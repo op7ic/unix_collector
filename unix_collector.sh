@@ -16,6 +16,7 @@
 #     > Linux
 #     > IBM AIX
 #     > HPUX
+#     > Mac
 #     > Probably others as well.
 # Commandline Options
 # ~~~~~~~~~~~~~~~~~~~
@@ -36,11 +37,12 @@ HOSTNAME=`hostname`
 PLATFORM="none"
 SHORT_DATE=`date +%B" "%Y`
 LONG_DATE=`date +%A" "%d" "%B" "%Y`
+COLLECTION_DATE=`date +%d"-"%m"-"%Y`
 WHOAMI="root"
 QUIET="NO"
 DISPLAYHELP="OFF"
-OUTPUT_DIR="audit-${HOSTNAME}"
-TAR_FILE="audit-${HOSTNAME}.tar"
+OUTPUT_DIR="collector-${HOSTNAME}-${COLLECTION_DATE}"
+TAR_FILE="collector-/${HOSTNAME}-${COLLECTION_DATE}.tar"
 
 # ---------------------------
 # Parse ARGS
@@ -53,6 +55,9 @@ do
             ;;
         "--platform=aix")
             PLATFORM="aix"
+            ;;
+        "--platform=mac")
+            PLATFORM="mac"
             ;;
         "--platform=generic")
             PLATFORM="generic"
@@ -84,6 +89,9 @@ then
     elif [ -x /usr/sbin/sam -o -x /usr/bin/sam ]
     then
         PLATFORM="hpux"
+	elif [[ $OSTYPE == 'darwin'* ]]
+	then
+	    PLATFORM="mac"
     elif [ -x /usr/bin/rpm -o -x /bin/rpm -o -x /usr/bin/dpkg -o -x /usr/bin/emerge ]
     then
         PLATFORM="linux"
@@ -129,6 +137,9 @@ case $PLATFORM in
         ;;
     "aix")
         echo "${COL_SECTION}PLATFORM:${RESET} IBM AIX"
+        ;;
+    "mac")
+        echo "${COL_SECTION}PLATFORM:${RESET} MacOS (Darwin)"
         ;;
     "hpux")
         echo "${COL_SECTION}PLATFORM:${RESET} HPUX"
@@ -262,11 +273,33 @@ echo "  ${COL_ENTRY}>${RESET} Process list"
 ps -efl 1> $OUTPUT_DIR/general/ps.txt 2> /dev/null
 ps -auxww 1> $OUTPUT_DIR/general/ps-auxww 2> /dev/null
 ps -deaf 1> $OUTPUT_DIR/general/ps-deaf 2> /dev/null
+ps -aux 1> $OUTPUT_DIR/general/ps-aux 2> /dev/null
 
 echo "  ${COL_ENTRY}>${RESET} Cron scheduler"
 if [ -f "/etc/crontab" ] && [ -r "/etc/crontab" ]; then
 	cp /etc/crontab $OUTPUT_DIR/general/etc-crontab.txt 2>/dev/null
 fi
+
+if [ $PLATFORM = "mac" ]
+then
+	if [ -d /var/at/tabs ]
+	then
+		mkdir $OUTPUT_DIR/general/crontabs 2> /dev/null
+		for name in `ls /var/at/tabs`
+		do
+		  ls -lL /var/at/tabs/$name 1>> $OUTPUT_DIR/general/crontabs/perms 2> /dev/null
+		  cp /var/at/tabs/$name $OUTPUT_DIR/general/crontabs/$name 2> /dev/null
+		done
+	fi
+fi
+
+if [ $PLATFORM = "mac" ]
+then
+    crontab -v 1> $OUTPUT_DIR/general/crontab.txt 2> /dev/null
+else
+    crontab -l 1> $OUTPUT_DIR/general/crontab.txt 2> /dev/null
+fi
+
 if [ $PLATFORM = "aix" ]
 then
     crontab -v 1> $OUTPUT_DIR/general/crontab.txt 2> /dev/null
@@ -362,6 +395,9 @@ then
 elif [ $PLATFORM = "linux" ]
 then
     lsmod 1> $OUTPUT_DIR/general/kernel-modules.txt 2> /dev/null
+elif [ $PLATFORM = "mac" ]
+then
+	kmutil showloaded 1> $OUTPUT_DIR/general/kernel-modules.txt 2> /dev/null
 fi
 
 echo "  ${COL_ENTRY}>${RESET} At scheduler"
@@ -378,37 +414,13 @@ then
     done
 fi
 
-echo "  ${COL_ENTRY}>${RESET} Scheduler permissions"
-for name in at.deny at.allow cron.deny cron.allow
-do
-    if [ -f /var/adm/cron/$name ]
-    then
-        cat /var/adm/cron/$name > $OUTPUT_DIR/general/$name.txt 2> /dev/null
-    elif [ -f /etc/cron.d/$name ]
-    then
-        cat /etc/cron.d/$name > $OUTPUT_DIR/general/$name.txt 2> /dev/null
-    fi
-done
-
-echo "  ${COL_ENTRY}>${RESET} Default files"
-mkdir $OUTPUT_DIR/general/default
-for name in yppasswdd passwd login inetd init nfs su syslogd rpc.nisd nfslogd inetinit fs cron ipsec telnetd webconsole autofs ftp
-do
-    if [ -f /etc/default/$name ]
-    then
-        cp /etc/default/$name $OUTPUT_DIR/general/default/$name 2> /dev/null
-    fi
-done
-
-if [ -f /etc/nsswitch.conf ]
-then
-    echo "  ${COL_ENTRY}>${RESET} nsswitch"
-    cp /etc/nsswitch.conf $OUTPUT_DIR/general/nsswitch.conf 2> /dev/null
-fi
-
 echo "  ${COL_ENTRY}>${RESET} Kernel settings"
 cat /etc/sysctl.conf 1> $OUTPUT_DIR/general/sysctl.conf 2> /dev/null
 if [ $PLATFORM = "linux" ]
+then
+    sysctl -a 1> $OUTPUT_DIR/general/sysctl-a.txt 2> /dev/null
+fi
+if [ $PLATFORM = "mac" ]
 then
     sysctl -a 1> $OUTPUT_DIR/general/sysctl-a.txt 2> /dev/null
 fi
@@ -469,6 +481,10 @@ then
     lslpp -L all 1> $OUTPUT_DIR/software/software-lslpp.txt 2> /dev/null
     lslpp -Lc 1> $OUTPUT_DIR/software/nopc-aix-patchlist.txt 2> /dev/null
     pkginfo 1> $OUTPUT_DIR/software/software-pkginfo.txt 2> /dev/null
+elif [ $PLATFORM = "mac" ]
+then
+    find / -iname "*.app" 1> $OUTPUT_DIR/software/software-apps.txt 2> /dev/null
+    ls -la /Applications/ 1> $OUTPUT_DIR/software/software-Applications-folder.txt 2> /dev/null
 elif [ $PLATFORM = "hpux" ]
 then
     swlist 1> $OUTPUT_DIR/software/software-swlist.txt 2> /dev/null
@@ -492,6 +508,11 @@ if [ $PLATFORM = "solaris" ]
 then
     showrev -p 1> $OUTPUT_DIR/software/patches-showrev-p.txt 2> /dev/null
     patchadd -p 1> $OUTPUT_DIR/software/patches-patchadd-p.txt 2> /dev/null
+elif [ $PLATFORM = "mac" ]
+then
+	system_profiler SPInstallHistoryDataType 1> $OUTPUT_DIR/software/patches-SPInstallHistoryDataType.txt 2> /dev/null
+	softwareupdate --history --all 1> $OUTPUT_DIR/software/patches-history.txt 2> /dev/null
+	cp /Library/Receipts/InstallHistory.plist $OUTPUT_DIR/software/ 2> /dev/null
 elif [ $PLATFORM = "aix" ]
 then
     instfix -a 1> $OUTPUT_DIR/software/patches-instfix.txt 2> /dev/null
@@ -517,6 +538,10 @@ then
 elif [ $PLATFORM = "aix" ]
 then
     cp -R /var/adm/ $OUTPUT_DIR/logs/
+elif [ $PLATFORM = "mac" ]
+then
+	cp -R /var/log $OUTPUT_DIR/logs/
+	cp -R /Library/Logs $OUTPUT_DIR/logs/
 elif [ $PLATFORM = "linux" ]
 then
     cp -R /var/log/ $OUTPUT_DIR/logs/
@@ -541,6 +566,8 @@ do
 	mkdir -p "$OUTPUT_DIR/setuid`dirname $line`"
 	cp -p "$line" "$OUTPUT_DIR/setuid`dirname $line`"
 done
+
+
 
 
 # ------------------------------------
@@ -697,6 +724,39 @@ then
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid
 		done	
 	fi	
+elif [ $PLATFORM = "mac" ]
+then
+    if [ -x "$(command -v sha256sum)" ]
+	then
+		find / -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha256sum {} \; 2>/dev/null | while read line
+		do
+		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid
+		done	
+	elif [ -x "$(command -v sha1sum)" ]
+	then
+		find / -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha1sum {} \; 2>/dev/null | while read line
+		do
+		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-sgid_suid
+		done	
+	elif [ -x "$(command -v md5sum)" ]
+	then
+		find / -type f -a \( -perm -u+s -o -perm -g+s \) -exec md5sum {} \; 2>/dev/null | while read line
+		do
+		  echo $line >> $OUTPUT_DIR/hashes/md5sum-sgid_suid
+		done	
+	elif [ -x "$(command -v openssl)" ]
+	then
+		find / -type f -a \( -perm -u+s -o -perm -g+s \) -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		do
+		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid
+		done	
+	elif [ -x "$(command -v shasum)" ]
+	then
+		find / -type f -a \( -perm -u+s -o -perm -g+s \) -exec shasum -a 256 {} \; 2>/dev/null | while read line
+		do
+		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid
+		done	
+	fi	
 fi
 
 echo "  ${COL_ENTRY}>${RESET} Hashing all HOME dirs"
@@ -847,32 +907,65 @@ then
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir
 		done	
 	fi	
+elif [ $PLATFORM = "mac" ]
+then
+    if [ -x "$(command -v sha256sum)" ]
+	then
+		find /home/ -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		do
+		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir
+		done	
+	elif [ -x "$(command -v sha1sum)" ]
+	then
+		find /home/ -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		do
+		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-homedir
+		done	
+	elif [ -x "$(command -v md5sum)" ]
+	then
+		find /home/ -type f -exec md5sum {} \; 2>/dev/null | while read line
+		do
+		  echo $line >> $OUTPUT_DIR/hashes/md5sum-homedir
+		done	
+	elif [ -x "$(command -v openssl)" ]
+	then
+		find /home/ -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		do
+		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir
+		done	
+	elif [ -x "$(command -v shasum)" ]
+	then
+		find /home/ -type f -exec shasum -a 256 {} \; 2>/dev/null | while read line
+		do
+		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir
+		done	
+	fi	
 fi
 
-echo "  ${COL_ENTRY}>${RESET} Hashing all /bin /sbin /usr/ /opt/ dirs"
+echo "  ${COL_ENTRY}>${RESET} Hashing all /bin /sbin /usr/ /opt/ /tmp/ dirs"
 if [ $PLATFORM = "linux" ]
 then 
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -type f -exec sha256sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -type f -exec sha1sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-variousbins
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -type f -exec md5sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-variousbins
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins
 		done	
@@ -881,25 +974,25 @@ elif [ $PLATFORM = "generic" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -type f -exec sha256sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -type f -exec sha1sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-variousbins
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -type f -exec md5sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-variousbins
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins
 		done	
@@ -907,31 +1000,31 @@ elif [ $PLATFORM = "solaris" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -type f -exec sha256sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -type f -exec sha1sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-variousbins
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -type f -exec md5sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-variousbins
 		done	
 	elif [ -x "$(command -v digest)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ -type f -exec digest -a sha256 {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -type f -exec digest -a sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins
 		done	
@@ -940,31 +1033,31 @@ elif [ $PLATFORM = "aix" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -type f -exec sha256sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -type f -exec sha1sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-variousbins
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -type f -exec md5sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-variousbins
 		done	
 	elif [ -x "$(command -v csum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ -type f -exec csum -h MD5 {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -type f -exec csum -h MD5 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/shaMD5sum-variousbins
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins
 		done	
@@ -973,25 +1066,58 @@ elif [ $PLATFORM = "hpux" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -type f -exec sha256sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -type f -exec sha1sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-variousbins
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -type f -exec md5sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-variousbins
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		do
+		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins
+		done	
+	fi
+elif [ $PLATFORM = "mac" ]
+then
+    if [ -x "$(command -v sha256sum)" ]
+	then
+		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		do
+		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins
+		done	
+	elif [ -x "$(command -v sha1sum)" ]
+	then
+		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		do
+		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-variousbins
+		done	
+	elif [ -x "$(command -v md5sum)" ]
+	then
+		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ -type f -exec md5sum {} \; 2>/dev/null | while read line
+		do
+		  echo $line >> $OUTPUT_DIR/hashes/md5sum-variousbins
+		done	
+	elif [ -x "$(command -v openssl)" ]
+	then
+		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		do
+		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins
+		done	
+	elif [ -x "$(command -v shasum)" ]
+	then
+		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ -type f -exec shasum -a 256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins
 		done	
