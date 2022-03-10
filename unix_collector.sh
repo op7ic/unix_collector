@@ -42,7 +42,7 @@ WHOAMI="root"
 QUIET="NO"
 DISPLAYHELP="OFF"
 OUTPUT_DIR="collector-${HOSTNAME}-${COLLECTION_DATE}"
-TAR_FILE="collector-/${HOSTNAME}-${COLLECTION_DATE}.tar"
+TAR_FILE="collector-${HOSTNAME}-${COLLECTION_DATE}.tar"
 
 # ---------------------------
 # Parse ARGS
@@ -89,7 +89,7 @@ then
     elif [ -x /usr/sbin/sam -o -x /usr/bin/sam ]
     then
         PLATFORM="hpux"
-	elif [[ $OSTYPE == 'darwin'* ]]
+	elif [ -x /usr/bin/osacompile ]
 	then
 	    PLATFORM="mac"
     elif [ -x /usr/bin/rpm -o -x /bin/rpm -o -x /usr/bin/dpkg -o -x /usr/bin/emerge ]
@@ -459,6 +459,11 @@ then
     sestatus -v > $OUTPUT_DIR/selinux/sestatus-v.txt 2> /dev/null
     cp /etc/selinux/config $OUTPUT_DIR/selinux/ 2> /dev/null
     cp /etc/sysconfig/selinux $OUTPUT_DIR/selinux/sysconfig-selinux 2> /dev/null
+fi
+
+if [ $PLATFORM = "mac" ]
+then
+	cp /etc/security/audit_control $OUTPUT_DIR/auditd/ 2> /dev/null
 fi
 
 # ------------------------------------
@@ -995,7 +1000,8 @@ then
 		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins
-		done	
+		done
+    fi		
 elif [ $PLATFORM = "solaris" ]
 then
     if [ -x "$(command -v sha256sum)" ]
@@ -1147,6 +1153,9 @@ then
 else
     ifconfig -a 1> $OUTPUT_DIR/network/ifconfig-a.txt 2> /dev/null
 fi
+
+echo "  ${COL_ENTRY}>${RESET} IP addr"
+ip addr 1> $OUTPUT_DIR/network/ipaddr.txt 2> /dev/null
 
 echo "  ${COL_ENTRY}>${RESET} IP forwarding"
 if [ $PLATFORM = "aix" ]
