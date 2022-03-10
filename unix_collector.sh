@@ -282,22 +282,11 @@ fi
 
 if [ $PLATFORM = "mac" ]
 then
-	if [ -d /var/at/tabs ]
-	then
-		mkdir $OUTPUT_DIR/general/crontabs 2> /dev/null
-		for name in `ls /var/at/tabs`
-		do
-		  ls -lL /var/at/tabs/$name 1>> $OUTPUT_DIR/general/crontabs/perms 2> /dev/null
-		  cp /var/at/tabs/$name $OUTPUT_DIR/general/crontabs/$name 2> /dev/null
-		done
-	fi
-fi
-
-if [ $PLATFORM = "mac" ]
-then
     crontab -v 1> $OUTPUT_DIR/general/crontab.txt 2> /dev/null
+	cp -R /var/at/ $OUTPUT_DIR/general/crontabs/
 else
     crontab -l 1> $OUTPUT_DIR/general/crontab.txt 2> /dev/null
+	cp -R /var/at/ $OUTPUT_DIR/general/crontabs/
 fi
 
 if [ $PLATFORM = "aix" ]
@@ -916,31 +905,31 @@ elif [ $PLATFORM = "mac" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /home/ -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /Users/ -type f -exec sha256sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /home/ -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /Users/ -type f -exec sha1sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-homedir
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /home/ -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /Users/ -type f -exec md5sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-homedir
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /home/ -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /Users/ -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir
 		done	
 	elif [ -x "$(command -v shasum)" ]
 	then
-		find /home/ -type f -exec shasum -a 256 {} \; 2>/dev/null | while read line
+		find /Users/ -type f -exec shasum -a 256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir
 		done	

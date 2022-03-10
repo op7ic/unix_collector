@@ -47,5 +47,57 @@ Execute ```unix_collector``` on MacOS while specifying platform:
 
 # Sample Output
 ```
+PLATFORM: GNU/Linux
 
+BASIC INFORMATION [0%  ]:
+  > UNIX Collector
+  > UNIX Collector Date
+  > UNIX Collector User
+  > UNIX Collector Platform
+GENERAL INFORMATION [15%  ]:
+  > Hostname
+  > Kernel
+  > Version
+  > Release
+  > Processor
+  > Full OS Info
+  > Process list
+  > Cron scheduler
+  > Kernel Modules
+  > At scheduler
+  > Kernel settings
+  > Environment
+  > ulimit
+  > Auditd
+INSTALLED SOFTWARE AND PATCHES [25% ]:
+  > Installed software (this could take a few mins)
+  > Installed patches
+  > Compiler tools
+LOG FILE COLLECTION [50% ]:
+  > Copying logs
+SUID/SGID SEARCH [60% ]:
+  > Finding all SUID/SGID binaries
+ HASH BINARIES [65% ]:
+  > Hashing all SUID/SGID binaries
+  > Hashing all HOME dirs
+  > Hashing all /bin /sbin /usr/ /opt/ /tmp/ dirs
+
+NETWORK INFORMATION [90% ]:
+  > Interface configuration
+  > IP addr
+  > IP forwarding
+  > Routing
+  > Netstat
+  > ARP cache
+  > Hosts
+  > DNS
+  > TCP wrappers
+  > RPC
+  > IP Tables
+  > IP Tables (IPv6)
+FINISHING [100%]:
+  > Removing temporary file
+  > Removing empty files
+  > Creating TAR file
+  > Removing temporary directory
 ```
