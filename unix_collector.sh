@@ -11,6 +11,7 @@
 # This script is designed to work on multiple UNIX platforms
 # and gather the information required for a quick forensic
 # investigation of the device. 
+# 
 # Current UNIX platforms supported include:
 #     > Sun Solaris
 #     > Linux
@@ -21,7 +22,7 @@
 # Commandline Options
 # ~~~~~~~~~~~~~~~~~~~
 #
-#    --platform=<solaris | hpup | aix | linux | generic>
+#    --platform=<solaris | hpup | mac | aix | linux | generic>
 #    Specify a platform, instead of using the platform auto-
 #    detection code.
 #
@@ -286,11 +287,25 @@ fi
 mkdir $OUTPUT_DIR/general/crontabs/
 if [ $PLATFORM = "mac" ]
 then
-    crontab -v 1> $OUTPUT_DIR/general/crontab.txt 2> /dev/null
+    crontab -v 1> $OUTPUT_DIR/general/crontab-v.txt 2> /dev/null
+	crontab -l 1> $OUTPUT_DIR/general/crontab-l.txt 2> /dev/null
 	cp -R /var/at/ $OUTPUT_DIR/general/crontabs/
-else
-    crontab -l 1> $OUTPUT_DIR/general/crontab.txt 2> /dev/null
-	cp -R /var/at/ $OUTPUT_DIR/general/crontabs/
+	cp -R /Library/StartupItems/ $OUTPUT_DIR/general/crontabs/StartupItems
+	cp -R /System/Library/StartupItems/ $OUTPUT_DIR/general/crontabs/System_StartupItems
+	cp -R /Library/LaunchAgents/ $OUTPUT_DIR/general/crontabs/LaunchAgents
+	cp -R /System/Library/LaunchAgents/ $OUTPUT_DIR/general/crontabs/System_LaunchAgents
+	cp -R /usr/lib/cron/jobs/ $OUTPUT_DIR/general/crontabs/usr_lib_cron_jobs
+	cp -R /usr/lib/cron/tabs/ $OUTPUT_DIR/general/crontabs/usr_lib_cron_tabs
+	cp /etc/periodic.conf $OUTPUT_DIR/general/crontabs/
+	cp /etc/periodic.conf.local $OUTPUT_DIR/general/crontabs/
+	cp -R /etc/periodic/ $OUTPUT_DIR/general/crontabs/
+	cp -R /etc/daily.local/ $OUTPUT_DIR/general/crontabs/
+	cp -R /etc/weekly.local/ $OUTPUT_DIR/general/crontabs/
+	cp -R /etc/monthly.local/ $OUTPUT_DIR/general/crontabs/
+	cp -R /etc/periodic/daily/ $OUTPUT_DIR/general/crontabs/periodic_daily
+	cp -R /etc/periodic/weekly/ $OUTPUT_DIR/general/crontabs/periodic_weekly
+	cp -R /etc/periodic/monthly/ $OUTPUT_DIR/general/crontabs/periodic_monthly
+	cp -R /usr/local/etc/periodic/ $OUTPUT_DIR/general/crontabs/usr_local_etc_periodic	
 fi
 
 if [ $PLATFORM = "aix" ]
@@ -457,6 +472,8 @@ fi
 if [ $PLATFORM = "mac" ]
 then
 	cp /etc/security/audit_control $OUTPUT_DIR/auditd/ 2> /dev/null
+	cp /var/audit/ $OUTPUT_DIR/auditd/ 2> /dev/null
+	
 fi
 
 # ------------------------------------
@@ -482,7 +499,10 @@ then
 elif [ $PLATFORM = "mac" ]
 then
     find / -iname "*.app" 1> $OUTPUT_DIR/software/software-apps.txt 2> /dev/null
+	find / -iname "*.plist" 1> $OUTPUT_DIR/software/software-plist.txt 2> /dev/null
     ls -la /Applications/ 1> $OUTPUT_DIR/software/software-Applications-folder.txt 2> /dev/null
+	cp -R /System/Library/Extensions/ 1> $OUTPUT_DIR/software/System_Extensions 2> /dev/null
+	cp -R /Library/Extensions/ 1> $$OUTPUT_DIR/software/Library_Extensions 2> /dev/null
 elif [ $PLATFORM = "hpux" ]
 then
     swlist 1> $OUTPUT_DIR/software/software-swlist.txt 2> /dev/null
@@ -538,8 +558,10 @@ then
     cp -R /var/adm/ $OUTPUT_DIR/logs/
 elif [ $PLATFORM = "mac" ]
 then
-	cp -R /var/log $OUTPUT_DIR/logs/
-	cp -R /Library/Logs $OUTPUT_DIR/logs/
+    cp -R /private/var/log $OUTPUT_DIR/logs/private_var_log
+	cp -R /private/var/logs $OUTPUT_DIR/logs/private_var_logs
+	cp -R /var/log $OUTPUT_DIR/logs/var_log
+	cp -R /Library/Logs $OUTPUT_DIR/logs/library_logs
 elif [ $PLATFORM = "linux" ]
 then
     cp -R /var/log/ $OUTPUT_DIR/logs/
@@ -601,6 +623,14 @@ then
     cp -R /home/ $OUTPUT_DIR/procfiles/
 fi
 
+if [ $PLATFORM = "mac" ]
+then
+	echo "${COL_SECTION} Copying plist files"
+	mkdir $OUTPUT_DIR/plist
+	find / -type f -iname "*.plist" 2>/dev/null | while read line
+	mkdir -p "$OUTPUT_DIR/plist`dirname $line`"
+	cp -p "$line" "$OUTPUT_DIR/plist`dirname $line`"
+fi
 
 # ------------------------------------
 # PART 6: SUID
@@ -614,8 +644,6 @@ do
 	mkdir -p "$OUTPUT_DIR/setuid`dirname $line`"
 	cp -p "$line" "$OUTPUT_DIR/setuid`dirname $line`"
 done
-
-
 
 
 # ------------------------------------
