@@ -305,7 +305,8 @@ then
 	cp -R /etc/periodic/daily/ $OUTPUT_DIR/general/crontabs/periodic_daily
 	cp -R /etc/periodic/weekly/ $OUTPUT_DIR/general/crontabs/periodic_weekly
 	cp -R /etc/periodic/monthly/ $OUTPUT_DIR/general/crontabs/periodic_monthly
-	cp -R /usr/local/etc/periodic/ $OUTPUT_DIR/general/crontabs/usr_local_etc_periodic	
+	cp -R /usr/local/etc/periodic/ $OUTPUT_DIR/general/crontabs/usr_local_etc_periodic
+	cp -R /etc/crontab $OUTPUT_DIR/general/crontabs/etc_crontab
 fi
 
 if [ $PLATFORM = "aix" ]
