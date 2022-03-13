@@ -313,10 +313,6 @@ then
 	cp -R /var/spool/cron/ $OUTPUT_DIR/general/crontabs/var_spool_cron 2> /dev/null
 fi
 
-if [ -d /var/spool/cron/ ]
-then
-	cp -R /var/spool/cron/ $OUTPUT_DIR/general/crontabs/var_spool_cron 2> /dev/null
-fi
 
 if [ $PLATFORM = "mac" ]
 then
