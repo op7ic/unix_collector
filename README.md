@@ -95,7 +95,6 @@ NETWORK INFORMATION [90% ]:
   > IP Tables
   > IP Tables (IPv6)
 FINISHING [100%]:
-  > Removing temporary file
   > Removing empty files
   > Creating TAR file
   > Removing temporary directory

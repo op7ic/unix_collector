@@ -19,6 +19,7 @@
 #     > HPUX
 #     > Mac
 #     > Probably others as well.
+# 
 # Commandline Options
 # ~~~~~~~~~~~~~~~~~~~
 #
@@ -33,7 +34,7 @@
 # ---------------------------
 # Global Variables
 # ---------------------------
-VERSION="1.0"
+VERSION="1.1"
 HOSTNAME=`hostname`
 PLATFORM="none"
 SHORT_DATE=`date +%B" "%Y`
@@ -121,10 +122,16 @@ fi
 # ---------------------------
 # Banner
 # ---------------------------
-echo ${COL_ENTRY}
-echo "${RESET}"
-echo "      Simple log collector for UNIX $VERSION"
+echo "${COL_ENTRY}"
+echo "  _   _ _   _ _____  __   ____ ___  _     _     _____ ____ _____ ___  ____  "
+echo " | | | | \ | |_ _\ \/ /  / ___/ _ \| |   | |   | ____/ ___|_   _/ _ \|  _ \ "
+echo " | | | |  \| || | \  /  | |  | | | | |   | |   |  _|| |     | || | | | |_) |"
+echo " | |_| | |\  || | /  \  | |__| |_| | |___| |___| |__| |___  | || |_| |  _ < "
+echo "  \___/|_| \_|___/_/\_\  \____\___/|_____|_____|_____\____| |_| \___/|_| \_\""
 echo ""
+echo "${COL_LOGO}Simple forensic collector for UNIX Systems $VERSION by op7ic"
+echo ""
+echo "${RESET}"
 
 # ---------------------------
 # Platform detected
@@ -651,7 +658,7 @@ done
 # PART 7: BINARY HASHES
 # ------------------------------------
 
-echo "${COL_SECTION} HASH BINARIES [65% ]:${RESET}"
+echo "${COL_SECTION}HASH BINARIES [65% ]:${RESET}"
 echo "  ${COL_ENTRY}>${RESET} Hashing all SUID/SGID binaries"
 mkdir $OUTPUT_DIR/hashes
 if [ $PLATFORM = "linux" ]
@@ -1302,9 +1309,6 @@ fi
 # --------------------------------
 
 echo "${COL_SECTION}FINISHING [100%]:${RESET}"
-
-echo "  ${COL_ENTRY}>${RESET} Removing temporary file"
-rm -f $OUTPUT_DIR/filesystem/files.txt 2> /dev/null
 
 echo "  ${COL_ENTRY}>${RESET} Removing empty files"
 for REMOVELIST in `find $OUTPUT_DIR -size 0`
