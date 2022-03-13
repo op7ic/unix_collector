@@ -286,34 +286,74 @@ ps -auxww 1> $OUTPUT_DIR/general/ps-auxww 2> /dev/null
 ps -deaf 1> $OUTPUT_DIR/general/ps-deaf 2> /dev/null
 ps -aux 1> $OUTPUT_DIR/general/ps-aux 2> /dev/null
 
-echo "  ${COL_ENTRY}>${RESET} Cron scheduler"
+echo "  ${COL_ENTRY}>${RESET} Cron and other scheduler files"
 if [ -f "/etc/crontab" ] && [ -r "/etc/crontab" ]; then
 	cp /etc/crontab $OUTPUT_DIR/general/etc-crontab.txt 2>/dev/null
 fi
 
-mkdir $OUTPUT_DIR/general/crontabs/
+mkdir $OUTPUT_DIR/general/crontabs/ 2> /dev/null
+
+if [ -d /var/cron/ ]
+then
+	cp -R /var/cron/ $OUTPUT_DIR/general/crontabs/var_cron 2> /dev/null
+fi
+
+if [ -d /var/adm/cron/ ]
+then
+	cp -R /var/adm/cron/ $OUTPUT_DIR/general/crontabs/var_adm_cron 2> /dev/null
+fi
+
+if [ -d /var/spool/at/ ]
+then
+	cp -R /var/spool/at/ $OUTPUT_DIR/general/crontabs/var_spool_at 2> /dev/null
+fi
+
+if [ -d /var/spool/cron/ ]
+then
+	cp -R /var/spool/cron/ $OUTPUT_DIR/general/crontabs/var_spool_cron 2> /dev/null
+fi
+
+if [ -d /var/spool/cron/ ]
+then
+	cp -R /var/spool/cron/ $OUTPUT_DIR/general/crontabs/var_spool_cron 2> /dev/null
+fi
+
 if [ $PLATFORM = "mac" ]
 then
     crontab -v 1> $OUTPUT_DIR/general/crontab-v.txt 2> /dev/null
 	crontab -l 1> $OUTPUT_DIR/general/crontab-l.txt 2> /dev/null
-	cp -R /var/at/ $OUTPUT_DIR/general/crontabs/
-	cp -R /Library/StartupItems/ $OUTPUT_DIR/general/crontabs/StartupItems
-	cp -R /System/Library/StartupItems/ $OUTPUT_DIR/general/crontabs/System_StartupItems
-	cp -R /Library/LaunchAgents/ $OUTPUT_DIR/general/crontabs/LaunchAgents
-	cp -R /System/Library/LaunchAgents/ $OUTPUT_DIR/general/crontabs/System_LaunchAgents
-	cp -R /usr/lib/cron/jobs/ $OUTPUT_DIR/general/crontabs/usr_lib_cron_jobs
-	cp -R /usr/lib/cron/tabs/ $OUTPUT_DIR/general/crontabs/usr_lib_cron_tabs
-	cp /etc/periodic.conf $OUTPUT_DIR/general/crontabs/
-	cp /etc/periodic.conf.local $OUTPUT_DIR/general/crontabs/
-	cp -R /etc/periodic/ $OUTPUT_DIR/general/crontabs/
-	cp -R /etc/daily.local/ $OUTPUT_DIR/general/crontabs/
-	cp -R /etc/weekly.local/ $OUTPUT_DIR/general/crontabs/
-	cp -R /etc/monthly.local/ $OUTPUT_DIR/general/crontabs/
-	cp -R /etc/periodic/daily/ $OUTPUT_DIR/general/crontabs/periodic_daily
-	cp -R /etc/periodic/weekly/ $OUTPUT_DIR/general/crontabs/periodic_weekly
-	cp -R /etc/periodic/monthly/ $OUTPUT_DIR/general/crontabs/periodic_monthly
-	cp -R /usr/local/etc/periodic/ $OUTPUT_DIR/general/crontabs/usr_local_etc_periodic
-	cp -R /etc/crontab $OUTPUT_DIR/general/crontabs/etc_crontab
+	cp -R /var/at/ $OUTPUT_DIR/general/crontabs/var_at 2> /dev/null
+	cp -R /private/var/at/tabs/ $OUTPUT_DIR/general/crontabs/private_var_at_tabs 2> /dev/null
+	cp -R /Library/StartupItems/ $OUTPUT_DIR/general/crontabs/StartupItems 2> /dev/null
+	cp -R /System/Library/StartupItems/ $OUTPUT_DIR/general/crontabs/System_StartupItems 2> /dev/null
+	cp -R /Library/LaunchAgents/ $OUTPUT_DIR/general/crontabs/LaunchAgents 2> /dev/null
+	cp -R /System/Library/LaunchAgents/ $OUTPUT_DIR/general/crontabs/System_LaunchAgents 2> /dev/null
+	cp -R /usr/lib/cron/jobs/ $OUTPUT_DIR/general/crontabs/usr_lib_cron_jobs 2> /dev/null
+	cp -R /usr/lib/cron/tabs/ $OUTPUT_DIR/general/crontabs/usr_lib_cron_tabs 2> /dev/null
+	cp /etc/periodic.conf $OUTPUT_DIR/general/crontabs/ 2> /dev/null
+	cp /etc/periodic.conf.local $OUTPUT_DIR/general/crontabs/ 2> /dev/null
+	cp -R /etc/periodic/ $OUTPUT_DIR/general/crontabs/ 2> /dev/null
+	cp -R /etc/daily.local/ $OUTPUT_DIR/general/crontabs/ 2> /dev/null
+	cp -R /etc/weekly.local/ $OUTPUT_DIR/general/crontabs/ 2> /dev/null
+	cp -R /etc/monthly.local/ $OUTPUT_DIR/general/crontabs/ 2> /dev/null
+	cp -R /etc/periodic/daily/ $OUTPUT_DIR/general/crontabs/periodic_daily 2> /dev/null
+	cp -R /etc/periodic/weekly/ $OUTPUT_DIR/general/crontabs/periodic_weekly 2> /dev/null
+	cp -R /etc/periodic/monthly/ $OUTPUT_DIR/general/crontabs/periodic_monthly 2> /dev/null
+	cp -R /usr/local/etc/periodic/ $OUTPUT_DIR/general/crontabs/usr_local_etc_periodic 2> /dev/null
+	cp -R /etc/crontab $OUTPUT_DIR/general/crontabs/etc_crontab 2> /dev/null
+	cp -R /Library/LaunchDaemons/ $OUTPUT_DIR/general/crontabs/LaunchDaemons 2> /dev/null
+	cp -R /System/Library/LaunchDaemons/ $OUTPUT_DIR/general/crontabs/System_LaunchDaemons 2> /dev/null
+fi
+
+mkdir $OUTPUT_DIR/general/systemd/ 2> /dev/null 
+if [ -d /lib/systemd/system/ ]
+then
+	cp -R /lib/systemd/system/ $OUTPUT_DIR/general/systemd/lib_systemd_system 2> /dev/null
+fi
+
+if [ -d /usr/lib/systemd/system/ ]
+then
+	cp -R /usr/lib/systemd/system/ $OUTPUT_DIR/general/systemd/usr_lib_systemd_system 2> /dev/null
 fi
 
 if [ $PLATFORM = "aix" ]
@@ -484,6 +524,16 @@ then
 	
 fi
 
+echo "  ${COL_ENTRY}>${RESET} spool files"
+mkdir $OUTPUT_DIR/general/spool/ 2> /dev/null
+cp -R /var/spool $OUTPUT_DIR/general/spool/ 2> /dev/null
+if [ $PLATFORM = "mac" ]
+then
+	cp -R /private/var/spool/ $OUTPUT_DIR/general/spool/private_var_spool
+fi
+
+
+
 # ------------------------------------
 # PART 4: INSTALLED SOFTWARE / PATCHES
 # ------------------------------------
@@ -497,12 +547,12 @@ then
     pkginfo -l 1> $OUTPUT_DIR/software/software-pkginfo-l.txt 2> /dev/null
     pkginfo -x 1> $OUTPUT_DIR/software/software-pkginfo-x.txt 2> /dev/null
     showrev 1> $OUTPUT_DIR/software/software-showrev.txt 2> /dev/null
-    pkginfo -x 2> /dev/null | awk '{ if ( NR % 2 ) { prev = $1 } else { print prev" "$0 } }' > $OUTPUT_DIR/software/nopc-solaris-pkginfo.txt 2> /dev/null
-    showrev -a > $OUTPUT_DIR/software/nopc-showrev.txt 2> /dev/null
+    pkginfo -x 2> /dev/null | awk '{ if ( NR % 2 ) { prev = $1 } else { print prev" "$0 } }' > $OUTPUT_DIR/software/solaris-pkginfo.txt 2> /dev/null
+    showrev -a > $OUTPUT_DIR/software/showrev.txt 2> /dev/null
 elif [ $PLATFORM = "aix" ]
 then
     lslpp -L all 1> $OUTPUT_DIR/software/software-lslpp.txt 2> /dev/null
-    lslpp -Lc 1> $OUTPUT_DIR/software/nopc-aix-patchlist.txt 2> /dev/null
+    lslpp -Lc 1> $OUTPUT_DIR/software/aix-patchlist.txt 2> /dev/null
     pkginfo 1> $OUTPUT_DIR/software/software-pkginfo.txt 2> /dev/null
 elif [ $PLATFORM = "mac" ]
 then
@@ -514,18 +564,18 @@ then
 elif [ $PLATFORM = "hpux" ]
 then
     swlist 1> $OUTPUT_DIR/software/software-swlist.txt 2> /dev/null
-    swlist -l fileset -a revision 1> $OUTPUT_DIR/software/nopc-hpux-patchlist.txt 2> /dev/null
+    swlist -l fileset -a revision 1> $OUTPUT_DIR/software/hpux-patchlist.txt 2> /dev/null
 else
     cp /etc/redhat-release $OUTPUT_DIR/software/ 2> /dev/null
     rpm -q -a 1> $OUTPUT_DIR/software/software-rpm.txt 2> /dev/null
-    rpm -qa --qf '%{NAME}-%{VERSION}-%{RELEASE}|%{EPOCH}\n' > $OUTPUT_DIR/software/nopc-rpm-patchlist.txt 2> /dev/null
+    rpm -qa --qf '%{NAME}-%{VERSION}-%{RELEASE}|%{EPOCH}\n' > $OUTPUT_DIR/software/rpm-patchlist.txt 2> /dev/null
     dpkg --list 1> $OUTPUT_DIR/software/software-dpkg.txt 2> /dev/null
-    dpkg -l 1> $OUTPUT_DIR/software/nopc-dpkg-patchlist.txt 2> /dev/null
-    ls -1 /var/log/packages 1> $OUTPUT_DIR/software/nopc-slackware-patchlist.txt 2> /dev/null
-    grep -A 1 displayName /Library/Receipts/InstallHistory.plist 2>/dev/null| grep string | sed 's/<string>\(.*\)<\/string>.*/\1/g'  | sed 's/^[      ]*//g'|tr  -d -c 'a-zA-Z0-9\n _-'|sort|uniq > $OUTPUT_DIR/software/nopc-osx-patchlist.txt 2> /dev/null
-    ls -1 /Library/Receipts/boms /private/var/db/receipts 2>/dev/null | grep '\.bom$' > $OUTPUT_DIR/software/nopc-osx-bomlist.txt 2> /dev/null
+    dpkg -l 1> $OUTPUT_DIR/software/dpkg-patchlist.txt 2> /dev/null
+    ls -1 /var/log/packages 1> $OUTPUT_DIR/software/slackware-patchlist.txt 2> /dev/null
+    grep -A 1 displayName /Library/Receipts/InstallHistory.plist 2>/dev/null| grep string | sed 's/<string>\(.*\)<\/string>.*/\1/g'  | sed 's/^[      ]*//g'|tr  -d -c 'a-zA-Z0-9\n _-'|sort|uniq > $OUTPUT_DIR/software/osx-patchlist.txt 2> /dev/null
+    ls -1 /Library/Receipts/boms /private/var/db/receipts 2>/dev/null | grep '\.bom$' > $OUTPUT_DIR/software/osx-bomlist.txt 2> /dev/null
     emerge -pev world 1> $OUTPUT_DIR/software/software-emerge.txt 2> /dev/null
-    pkg_info > $OUTPUT_DIR/software/nopc-freebsd-patchlist.txt 2> /dev/null
+    pkg_info > $OUTPUT_DIR/software/freebsd-patchlist.txt 2> /dev/null
     chkconfig --list $OUTPUT_DIR/software/chkconfig--list.txt 2> /dev/null
 fi
 
@@ -553,32 +603,41 @@ find / \( -name gcc* -o -name javac -o -name perl* -o -name tclsh* -o -name pyth
 # ------------------------------------
 
 echo "${COL_SECTION}LOG, HOME and PROC FILE COLLECTION [50% ]:${RESET}"
-mkdir $OUTPUT_DIR/logs
+mkdir $OUTPUT_DIR/logs 2> /dev/null
 
 echo "  ${COL_ENTRY}>${RESET} Copying logs"
 
 if [ $PLATFORM = "solaris" ]
 then
-    cp -R /var/adm/ $OUTPUT_DIR/logs/
-	cp -R /var/log/ $OUTPUT_DIR/logs/
+    cp -R /var/adm/ $OUTPUT_DIR/logs/ 2> /dev/null
+	cp -R /var/log/ $OUTPUT_DIR/logs/ 2> /dev/null
+	cp -R /var/nslog/ $OUTPUT_DIR/logs/ 2> /dev/null
 elif [ $PLATFORM = "aix" ]
 then
-    cp -R /var/adm/ $OUTPUT_DIR/logs/
+    cp -R /var/adm/ $OUTPUT_DIR/logs/ 2> /dev/null
+	cp -R /var/log/ $OUTPUT_DIR/logs/ 2> /dev/null
+	cp -R /var/nslog/ $OUTPUT_DIR/logs/ 2> /dev/null
 elif [ $PLATFORM = "mac" ]
 then
-    cp -R /private/var/log $OUTPUT_DIR/logs/private_var_log
-	cp -R /private/var/logs $OUTPUT_DIR/logs/private_var_logs
-	cp -R /var/log $OUTPUT_DIR/logs/var_log
-	cp -R /Library/Logs $OUTPUT_DIR/logs/library_logs
+    cp -R /private/var/log $OUTPUT_DIR/logs/private_var_log 2> /dev/null
+	cp -R /private/var/logs $OUTPUT_DIR/logs/private_var_logs 2> /dev/null
+	cp -R /var/log $OUTPUT_DIR/logs/var_log 2> /dev/null
+	cp -R /Library/Logs $OUTPUT_DIR/logs/library_logs 2> /dev/null
 elif [ $PLATFORM = "linux" ]
 then
-    cp -R /var/log/ $OUTPUT_DIR/logs/
+    cp -R /var/log/ $OUTPUT_DIR/logs/ 2> /dev/null
+    cp -R /var/adm/ $OUTPUT_DIR/logs/ 2> /dev/null
+	cp -R /var/nslog/ $OUTPUT_DIR/logs/ 2> /dev/null
 elif [ $PLATFORM = "generic" ]
 then
-    cp -R /var/log/ $OUTPUT_DIR/logs/
+    cp -R /var/log/ $OUTPUT_DIR/logs/ 2> /dev/null
+    cp -R /var/adm/ $OUTPUT_DIR/logs/ 2> /dev/null
+	cp -R /var/nslog/ $OUTPUT_DIR/logs/ 2> /dev/null
 elif [ $PLATFORM = "hpux" ]
 then
-    cp -R /var/log/ $OUTPUT_DIR/logs/
+    cp -R /var/log/ $OUTPUT_DIR/logs/ 2> /dev/null
+    cp -R /var/adm/ $OUTPUT_DIR/logs/ 2> /dev/null
+	cp -R /var/nslog/ $OUTPUT_DIR/logs/ 2> /dev/null
 fi
 
 mkdir $OUTPUT_DIR/homedir
@@ -586,57 +645,83 @@ echo "  ${COL_ENTRY}>${RESET} Copying home dirs"
 
 if [ $PLATFORM = "solaris" ]
 then
-    cp -R /home/ $OUTPUT_DIR/homedir/
-	cp -R /root/ $OUTPUT_DIR/homedir/
-	cp -R /export/home/ $OUTPUT_DIR/homedir/home-export
+    cp -R /home/ $OUTPUT_DIR/homedir/ 2> /dev/null
+	cp -R /root/ $OUTPUT_DIR/homedir/ 2> /dev/null
+	cp -R /export/home/ $OUTPUT_DIR/homedir/home-export 2> /dev/null
 elif [ $PLATFORM = "aix" ]
 then
-    cp -R /home/ $OUTPUT_DIR/homedir/
-	cp -R /root/ $OUTPUT_DIR/homedir/
+    cp -R /home/ $OUTPUT_DIR/homedir/ 2> /dev/null
+	cp -R /root/ $OUTPUT_DIR/homedir/ 2> /dev/null
 elif [ $PLATFORM = "mac" ]
 then
-	cp -R /Users/ $OUTPUT_DIR/homedir/
-	cp -R /home/ $OUTPUT_DIR/homedir/
+	cp -R /Users/ $OUTPUT_DIR/homedir/ 2> /dev/null
+	cp -R /home/ $OUTPUT_DIR/homedir/ 2> /dev/null
 elif [ $PLATFORM = "linux" ]
 then
-    cp -R /home/ $OUTPUT_DIR/homedir/
-	cp -R /root/ $OUTPUT_DIR/homedir/
+    cp -R /home/ $OUTPUT_DIR/homedir/ 2> /dev/null
+	cp -R /root/ $OUTPUT_DIR/homedir/ 2> /dev/null
 elif [ $PLATFORM = "generic" ]
 then
-    cp -R /home/ $OUTPUT_DIR/homedir/
-	cp -R /root/ $OUTPUT_DIR/homedir/
+    cp -R /home/ $OUTPUT_DIR/homedir/ 2> /dev/null
+	cp -R /root/ $OUTPUT_DIR/homedir/ 2> /dev/null
 elif [ $PLATFORM = "hpux" ]
 then
-    cp -R /home/ $OUTPUT_DIR/homedir/
-	cp -R /root/ $OUTPUT_DIR/homedir/
+    cp -R /home/ $OUTPUT_DIR/homedir/ 2> /dev/null
+	cp -R /root/ $OUTPUT_DIR/homedir/ 2> /dev/null
 fi
 
-mkdir $OUTPUT_DIR/procfiles
+mkdir $OUTPUT_DIR/procfiles 2> /dev/null
 echo "  ${COL_ENTRY}>${RESET} Copying proc dirs"
 
 if [ $PLATFORM = "solaris" ]
 then
-    cp -R /proc/ $OUTPUT_DIR/procfiles/
+    cp -R /proc/ $OUTPUT_DIR/procfiles/ 2> /dev/null
 elif [ $PLATFORM = "aix" ]
 then
-    cp -R /proc/ $OUTPUT_DIR/procfiles/
+    cp -R /proc/ $OUTPUT_DIR/procfiles/ 2> /dev/null
 elif [ $PLATFORM = "linux" ]
 then
-    cp -R /proc/ $OUTPUT_DIR/procfiles/
+    cp -R /proc/ $OUTPUT_DIR/procfiles/ 2> /dev/null
 elif [ $PLATFORM = "generic" ]
 then
-    cp -R /proc/ $OUTPUT_DIR/procfiles/
+    cp -R /proc/ $OUTPUT_DIR/procfiles/ 2> /dev/null
 elif [ $PLATFORM = "hpux" ]
 then
-    cp -R /home/ $OUTPUT_DIR/procfiles/
+    cp -R /home/ $OUTPUT_DIR/procfiles/ 2> /dev/null
 fi
+
+
+mkdir $OUTPUT_DIR/tmpfiles 2> /dev/null
+echo "  ${COL_ENTRY}>${RESET} Copying /tmp/ dirs"
+
+if [ $PLATFORM = "solaris" ]
+then
+    cp -R /tmp/ $OUTPUT_DIR/tmpfiles/ 2> /dev/null
+elif [ $PLATFORM = "aix" ]
+then
+    cp -R /tmp/ $OUTPUT_DIR/tmpfiles/ 2> /dev/null
+elif [ $PLATFORM = "linux" ]
+then
+    cp -R /tmp/ $OUTPUT_DIR/tmpfiles/ 2> /dev/null
+elif [ $PLATFORM = "mac" ]
+then
+	cp -R /tmp/ $OUTPUT_DIR/tmpfiles/ 2> /dev/null
+	cp -R /private/tmp/ $OUTPUT_DIR/tmpfiles/private_tmp 2> /dev/null
+elif [ $PLATFORM = "generic" ]
+then
+    cp -R /tmp/ $OUTPUT_DIR/tmpfiles/ 2> /dev/null
+elif [ $PLATFORM = "hpux" ]
+then
+    cp -R /tmp/ $OUTPUT_DIR/tmpfiles/ 2> /dev/null
+fi
+
 
 if [ $PLATFORM = "mac" ]
 then
 	echo "${COL_SECTION} Copying plist files"
 	mkdir $OUTPUT_DIR/plist
 	find / -type f -iname "*.plist" 2>/dev/null | while read line
-	mkdir -p "$OUTPUT_DIR/plist`dirname $line`"
+	mkdir -p "$OUTPUT_DIR/plist`dirname $line`" 
 	cp -p "$line" "$OUTPUT_DIR/plist`dirname $line`"
 fi
 
