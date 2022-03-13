@@ -1398,7 +1398,7 @@ do
 done
 
 echo "  ${COL_ENTRY}>${RESET} Creating TAR file"
-tar zcf $TAR_FILE $OUTPUT_DIR.gz 1> /dev/null  2> /dev/null || tar cf $TAR_FILE $OUTPUT_DIR 1> /dev/null  2> /dev/null
+tar zcf $TAR_FILE.gz $OUTPUT_DIR 1> /dev/null  2> /dev/null || tar cf $TAR_FILE $OUTPUT_DIR 1> /dev/null  2> /dev/null
 
 echo "  ${COL_ENTRY}>${RESET} Removing temporary directory"
 rm -rf $OUTPUT_DIR
