@@ -249,6 +249,9 @@ uname -s 1> $OUTPUT_DIR/general/kernel.txt 2> /dev/null
 echo "  ${COL_ENTRY}>${RESET} Version"
 uname -v 1> $OUTPUT_DIR/general/version.txt 2> /dev/null
 
+echo "  ${COL_ENTRY}>${RESET} SSH settings"
+sshd -T 1> $OUTPUT_DIR/general/sshd-t.txt 2> /dev/null
+
 echo "  ${COL_ENTRY}>${RESET} Release"
 uname -r 1> $OUTPUT_DIR/general/release.txt 2> /dev/null
 cp /etc/*release /etc/debian_version $OUTPUT_DIR/general/ 2> /dev/null
@@ -280,6 +283,7 @@ if [ -f "/etc/crontab" ] && [ -r "/etc/crontab" ]; then
 	cp /etc/crontab $OUTPUT_DIR/general/etc-crontab.txt 2>/dev/null
 fi
 
+mkdir $OUTPUT_DIR/general/crontabs/
 if [ $PLATFORM = "mac" ]
 then
     crontab -v 1> $OUTPUT_DIR/general/crontab.txt 2> /dev/null
@@ -513,14 +517,14 @@ then
 fi
 
 echo "  ${COL_ENTRY}>${RESET} Compiler tools"
-find / \( -name gcc -o -name javac -o -name perl -o -name tclsh -o -name python -o -name ruby \) -ls 1> $OUTPUT_DIR/software/compiler.txt 2> /dev/null
+find / \( -name gcc* -o -name javac -o -name perl* -o -name tclsh* -o -name python* -o -name ruby* \) -ls 1> $OUTPUT_DIR/software/compiler.txt 2> /dev/null
 
 
 # ------------------------------------
-# PART 5: LOG FILES
+# PART 5: LOG FILES & HOME DIR
 # ------------------------------------
 
-echo "${COL_SECTION}LOG FILE COLLECTION [50% ]:${RESET}"
+echo "${COL_SECTION}LOG & HOME FILE COLLECTION [50% ]:${RESET}"
 mkdir $OUTPUT_DIR/logs
 
 echo "  ${COL_ENTRY}>${RESET} Copying logs"
@@ -545,6 +549,34 @@ then
 elif [ $PLATFORM = "hpux" ]
 then
     cp -R /var/log/ $OUTPUT_DIR/logs/
+fi
+
+mkdir $OUTPUT_DIR/homedir
+echo "  ${COL_ENTRY}>${RESET} Copying home dirs"
+
+if [ $PLATFORM = "solaris" ]
+then
+    cp -R /home/ $OUTPUT_DIR/homedir/
+	cp -R /root/ $OUTPUT_DIR/homedir/
+elif [ $PLATFORM = "aix" ]
+then
+    cp -R /home/ $OUTPUT_DIR/homedir/
+	cp -R /root/ $OUTPUT_DIR/homedir/
+elif [ $PLATFORM = "mac" ]
+then
+	cp -R /Users/ $OUTPUT_DIR/homedir/
+elif [ $PLATFORM = "linux" ]
+then
+    cp -R /home/ $OUTPUT_DIR/homedir/
+	cp -R /root/ $OUTPUT_DIR/homedir/
+elif [ $PLATFORM = "generic" ]
+then
+    cp -R /home/ $OUTPUT_DIR/homedir/
+	cp -R /root/ $OUTPUT_DIR/homedir/
+elif [ $PLATFORM = "hpux" ]
+then
+    cp -R /home/ $OUTPUT_DIR/homedir/
+	cp -R /root/ $OUTPUT_DIR/homedir/
 fi
 
 
@@ -758,25 +790,25 @@ if [ $PLATFORM = "linux" ]
 then 
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /home/ -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -type f -exec sha256sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /home/ -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -type f -exec sha1sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-homedir
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /home/ -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -type f -exec md5sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-homedir
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /home/ -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /home/ /root/ -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir
 		done	
@@ -785,25 +817,25 @@ elif [ $PLATFORM = "generic" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /home/ -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -type f -exec sha256sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /home/ -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -type f -exec sha1sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-homedir
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /home/ -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -type f -exec md5sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-homedir
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /home/ -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /home/ /root/ -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir
 		done	
@@ -812,31 +844,31 @@ elif [ $PLATFORM = "solaris" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /home/ -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -type f -exec sha256sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /home/ -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -type f -exec sha1sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-homedir
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /home/ -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -type f -exec md5sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-homedir
 		done	
 	elif [ -x "$(command -v digest)" ]
 	then
-		find /home/ -type f -exec digest -a sha256 {} \; 2>/dev/null | while read line
+		find /home/ /root/ -type f -exec digest -a sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /home/ -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /home/ /root/ -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir
 		done	
@@ -845,31 +877,31 @@ elif [ $PLATFORM = "aix" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /home/ -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -type f -exec sha256sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /home/ -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -type f -exec sha1sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-homedir
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /home/ -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -type f -exec md5sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-homedir
 		done	
 	elif [ -x "$(command -v csum)" ]
 	then
-		find /home/ -type f -exec csum -h MD5 {} \; 2>/dev/null | while read line
+		find /home/ /root/ -type f -exec csum -h MD5 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-homedir
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /home/ -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /home/ /root/ -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir
 		done	
@@ -878,25 +910,25 @@ elif [ $PLATFORM = "hpux" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /home/ -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -type f -exec sha256sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /home/ -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -type f -exec sha1sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-homedir
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /home/ -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -type f -exec md5sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-homedir
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /home/ -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /home/ /root/ -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir
 		done	
@@ -936,7 +968,7 @@ then
 	fi	
 fi
 
-echo "  ${COL_ENTRY}>${RESET} Hashing all /bin /sbin /usr/ /opt/ /tmp/ dirs"
+echo "  ${COL_ENTRY}>${RESET} Hashing all /bin/* /sbin/* /usr/* /opt/* /tmp/* dirs"
 if [ $PLATFORM = "linux" ]
 then 
     if [ -x "$(command -v sha256sum)" ]
@@ -1088,31 +1120,31 @@ elif [ $PLATFORM = "mac" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ -type f -exec sha256sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ -type f -exec sha1sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-variousbins
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ -type f -exec md5sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-variousbins
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins
 		done	
 	elif [ -x "$(command -v shasum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ -type f -exec shasum -a 256 {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ -type f -exec shasum -a 256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins
 		done	
