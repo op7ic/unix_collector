@@ -521,10 +521,10 @@ find / \( -name gcc* -o -name javac -o -name perl* -o -name tclsh* -o -name pyth
 
 
 # ------------------------------------
-# PART 5: LOG FILES & HOME DIR
+# PART 5: LOG FILES, HOME DIR and PROC folders
 # ------------------------------------
 
-echo "${COL_SECTION}LOG & HOME FILE COLLECTION [50% ]:${RESET}"
+echo "${COL_SECTION}LOG, HOME and PROC FILE COLLECTION [50% ]:${RESET}"
 mkdir $OUTPUT_DIR/logs
 
 echo "  ${COL_ENTRY}>${RESET} Copying logs"
@@ -579,6 +579,26 @@ elif [ $PLATFORM = "hpux" ]
 then
     cp -R /home/ $OUTPUT_DIR/homedir/
 	cp -R /root/ $OUTPUT_DIR/homedir/
+fi
+
+mkdir $OUTPUT_DIR/procfiles
+echo "  ${COL_ENTRY}>${RESET} Copying proc dirs"
+
+if [ $PLATFORM = "solaris" ]
+then
+    cp -R /proc/ $OUTPUT_DIR/procfiles/
+elif [ $PLATFORM = "aix" ]
+then
+    cp -R /proc/ $OUTPUT_DIR/procfiles/
+elif [ $PLATFORM = "linux" ]
+then
+    cp -R /proc/ $OUTPUT_DIR/procfiles/
+elif [ $PLATFORM = "generic" ]
+then
+    cp -R /proc/ $OUTPUT_DIR/procfiles/
+elif [ $PLATFORM = "hpux" ]
+then
+    cp -R /home/ $OUTPUT_DIR/procfiles/
 fi
 
 
