@@ -1,8 +1,8 @@
 #!/bin/sh
 
 # --------------------------------------------------
-# Simple forensic collector for UNIX servers
-# Author: Jerzy 'Yuri' Kramarz 
+# Simple forensic collector for UNIX platforms
+# Author: Jerzy 'Yuri' Kramarz (op7ic) 
 # Inspired by: 
 # - Collective knowledge of Portcullis Security Team. Check out https://labs.portcullis.co.uk/
 # - https://github.com/pentestmonkey/unix-privesc-check/blob/master/upc.sh
