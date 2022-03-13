@@ -558,6 +558,7 @@ if [ $PLATFORM = "solaris" ]
 then
     cp -R /home/ $OUTPUT_DIR/homedir/
 	cp -R /root/ $OUTPUT_DIR/homedir/
+	cp -R /export/home/ $OUTPUT_DIR/homedir/home-export
 elif [ $PLATFORM = "aix" ]
 then
     cp -R /home/ $OUTPUT_DIR/homedir/
@@ -565,6 +566,7 @@ then
 elif [ $PLATFORM = "mac" ]
 then
 	cp -R /Users/ $OUTPUT_DIR/homedir/
+	cp -R /home/ $OUTPUT_DIR/homedir/
 elif [ $PLATFORM = "linux" ]
 then
     cp -R /home/ $OUTPUT_DIR/homedir/
