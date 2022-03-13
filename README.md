@@ -47,6 +47,15 @@ Execute ```unix_collector``` on MacOS while specifying platform:
 
 # Sample Output
 ```
+  _   _ _   _ _____  __   ____ ___  _     _     _____ ____ _____ ___  ____
+ | | | | \ | |_ _\ \/ /  / ___/ _ \| |   | |   | ____/ ___|_   _/ _ \|  _ \
+ | | | |  \| || | \  /  | |  | | | | |   | |   |  _|| |     | || | | | |_) |
+ | |_| | |\  || | /  \  | |__| |_| | |___| |___| |__| |___  | || |_| |  _ <
+  \___/|_| \_|___/_/\_\  \____\___/|_____|_____|_____\____| |_| \___/|_| \_"
+
+Simple forensic collector for UNIX Systems 1.1 by op7ic
+
+
 PLATFORM: GNU/Linux
 
 BASIC INFORMATION [0%  ]:
