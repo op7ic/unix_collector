@@ -129,7 +129,7 @@ echo " | | | |  \| || | \  /  | |  | | | | |   | |   |  _|| |     | || | | | |_)
 echo " | |_| | |\  || | /  \  | |__| |_| | |___| |___| |__| |___  | || |_| |  _ < "
 echo "  \___/|_| \_|___/_/\_\  \____\___/|_____|_____|_____\____| |_| \___/|_| \_\""
 echo ""
-echo "${COL_LOGO}Simple forensic collector for UNIX Systems $VERSION by op7ic"
+echo "${COL_ENTRY}Simple forensic collector for UNIX Systems $VERSION by op7ic"
 echo ""
 echo "${RESET}"
 
@@ -1323,7 +1323,7 @@ echo "  ${COL_ENTRY}>${RESET} Removing temporary directory"
 rm -rf $OUTPUT_DIR
 
 echo ""
-echo "Finished! Copy the audit file ${TAR_FILE} to a safe location"
+echo "Finished! Copy the audit file ${TAR_FILE} to a safe location. Happy hunting."
 echo "${RESET}"
 
 exit 0
