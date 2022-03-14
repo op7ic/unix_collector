@@ -1011,31 +1011,31 @@ elif [ $PLATFORM = "solaris" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /home/ /root/ -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ /export/home/ -type f -exec sha256sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /home/ /root/ -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ /export/home/ -type f -exec sha1sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /home/ /root/ -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ /export/home/ -type f -exec md5sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v digest)" ]
 	then
-		find /home/ /root/ -type f -exec digest -a sha256 {} \; 2>/dev/null | while read line
+		find /home/ /root/ /export/home/ -type f -exec digest -a sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /home/ /root/ -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /home/ /root/ /export/home/ -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
