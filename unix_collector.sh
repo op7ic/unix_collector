@@ -1404,7 +1404,7 @@ echo "  ${COL_ENTRY}>${RESET} Creating TAR file"
 tar cJf $TAR_FILE.xz $OUTPUT_DIR 1> /dev/null  2> /dev/null || tar cjf $TAR_FILE.bz2 $OUTPUT_DIR 1> /dev/null  2> /dev/null || tar zcf $TAR_FILE.gz $OUTPUT_DIR 1> /dev/null  2> /dev/null || tar cf $TAR_FILE $OUTPUT_DIR 1> /dev/null  2> /dev/null
 
 echo "  ${COL_ENTRY}>${RESET} Removing temporary directory"
-chflags -R noschg $OUTPUT_DIR 1> /dev/null
+chflags -R noschg $OUTPUT_DIR 1> /dev/null  2> /dev/null
 rm -rf $OUTPUT_DIR
 
 echo ""
