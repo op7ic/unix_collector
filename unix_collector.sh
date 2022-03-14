@@ -1362,6 +1362,7 @@ netstat -anr 1> $OUTPUT_DIR/network/route.txt 2> /dev/null
 
 echo "  ${COL_ENTRY}>${RESET} Netstat"
 netstat -an 1> $OUTPUT_DIR/network/netstat-an.txt 2> /dev/null
+ss -an 1> $OUTPUT_DIR/network/ss-an.txt 2> /dev/null
 
 if [ $PLATFORM != "solaris" ]
 then
