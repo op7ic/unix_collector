@@ -264,6 +264,11 @@ echo "  ${COL_ENTRY}>${RESET} Release"
 uname -r 1> $OUTPUT_DIR/general/release.txt 2> /dev/null
 cp /etc/*release /etc/debian_version $OUTPUT_DIR/general/ 2> /dev/null
 
+cp /etc/passwd $OUTPUT_DIR/general/ 2> /dev/null
+cp /etc/group $OUTPUT_DIR/general/ 2> /dev/null
+cp /etc/ssh/sshd_config $OUTPUT_DIR/general/ 2> /dev/null
+cp  /etc/ssh/ssh_config $OUTPUT_DIR/general/ 2> /dev/null
+
 if [ $PLATFORM != "aix" ]
 then
     echo "  ${COL_ENTRY}>${RESET} Processor"
