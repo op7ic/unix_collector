@@ -1344,6 +1344,7 @@ fi
 
 echo "  ${COL_ENTRY}>${RESET} IP addr"
 ip addr 1> $OUTPUT_DIR/network/ipaddr.txt 2> /dev/null
+ip netconf 1> $OUTPUT_DIR/network/ipnetconf.txt 2> /dev/null
 
 echo "  ${COL_ENTRY}>${RESET} IP forwarding"
 if [ $PLATFORM = "aix" ]
@@ -1359,6 +1360,7 @@ fi
 
 echo "  ${COL_ENTRY}>${RESET} Routing"
 netstat -anr 1> $OUTPUT_DIR/network/route.txt 2> /dev/null
+ip route 1> $OUTPUT_DIR/network/ip_route.txt 2> /dev/null
 
 echo "  ${COL_ENTRY}>${RESET} Netstat"
 netstat -an 1> $OUTPUT_DIR/network/netstat-an.txt 2> /dev/null
@@ -1371,6 +1373,7 @@ fi
 
 echo "  ${COL_ENTRY}>${RESET} ARP cache"
 arp -a 1> $OUTPUT_DIR/network/arp.txt 2> /dev/null
+ip neighbour 1> $OUTPUT_DIR/network/ip_neighbour.txt 2> /dev/null
 
 if [ -f /etc/ethers ]
 then
