@@ -677,19 +677,39 @@ echo "  ${COL_ENTRY}>${RESET} Copying proc dirs"
 
 if [ $PLATFORM = "solaris" ]
 then
-    cp -R /proc/ $OUTPUT_DIR/procfiles/ 2> /dev/null
+    find /proc/ -type f \( -name  "cmdline" -o -name "fib_triestat" -o -name "status" -o -name "connector" -o -name "protocols" -o -name "route" -o -name "fib_trie" -o -name "snmp*"\) 2>/dev/null | while read line
+	do
+		mkdir -p "$OUTPUT_DIR/procfiles`dirname $line`" 2> /dev/null
+		cp -p "$line" "$OUTPUT_DIR/procfiles`dirname $line`" 2> /dev/null
+	done
 elif [ $PLATFORM = "aix" ]
 then
-    cp -R /proc/ $OUTPUT_DIR/procfiles/ 2> /dev/null
+    find /proc/ -type f \( -name  "cmdline" -o -name "fib_triestat" -o -name "status" -o -name "connector" -o -name "protocols" -o -name "route" -o -name "fib_trie" -o -name "snmp*"\) 2>/dev/null | while read line
+	do
+		mkdir -p "$OUTPUT_DIR/procfiles`dirname $line`" 2> /dev/null
+		cp -p "$line" "$OUTPUT_DIR/procfiles`dirname $line`" 2> /dev/null
+	done
 elif [ $PLATFORM = "linux" ]
 then
-    cp -R /proc/ $OUTPUT_DIR/procfiles/ 2> /dev/null
+    find /proc/ -type f \( -name  "cmdline" -o -name "fib_triestat" -o -name "status" -o -name "connector" -o -name "protocols" -o -name "route" -o -name "fib_trie" -o -name "snmp*"\) 2>/dev/null | while read line
+	do
+		mkdir -p "$OUTPUT_DIR/procfiles`dirname $line`" 2> /dev/null
+		cp -p "$line" "$OUTPUT_DIR/procfiles`dirname $line`" 2> /dev/null
+	done
 elif [ $PLATFORM = "generic" ]
 then
-    cp -R /proc/ $OUTPUT_DIR/procfiles/ 2> /dev/null
+    find /proc/ -type f \( -name  "cmdline" -o -name "fib_triestat" -o -name "status" -o -name "connector" -o -name "protocols" -o -name "route" -o -name "fib_trie" -o -name "snmp*"\) 2>/dev/null | while read line
+	do
+		mkdir -p "$OUTPUT_DIR/procfiles`dirname $line`" 2> /dev/null
+		cp -p "$line" "$OUTPUT_DIR/procfiles`dirname $line`" 2> /dev/null
+	done
 elif [ $PLATFORM = "hpux" ]
 then
-    cp -R /home/ $OUTPUT_DIR/procfiles/ 2> /dev/null
+    find /proc/ -type f \( -name  "cmdline" -o -name "fib_triestat" -o -name "status" -o -name "connector" -o -name "protocols" -o -name "route" -o -name "fib_trie" -o -name "snmp*"\) 2>/dev/null | while read line
+	do
+		mkdir -p "$OUTPUT_DIR/procfiles`dirname $line`" 2> /dev/null
+		cp -p "$line" "$OUTPUT_DIR/procfiles`dirname $line`" 2> /dev/null
+	done
 fi
 
 
