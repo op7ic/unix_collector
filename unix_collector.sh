@@ -455,7 +455,11 @@ then
 elif [ $PLATFORM = "mac" ]
 then
 	kmutil showloaded 1> $OUTPUT_DIR/general/kernel-modules.txt 2> /dev/null
+elif [ $PLATFORM = "aix" ]
+then
+	genkex 1> $OUTPUT_DIR/general/kernel-modules.txt 2> /dev/null
 fi
+
 
 echo "  ${COL_ENTRY}>${RESET} At scheduler"
 if [ $PLATFORM != "solaris" ]
