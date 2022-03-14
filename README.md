@@ -88,7 +88,7 @@ LOG FILE COLLECTION [50% ]:
   > Copying logs
 SUID/SGID SEARCH [60% ]:
   > Finding all SUID/SGID binaries
- HASH BINARIES [65% ]:
+HASH BINARIES [65% ]:
   > Hashing all SUID/SGID binaries
   > Hashing all HOME dirs
   > Hashing all /bin /sbin /usr/ /opt/ /tmp/ dirs
