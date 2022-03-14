@@ -717,8 +717,10 @@ then
 	echo "${COL_SECTION} Copying plist files"
 	mkdir $OUTPUT_DIR/plist
 	find / -type f -iname "*.plist" 2>/dev/null | while read line
-	mkdir -p "$OUTPUT_DIR/plist`dirname $line`" 
-	cp -p "$line" "$OUTPUT_DIR/plist`dirname $line`"
+	do
+		mkdir -p "$OUTPUT_DIR/plist`dirname $line`" 
+		cp -p "$line" "$OUTPUT_DIR/plist`dirname $line`"
+	done
 fi
 
 # ------------------------------------
