@@ -627,10 +627,14 @@ then
 	cp -R /var/nslog/ $OUTPUT_DIR/logs/ 2> /dev/null
 elif [ $PLATFORM = "mac" ]
 then
-    cp -R /private/var/log $OUTPUT_DIR/logs/private_var_log 2> /dev/null
-	cp -R /private/var/logs $OUTPUT_DIR/logs/private_var_logs 2> /dev/null
-	cp -R /var/log $OUTPUT_DIR/logs/var_log 2> /dev/null
-	cp -R /Library/Logs $OUTPUT_DIR/logs/library_logs 2> /dev/null
+	mkdir $OUTPUT_DIR/logs/private_var_log
+    cp -R /private/var/log $OUTPUT_DIR/logs/private_var_log/ 2> /dev/null
+	mkdir $OUTPUT_DIR/logs/private_var_logs
+	cp -R /private/var/logs $OUTPUT_DIR/logs/private_var_logs/ 2> /dev/null
+	mkdir $OUTPUT_DIR/logs/var_log
+	cp -R /var/log $OUTPUT_DIR/logs/var_log/ 2> /dev/null
+	mkdir $OUTPUT_DIR/logs/library_logs
+	cp -R /Library/Logs $OUTPUT_DIR/logs/library_logs/ 2> /dev/null
 elif [ $PLATFORM = "linux" ]
 then
     cp -R /var/log/ $OUTPUT_DIR/logs/ 2> /dev/null
@@ -655,7 +659,8 @@ if [ $PLATFORM = "solaris" ]
 then
     cp -R /home/ $OUTPUT_DIR/homedir/ 2> /dev/null
 	cp -R /root/ $OUTPUT_DIR/homedir/ 2> /dev/null
-	cp -R /export/home/ $OUTPUT_DIR/homedir/home-export 2> /dev/null
+	mkdir $OUTPUT_DIR/homedir/home-export
+	cp -R /export/home/ $OUTPUT_DIR/homedir/home-export/ 2> /dev/null
 elif [ $PLATFORM = "aix" ]
 then
     cp -R /home/ $OUTPUT_DIR/homedir/ 2> /dev/null
@@ -680,7 +685,7 @@ fi
 
 mkdir $OUTPUT_DIR/procfiles 2> /dev/null
 echo "  ${COL_ENTRY}>${RESET} Copying proc dirs"
-
+# No /proc on mac and hpux
 if [ $PLATFORM = "solaris" ]
 then
     find /proc/ -type f \( -name "cmdline" -o -name "psinfo" -o -name "fib_triestat" -o -name "status" -o -name "connector" -o -name "protocols" -o -name "route" -o -name "fib_trie" -o -name "snmp*" \) 2>/dev/null | while read line
