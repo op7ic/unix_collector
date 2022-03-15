@@ -129,7 +129,7 @@ echo " | | | |  \| || | \  /  | |  | | | | |   | |   |  _|| |     | || | | | |_)
 echo " | |_| | |\  || | /  \  | |__| |_| | |___| |___| |__| |___  | || |_| |  _ < "
 echo "  \___/|_| \_|___/_/\_\  \____\___/|_____|_____|_____\____| |_| \___/|_| \_\""
 echo ""
-echo "${COL_ENTRY}A live forensic collection script for various artefacts from UNIX-like systems $VERSION by op7ic"
+echo "${COL_ENTRY}A live forensic collection script for UNIX-like systems. Version: $VERSION by op7ic"
 echo ""
 echo "${RESET}"
 
