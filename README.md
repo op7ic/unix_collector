@@ -11,6 +11,9 @@ A shell script for basic forensic collection of various artefacts from UNIX syst
 * IBM AIX
 * HPUX
 * MacOS
+* Debian
+* Ubuntu
+* CentOS
 * Probably others as well.
 
 # Script Activities
