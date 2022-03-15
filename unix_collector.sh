@@ -681,35 +681,28 @@ echo "  ${COL_ENTRY}>${RESET} Copying proc dirs"
 
 if [ $PLATFORM = "solaris" ]
 then
-    find /proc/ -type f \( -name  "cmdline" -o -name "psinfo" -o -name "fib_triestat" -o -name "status" -o -name "connector" -o -name "protocols" -o -name "route" -o -name "fib_trie" -o -name "snmp*" \) 2>/dev/null | while read line
+    find /proc/ -type f \( -name "cmdline" -o -name "psinfo" -o -name "fib_triestat" -o -name "status" -o -name "connector" -o -name "protocols" -o -name "route" -o -name "fib_trie" -o -name "snmp*" \) 2>/dev/null | while read line
 	do
 		mkdir -p "$OUTPUT_DIR/procfiles`dirname $line`" 2> /dev/null
 		cp -p "$line" "$OUTPUT_DIR/procfiles`dirname $line`" 2> /dev/null
 	done
 elif [ $PLATFORM = "aix" ]
 then
-    find /proc/ -type f \( -name  "cred" -o -name "psinfo" -o -name "mmap" -o -name "cwd" -o -name "fd" -o -name "sysent" \) 2>/dev/null | while read line
+    find /proc/ -type f \( -name "cred" -o -name "psinfo" -o -name "mmap" -o -name "cwd" -o -name "fd" -o -name "sysent" \) 2>/dev/null | while read line
 	do
 		mkdir -p "$OUTPUT_DIR/procfiles`dirname $line`" 2> /dev/null
 		cp -p "$line" "$OUTPUT_DIR/procfiles`dirname $line`" 2> /dev/null
 	done
 elif [ $PLATFORM = "linux" ]
 then
-    find /proc/ -type f \( -name  "cmdline" -o -name "fib_triestat" -o -name "status" -o -name "connector" -o -name "protocols" -o -name "route" -o -name "fib_trie" -o -name "snmp*" \) 2>/dev/null | while read line
+    find /proc/ -type f \( -name "cmdline" -o -name "fib_triestat" -o -name "status" -o -name "connector" -o -name "protocols" -o -name "route" -o -name "fib_trie" -o -name "snmp*" \) 2>/dev/null | while read line
 	do
 		mkdir -p "$OUTPUT_DIR/procfiles`dirname $line`" 2> /dev/null
 		cp -p "$line" "$OUTPUT_DIR/procfiles`dirname $line`" 2> /dev/null
 	done
 elif [ $PLATFORM = "generic" ]
 then
-    find /proc/ -type f \( -name  "cmdline" -o -name "fib_triestat" -o -name "status" -o -name "connector" -o -name "protocols" -o -name "route" -o -name "fib_trie" -o -name "snmp*" \) 2>/dev/null | while read line
-	do
-		mkdir -p "$OUTPUT_DIR/procfiles`dirname $line`" 2> /dev/null
-		cp -p "$line" "$OUTPUT_DIR/procfiles`dirname $line`" 2> /dev/null
-	done
-elif [ $PLATFORM = "hpux" ]
-then
-    find /proc/ -type f \( -name  "cmdline" -o -name "fib_triestat" -o -name "status" -o -name "connector" -o -name "protocols" -o -name "route" -o -name "fib_trie" -o -name "snmp*" \) 2>/dev/null | while read line
+    find /proc/ -type f \( -name "cmdline" -o -name "fib_triestat" -o -name "status" -o -name "connector" -o -name "protocols" -o -name "route" -o -name "fib_trie" -o -name "snmp*" \) 2>/dev/null | while read line
 	do
 		mkdir -p "$OUTPUT_DIR/procfiles`dirname $line`" 2> /dev/null
 		cp -p "$line" "$OUTPUT_DIR/procfiles`dirname $line`" 2> /dev/null
