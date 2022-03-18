@@ -652,35 +652,103 @@ then
 	cp -R /var/nslog/ $OUTPUT_DIR/logs/ 2> /dev/null
 fi
 
-mkdir $OUTPUT_DIR/homedir
+# mkdir $OUTPUT_DIR/homedir
 echo "  ${COL_ENTRY}>${RESET} Copying home dirs"
 
 if [ $PLATFORM = "solaris" ]
 then
-    cp -R /home/ $OUTPUT_DIR/homedir/ 2> /dev/null
-	cp -R /root/ $OUTPUT_DIR/homedir/ 2> /dev/null
-	mkdir $OUTPUT_DIR/homedir/home-export
-	cp -R /export/home/ $OUTPUT_DIR/homedir/home-export/ 2> /dev/null
+	if [ -x "$(command -v rsync)" ]
+	then
+		mkdir $OUTPUT_DIR/homedir/home 1> /dev/null 2> /dev/null
+		mkdir $OUTPUT_DIR/homedir/root 1> /dev/null 2> /dev/null
+		mkdir $OUTPUT_DIR/homedir/home-export 1> /dev/null 2> /dev/null
+		rsync -av --exclude=$OUTPUT_DIR /home/ $OUTPUT_DIR/homedir/home/ 1> /dev/null 2> /dev/null
+		rsync -av --exclude=$OUTPUT_DIR /root/ $OUTPUT_DIR/homedir/root/ 1> /dev/null 2> /dev/null
+		rsync -av --exclude=$OUTPUT_DIR /export/home/ $OUTPUT_DIR/homedir/home-export/ 1> /dev/null 2> /dev/null
+	elif [ -x "$(command -v tar)" ]
+	then
+		mkdir $OUTPUT_DIR/homedir/home 1> /dev/null 2> /dev/null
+		mkdir $OUTPUT_DIR/homedir/root 1> /dev/null 2> /dev/null
+		mkdir $OUTPUT_DIR/homedir/home-export 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home/home.tar /home/ 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/root/root.tar /root/ 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home-export/home-export.tar /export/home/ 1> /dev/null 2> /dev/null
+	fi
 elif [ $PLATFORM = "aix" ]
 then
-    cp -R /home/ $OUTPUT_DIR/homedir/ 2> /dev/null
-	cp -R /root/ $OUTPUT_DIR/homedir/ 2> /dev/null
+	if [ -x "$(command -v rsync)" ]
+	then
+		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
+		mkdir $OUTPUT_DIR/homedir/root 2> /dev/null
+		rsync -av --exclude=$OUTPUT_DIR /home/ $OUTPUT_DIR/homedir/home/ 1> /dev/null 2> /dev/null
+		rsync -av --exclude=$OUTPUT_DIR /root/ $OUTPUT_DIR/homedir/root/ 1> /dev/null 2> /dev/null
+	elif [ -x "$(command -v tar)" ]
+	then
+		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
+		mkdir $OUTPUT_DIR/homedir/root 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home/home.tar /home/ 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/root/root.tar /root/ 1> /dev/null 2> /dev/null
+	fi 
 elif [ $PLATFORM = "mac" ]
 then
-	cp -R /Users/ $OUTPUT_DIR/homedir/ 2> /dev/null
-	cp -R /home/ $OUTPUT_DIR/homedir/ 2> /dev/null
+	if [ -x "$(command -v rsync)" ]
+	then
+		mkdir $OUTPUT_DIR/homedir/Users 2> /dev/null
+		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
+		rsync -av --exclude=$OUTPUT_DIR /Users/ $OUTPUT_DIR/homedir/Users/ 1> /dev/null 2> /dev/null
+		rsync -av --exclude=$OUTPUT_DIR /home/ $OUTPUT_DIR/homedir/home/ 1> /dev/null 2> /dev/null
+	elif [ -x "$(command -v tar)" ]
+	then
+		mkdir $OUTPUT_DIR/homedir/Users 2> /dev/null
+		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home/Users.tar /Users/ 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home/home.tar /home/ 1> /dev/null 2> /dev/null
+	fi 	
 elif [ $PLATFORM = "linux" ]
 then
-    cp -R /home/ $OUTPUT_DIR/homedir/ 2> /dev/null
-	cp -R /root/ $OUTPUT_DIR/homedir/ 2> /dev/null
+	if [ -x "$(command -v rsync)" ]
+	then
+		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
+		mkdir $OUTPUT_DIR/homedir/root 2> /dev/null
+		rsync -av --exclude=$OUTPUT_DIR /home/ $OUTPUT_DIR/homedir/home/ 1> /dev/null 2> /dev/null
+		rsync -av --exclude=$OUTPUT_DIR /root/ $OUTPUT_DIR/homedir/root/ 1> /dev/null 2> /dev/null
+	elif [ -x "$(command -v tar)" ]
+	then
+		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
+		mkdir $OUTPUT_DIR/homedir/root 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home/home.tar /home/ 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/root/root.tar /root/ 1> /dev/null 2> /dev/null
+	fi 
 elif [ $PLATFORM = "generic" ]
 then
-    cp -R /home/ $OUTPUT_DIR/homedir/ 2> /dev/null
-	cp -R /root/ $OUTPUT_DIR/homedir/ 2> /dev/null
+	if [ -x "$(command -v rsync)" ]
+	then
+		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
+		mkdir $OUTPUT_DIR/homedir/root 2> /dev/null
+		rsync -av --exclude=$OUTPUT_DIR /home/ $OUTPUT_DIR/homedir/home/ 1> /dev/null 2> /dev/null
+		rsync -av --exclude=$OUTPUT_DIR /root/ $OUTPUT_DIR/homedir/root/ 1> /dev/null 2> /dev/null
+	elif [ -x "$(command -v tar)" ]
+	then
+		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
+		mkdir $OUTPUT_DIR/homedir/root 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home/home.tar /home/ 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/root/root.tar /root/ 1> /dev/null 2> /dev/null
+	fi 
 elif [ $PLATFORM = "hpux" ]
 then
-    cp -R /home/ $OUTPUT_DIR/homedir/ 2> /dev/null
-	cp -R /root/ $OUTPUT_DIR/homedir/ 2> /dev/null
+	if [ -x "$(command -v rsync)" ]
+	then
+		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
+		mkdir $OUTPUT_DIR/homedir/root 2> /dev/null
+		rsync -av --exclude=$OUTPUT_DIR /home/ $OUTPUT_DIR/homedir/home/ 1> /dev/null 2> /dev/null
+		rsync -av --exclude=$OUTPUT_DIR /root/ $OUTPUT_DIR/homedir/root/ 1> /dev/null 2> /dev/null
+	elif [ -x "$(command -v tar)" ]
+	then
+		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
+		mkdir $OUTPUT_DIR/homedir/root 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home/home.tar /home/ 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/root/root.tar /root/ 1> /dev/null 2> /dev/null
+	fi 
 fi
 
 mkdir $OUTPUT_DIR/procfiles 2> /dev/null
@@ -722,23 +790,72 @@ echo "  ${COL_ENTRY}>${RESET} Copying /tmp/ dirs"
 
 if [ $PLATFORM = "solaris" ]
 then
-    cp -R /tmp/ $OUTPUT_DIR/tmpfiles/ 2> /dev/null
+	if [ -x "$(command -v rsync)" ]
+	then
+		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
+		rsync -av --exclude=$OUTPUT_DIR /tmp/ $OUTPUT_DIR/tmpfiles/tmp 1> /dev/null 2> /dev/null
+	elif [ -x "$(command -v tar)" ]
+	then
+		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/tmp.tar /tmp/ 1> /dev/null 2> /dev/null
+	fi 
 elif [ $PLATFORM = "aix" ]
 then
-    cp -R /tmp/ $OUTPUT_DIR/tmpfiles/ 2> /dev/null
+	if [ -x "$(command -v rsync)" ]
+	then
+		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
+		rsync -av --exclude=$OUTPUT_DIR /tmp/ $OUTPUT_DIR/tmpfiles/tmp 1> /dev/null 2> /dev/null
+	elif [ -x "$(command -v tar)" ]
+	then
+		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/tmp.tar /tmp/ 1> /dev/null 2> /dev/null
+	fi 
 elif [ $PLATFORM = "linux" ]
 then
-    cp -R /tmp/ $OUTPUT_DIR/tmpfiles/ 2> /dev/null
+	if [ -x "$(command -v rsync)" ]
+	then
+		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
+		rsync -av --exclude=$OUTPUT_DIR /tmp/ $OUTPUT_DIR/tmpfiles/tmp 1> /dev/null 2> /dev/null
+	elif [ -x "$(command -v tar)" ]
+	then
+		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/tmp.tar /tmp/ 1> /dev/null 2> /dev/null
+	fi 
 elif [ $PLATFORM = "mac" ]
 then
-	cp -R /tmp/ $OUTPUT_DIR/tmpfiles/ 2> /dev/null
-	cp -R /private/tmp/ $OUTPUT_DIR/tmpfiles/private_tmp 2> /dev/null
+	if [ -x "$(command -v rsync)" ]
+	then
+		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
+		mkdir $OUTPUT_DIR/tmpfiles/private_tmp 2> /dev/null
+		rsync -av --exclude=$OUTPUT_DIR /tmp/ $OUTPUT_DIR/tmpfiles/tmp 1> /dev/null 2> /dev/null
+		rsync -av --exclude=$OUTPUT_DIR /private/tmp/ $OUTPUT_DIR/tmpfiles/private_tmp 1> /dev/null 2> /dev/null
+	elif [ -x "$(command -v tar)" ]
+	then
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/tmp.tar /tmp/ 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/private_tmp.tar /private/tmp/ 1> /dev/null 2> /dev/null
+	fi 
 elif [ $PLATFORM = "generic" ]
 then
-    cp -R /tmp/ $OUTPUT_DIR/tmpfiles/ 2> /dev/null
+	if [ -x "$(command -v rsync)" ]
+	then
+		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
+		rsync -av --exclude=$OUTPUT_DIR /tmp/ $OUTPUT_DIR/tmpfiles/tmp 1> /dev/null 2> /dev/null
+	elif [ -x "$(command -v tar)" ]
+	then
+		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/tmp.tar /tmp/ 1> /dev/null 2> /dev/null
+	fi 
 elif [ $PLATFORM = "hpux" ]
 then
-    cp -R /tmp/ $OUTPUT_DIR/tmpfiles/ 2> /dev/null
+	if [ -x "$(command -v rsync)" ]
+	then
+		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
+		rsync -av --exclude=$OUTPUT_DIR /tmp/ $OUTPUT_DIR/tmpfiles/tmp 1> /dev/null 2> /dev/null
+	elif [ -x "$(command -v tar)" ]
+	then
+		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/tmp.tar /tmp/ 1> /dev/null 2> /dev/null
+	fi 
 fi
 
 
