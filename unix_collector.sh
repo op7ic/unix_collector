@@ -625,6 +625,8 @@ then
     cp -R /var/adm/ $OUTPUT_DIR/logs/ 2> /dev/null
 	cp -R /var/log/ $OUTPUT_DIR/logs/ 2> /dev/null
 	cp -R /var/nslog/ $OUTPUT_DIR/logs/ 2> /dev/null
+	fcstkrpt -a 1> $OUTPUT_DIR/general/fast-fail-log.txt 2> /dev/null
+	errpt -a 1> $OUTPUT_DIR/general/crash-log.txt 2> /dev/null
 elif [ $PLATFORM = "mac" ]
 then
 	mkdir $OUTPUT_DIR/logs/private_var_log
