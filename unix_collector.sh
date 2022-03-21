@@ -657,9 +657,9 @@ then
 	cp -R /var/nslog/ $OUTPUT_DIR/logs/ 2> /dev/null
 fi
 
-# mkdir $OUTPUT_DIR/homedir
-echo "  ${COL_ENTRY}>${RESET} Copying home dirs"
 
+echo "  ${COL_ENTRY}>${RESET} Copying home dirs"
+mkdir $OUTPUT_DIR/homedir
 if [ $PLATFORM = "solaris" ]
 then
 	if [ -x "$(command -v rsync)" ]
