@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # --------------------------------------------------
-# Simple forensic collector for UNIX platforms
+# A live forensic collection script for UNIX-like systems.
 # Author: Jerzy 'Yuri' Kramarz (op7ic) 
 # Inspired by: 
 # - Collective knowledge of Portcullis Security Team. Check out https://labs.portcullis.co.uk/
