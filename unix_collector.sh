@@ -1577,7 +1577,7 @@ then
 	fi	
 elif [ $PLATFORM = "android" ]
 then
-	echo "  ${COL_ENTRY}>${RESET} Hashing all /bin/ /storage/ /system/ /sys/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ dirs"
+	echo "  ${COL_ENTRY}>${RESET} Hashing all /bin/ /storage/ /system/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ dirs"
     if [ -x "$(command -v sha256sum)" ]
 	then
 		find /bin/ /storage/ /system/ /sys/module/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -type f -exec sha256sum {} \; 2>/dev/null | while read line
