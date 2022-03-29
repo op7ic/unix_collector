@@ -59,7 +59,7 @@ Execute ```unix_collector``` on MacOS while specifying platform:
  | |_| | |\  || | /  \  | |__| |_| | |___| |___| |__| |___  | || |_| |  _ <
   \___/|_| \_|___/_/\_\  \____\___/|_____|_____|_____\____| |_| \___/|_| \_"
 
-A live forensic collection script for various artefacts from UNIX-like systems 1.1 by op7ic
+A live forensic collection script for various artefacts from UNIX-like systems 1.3 by op7ic
 
 
 PLATFORM: GNU/Linux
