@@ -957,7 +957,6 @@ then
 		mkdir -p "$OUTPUT_DIR/apk`dirname $line`" 2> /dev/null
 		mkdir -p "$OUTPUT_DIR/apk-sign`dirname $line`" 2> /dev/null
 		cp -p "$line" "$OUTPUT_DIR/apk`dirname $line`" 2> /dev/null
-		pm dump `dirname $line` 1> "$OUTPUT_DIR/apk-sign`dirname $line`/pm_dump" 2> /dev/null
 	done
 fi
 
