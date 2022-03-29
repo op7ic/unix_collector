@@ -1580,31 +1580,31 @@ then
 	echo "  ${COL_ENTRY}>${RESET} Hashing all /bin/ /storage/ /system/ /sys/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ dirs"
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /bin/ /storage/ /system/ /sys/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /bin/ /storage/ /system/ /sys/module/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -type f -exec sha256sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /bin/ /storage/ /system/ /sys/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /bin/ /storage/ /system/ /sys/module/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -type f -exec sha1sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /bin/ /storage/ /system/ /sys/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /bin/ /storage/ /system/ /sys/module/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -type f -exec md5sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /bin/ /storage/ /system/ /sys/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /bin/ /storage/ /system/ /sys/module/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v shasum)" ]
 	then
-		find /bin/ /storage/ /system/ /sys/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -type f -exec shasum -a 256 {} \; 2>/dev/null | while read line
+		find /bin/ /storage/ /system/ /sys/module/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -type f -exec shasum -a 256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
