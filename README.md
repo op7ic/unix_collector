@@ -12,6 +12,8 @@ A shell script for basic forensic collection of various artefacts from UNIX syst
 * Debian
 * Ubuntu
 * CentOS
+* Red Hat
+* Android
 * Probably others as well.
 
 # Script Activities
@@ -20,6 +22,7 @@ A shell script for basic forensic collection of various artefacts from UNIX syst
 * Enumerate network information and save details in output directory.
 * Enumerate patch and installed software information and save details in output directory.
 * Enumerate process list and other process information and save details in output directory.
+* Enumerate application lists, plist/apk for iOS/Android save them in output directory. 
 * Hash files in various folders such as /home/ /opt/ /usr/ and save details in output directory.
 * Hash files which are marked as SGID or SUID and save details in output directory.
 * Copy various files such as cron job, plist or other files into output directory.

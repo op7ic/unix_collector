@@ -17,13 +17,18 @@
 #     > Linux
 #     > IBM AIX
 #     > HPUX
-#     > Mac
+#     > MacOS
+#     > Debian
+#     > Ubuntu
+#     > CentOS
+#     > Red Hat
+#     > Android
 #     > Probably others as well.
 # 
 # Commandline Options
 # ~~~~~~~~~~~~~~~~~~~
 #
-#    --platform=<solaris | hpup | mac | aix | linux | generic>
+#    --platform=<solaris | hpup | mac | aix | linux | android | generic>
 #    Specify a platform, instead of using the platform auto-
 #    detection code.
 #
@@ -34,7 +39,7 @@
 # ---------------------------
 # Global Variables
 # ---------------------------
-VERSION="1.1"
+VERSION="1.2"
 HOSTNAME=`hostname`
 PLATFORM="none"
 SHORT_DATE=`date +%B" "%Y`
@@ -70,6 +75,9 @@ do
         "--platform=hpux")
             PLATFORM="hpux"
             ;;
+        "--platform=android")
+            PLATFORM="android"
+            ;;
         "--quiet")
             QUIET="YES"
             ;;
@@ -94,6 +102,9 @@ then
 	elif [ -x /usr/bin/osacompile ]
 	then
 	    PLATFORM="mac"
+	elif [ -x /system/bin/app_process -o -x /system/bin/getprop ]
+	then
+	    PLATFORM="android"
     elif [ -x /usr/bin/rpm -o -x /bin/rpm -o -x /usr/bin/dpkg -o -x /usr/bin/emerge ]
     then
         PLATFORM="linux"
@@ -123,11 +134,11 @@ fi
 # Banner
 # ---------------------------
 echo "${COL_ENTRY}"
-echo "  _   _ _   _ _____  __   ____ ___  _     _     _____ ____ _____ ___  ____  "
-echo " | | | | \ | |_ _\ \/ /  / ___/ _ \| |   | |   | ____/ ___|_   _/ _ \|  _ \ "
-echo " | | | |  \| || | \  /  | |  | | | | |   | |   |  _|| |     | || | | | |_) |"
-echo " | |_| | |\  || | /  \  | |__| |_| | |___| |___| |__| |___  | || |_| |  _ < "
-echo "  \___/|_| \_|___/_/\_\  \____\___/|_____|_____|_____\____| |_| \___/|_| \_\""
+echo "  _   _ _   _ _____  __   ____ ___  _     _     _____ ____ _____ ___  ____   "
+echo " | | | | \ | |_ _\ \/ /  / ___/ _ \| |   | |   | ____/ ___|_   _/ _ \|  _ \  "
+echo " | | | |  \| || | \  /  | |  | | | | |   | |   |  _|| |     | || | | | |_) | "
+echo " | |_| | |\  || | /  \  | |__| |_| | |___| |___| |__| |___  | || |_| |  _ <  "
+echo "  \___/|_| \_|___/_/\_\  \____\___/|_____|_____|_____\____| |_| \___/|_| \_\ "
 echo ""
 echo "${COL_ENTRY}A live forensic collection script for UNIX-like systems. Version: $VERSION by op7ic"
 echo ""
@@ -148,6 +159,9 @@ case $PLATFORM in
         ;;
     "mac")
         echo "${COL_SECTION}PLATFORM:${RESET} MacOS (Darwin)"
+        ;;
+    "android")
+        echo "${COL_SECTION}PLATFORM:${RESET} Android"
         ;;
     "hpux")
         echo "${COL_SECTION}PLATFORM:${RESET} HPUX"
@@ -223,8 +237,6 @@ fi
 
 # Create output directory
 mkdir $OUTPUT_DIR
-
-
 # ------------------
 # PART 2: THE BASICS
 # ------------------
@@ -262,15 +274,29 @@ sshd -T 1> $OUTPUT_DIR/general/sshd-t.txt 2> /dev/null
 
 echo "  ${COL_ENTRY}>${RESET} Release"
 uname -r 1> $OUTPUT_DIR/general/release.txt 2> /dev/null
-cp /etc/*release /etc/debian_version $OUTPUT_DIR/general/ 2> /dev/null
+cp /etc/*release $OUTPUT_DIR/general/ 2> /dev/null
+cp /etc/debian_version $OUTPUT_DIR/general/ 2> /dev/null
 
 cp /etc/passwd $OUTPUT_DIR/general/ 2> /dev/null
 cp /etc/group $OUTPUT_DIR/general/ 2> /dev/null
 cp /etc/ssh/sshd_config $OUTPUT_DIR/general/ 2> /dev/null
-cp  /etc/ssh/ssh_config $OUTPUT_DIR/general/ 2> /dev/null
+cp /etc/ssh/ssh_config $OUTPUT_DIR/general/ 2> /dev/null
 
+	
 echo "  ${COL_ENTRY}>${RESET} Kerberos ticket list"
 klist 1> $OUTPUT_DIR/general/kerberos-ticket-list.txt 2> /dev/null
+
+if [ $PLATFORM = "android" ]
+then
+    echo "  ${COL_ENTRY}>${RESET} Android Features"
+    pm list features 1> $OUTPUT_DIR/general/pm_list_features.txt 2> /dev/null
+	echo "  ${COL_ENTRY}>${RESET} Android Users"
+	pm list users 1> $OUTPUT_DIR/general/android_users.txt 2> /dev/null
+	echo "  ${COL_ENTRY}>${RESET} Android Properties"
+	getprop 1> $OUTPUT_DIR/general/android_getprop.txt 2> /dev/null
+	getprop -T 1> $OUTPUT_DIR/general/android_getprop-T.txt 2> /dev/null
+	getprop -Z 1> $OUTPUT_DIR/general/android_getprop-Z.txt 2> /dev/null
+fi
 
 if [ $PLATFORM != "aix" ]
 then
@@ -293,6 +319,12 @@ ps -efl 1> $OUTPUT_DIR/general/ps.txt 2> /dev/null
 ps -auxww 1> $OUTPUT_DIR/general/ps-auxww 2> /dev/null
 ps -deaf 1> $OUTPUT_DIR/general/ps-deaf 2> /dev/null
 ps -aux 1> $OUTPUT_DIR/general/ps-aux 2> /dev/null
+
+if [ $PLATFORM = "android" ]
+then
+	ps -A 1> $OUTPUT_DIR/general/android_ps-all 2> /dev/null
+	ps -A -f -l 1> $OUTPUT_DIR/general/android_ps-all-F-l 2> /dev/null
+fi
 
 echo "  ${COL_ENTRY}>${RESET} Cron and other scheduler files"
 if [ -f "/etc/crontab" ] && [ -r "/etc/crontab" ]; then
@@ -321,6 +353,10 @@ then
 	cp -R /var/spool/cron/ $OUTPUT_DIR/general/crontabs/var_spool_cron 2> /dev/null
 fi
 
+if [ -d /data/crontab/ ]
+then
+	cp -R /data/crontab/ $OUTPUT_DIR/general/crontabs/ 2> /dev/null
+fi
 
 if [ $PLATFORM = "mac" ]
 then
@@ -347,6 +383,11 @@ then
 	cp -R /etc/crontab $OUTPUT_DIR/general/crontabs/etc_crontab 2> /dev/null
 	cp -R /Library/LaunchDaemons/ $OUTPUT_DIR/general/crontabs/LaunchDaemons 2> /dev/null
 	cp -R /System/Library/LaunchDaemons/ $OUTPUT_DIR/general/crontabs/System_LaunchDaemons 2> /dev/null
+fi
+
+if [ $PLATFORM = "android" ]
+then
+	crontab -l 1> $OUTPUT_DIR/general/android_crontab-l 2> /dev/null
 fi
 
 mkdir $OUTPUT_DIR/general/systemd/ 2> /dev/null 
@@ -455,14 +496,20 @@ then
 elif [ $PLATFORM = "linux" ]
 then
     lsmod 1> $OUTPUT_DIR/general/kernel-modules.txt 2> /dev/null
+elif [ $PLATFORM = "android" ]
+then
+    lsmod 1> $OUTPUT_DIR/general/kernel-modules.txt 2> /dev/null
 elif [ $PLATFORM = "mac" ]
 then
 	kmutil showloaded 1> $OUTPUT_DIR/general/kernel-modules.txt 2> /dev/null
+elif [ $PLATFORM = "android" ]
+then
+	ls -la /sys/module/ 1> $OUTPUT_DIR/general/kernel-modules.txt 2> /dev/null
+	ls -la /system/lib/modules/ 1> $OUTPUT_DIR/general/loadable-modules.txt 2> /dev/null
 elif [ $PLATFORM = "aix" ]
 then
 	genkex 1> $OUTPUT_DIR/general/kernel-modules.txt 2> /dev/null
 fi
-
 
 echo "  ${COL_ENTRY}>${RESET} At scheduler"
 if [ $PLATFORM != "solaris" ]
@@ -481,6 +528,10 @@ fi
 echo "  ${COL_ENTRY}>${RESET} Kernel settings"
 cat /etc/sysctl.conf 1> $OUTPUT_DIR/general/sysctl.conf 2> /dev/null
 if [ $PLATFORM = "linux" ]
+then
+    sysctl -a 1> $OUTPUT_DIR/general/sysctl-a.txt 2> /dev/null
+fi
+if [ $PLATFORM = "android" ]
 then
     sysctl -a 1> $OUTPUT_DIR/general/sysctl-a.txt 2> /dev/null
 fi
@@ -537,10 +588,9 @@ mkdir $OUTPUT_DIR/general/spool/ 2> /dev/null
 cp -R /var/spool $OUTPUT_DIR/general/spool/ 2> /dev/null
 if [ $PLATFORM = "mac" ]
 then
-	cp -R /private/var/spool/ $OUTPUT_DIR/general/spool/private_var_spool
+	mkdir $OUTPUT_DIR/general/spool/private_var_spool/ 2> /dev/null
+	cp -R /private/var/spool/ $OUTPUT_DIR/general/spool/private_var_spool/
 fi
-
-
 
 # ------------------------------------
 # PART 4: INSTALLED SOFTWARE / PATCHES
@@ -562,6 +612,19 @@ then
     lslpp -L all 1> $OUTPUT_DIR/software/software-lslpp.txt 2> /dev/null
     lslpp -Lc 1> $OUTPUT_DIR/software/aix-patchlist.txt 2> /dev/null
     pkginfo 1> $OUTPUT_DIR/software/software-pkginfo.txt 2> /dev/null
+elif [ $PLATFORM = "android" ]
+then
+    find / -iname "*.apk" 1> $OUTPUT_DIR/software/software-apps.txt 2> /dev/null
+	pm list packages 1> $OUTPUT_DIR/software/list_packages-pm.txt 2> /dev/null 
+	cmd package list packages -f -u -i -U 1> $OUTPUT_DIR/software/android_list_packages-package.txt 2> /dev/null 
+	dumpsys -l 1> $OUTPUT_DIR/software/android_services_list.txt 2> /dev/null
+	dumpsys 1> $OUTPUT_DIR/software/android_services_dumpsys.txt 2> /dev/null
+	pm list libraries 1> $OUTPUT_DIR/software/android_libraries.txt 2> /dev/null
+	pm list permissions -f -u 1> $OUTPUT_DIR/software/android_permissions.txt 2> /dev/null
+	pm list permission-groups -f 1> $OUTPUT_DIR/software/android_group_permissions.txt 2> /dev/null
+	pm list instrumentation 1> $OUTPUT_DIR/software/android_instrumentation.txt 2> /dev/null
+	pm list features 1> $OUTPUT_DIR/software/android_features.txt 2> /dev/null
+	pm get-install-location 1> $OUTPUT_DIR/software/android_install_location.txt 2> /dev/null
 elif [ $PLATFORM = "mac" ]
 then
     find / -iname "*.app" 1> $OUTPUT_DIR/software/software-apps.txt 2> /dev/null
@@ -605,9 +668,8 @@ then
     instfix -a 1> $OUTPUT_DIR/software/patches-instfix.txt 2> /dev/null
 fi
 
-echo "  ${COL_ENTRY}>${RESET} Compiler tools"
-find / \( -name gcc* -o -name javac -o -name perl* -o -name tclsh* -o -name python* -o -name ruby* \) -ls 1> $OUTPUT_DIR/software/compiler.txt 2> /dev/null
-
+echo "  ${COL_ENTRY}>${RESET} Compiler tools (NFS skip)"
+find / -fstype nfs -prune -o \( -name 'gcc*' -o -name 'javac*' -o -name 'java*' -o -name 'perl*' -o -name 'tclsh*' -o -name 'python*' -o -name 'ruby*' \) -ls 1> $OUTPUT_DIR/software/compiler.txt 2> /dev/null
 
 # ------------------------------------
 # PART 5: LOG FILES, HOME DIR and PROC folders
@@ -617,7 +679,6 @@ echo "${COL_SECTION}LOG, HOME and PROC FILE COLLECTION [50% ]:${RESET}"
 mkdir $OUTPUT_DIR/logs 2> /dev/null
 
 echo "  ${COL_ENTRY}>${RESET} Copying logs"
-
 if [ $PLATFORM = "solaris" ]
 then
     cp -R /var/adm/ $OUTPUT_DIR/logs/ 2> /dev/null
@@ -630,6 +691,14 @@ then
 	cp -R /var/nslog/ $OUTPUT_DIR/logs/ 2> /dev/null
 	fcstkrpt -a 1> $OUTPUT_DIR/general/fast-fail-log.txt 2> /dev/null
 	errpt -a 1> $OUTPUT_DIR/general/crash-log.txt 2> /dev/null
+elif [ $PLATFORM = "android" ]
+then
+    logcat -d 1> $OUTPUT_DIR/logs/logcat-d.txt 2> /dev/null
+	logcat -d *:D 1> $OUTPUT_DIR/logs/logcat-d-D.txt 2> /dev/null
+	logcat -d *:I 1> $OUTPUT_DIR/logs/logcat-d-I.txt 2> /dev/null
+	logcat -d *:W 1> $OUTPUT_DIR/logs/logcat-d-W.txt 2> /dev/null
+	logcat -d *:E 1> $OUTPUT_DIR/logs/logcat-d-E.txt 2> /dev/null
+	logcat -d *:F 1> $OUTPUT_DIR/logs/logcat-d-F.txt 2> /dev/null
 elif [ $PLATFORM = "mac" ]
 then
 	mkdir $OUTPUT_DIR/logs/private_var_log
@@ -656,7 +725,6 @@ then
     cp -R /var/adm/ $OUTPUT_DIR/logs/ 2> /dev/null
 	cp -R /var/nslog/ $OUTPUT_DIR/logs/ 2> /dev/null
 fi
-
 
 echo "  ${COL_ENTRY}>${RESET} Copying home dirs"
 mkdir $OUTPUT_DIR/homedir
@@ -780,6 +848,13 @@ then
 		mkdir -p "$OUTPUT_DIR/procfiles`dirname $line`" 2> /dev/null
 		cp -p "$line" "$OUTPUT_DIR/procfiles`dirname $line`" 2> /dev/null
 	done
+elif [ $PLATFORM = "android" ]
+then
+    find /proc/ -type f \( -name 'cmdline' -o -name 'fib_triestat' -o -name 'status' -o -name 'connector' -o -name 'route' -o -name 'fib_trie' \) 2>/dev/null | while read line
+	do
+		mkdir -p "$OUTPUT_DIR/procfiles`dirname $line`" 2> /dev/null
+		cp -p "$line" "$OUTPUT_DIR/procfiles`dirname $line`" 2> /dev/null
+	done
 elif [ $PLATFORM = "generic" ]
 then
     find /proc/ -type f \( -name "cmdline" -o -name "fib_triestat" -o -name "status" -o -name "connector" -o -name "protocols" -o -name "route" -o -name "fib_trie" -o -name "snmp*" \) 2>/dev/null | while read line
@@ -789,9 +864,8 @@ then
 	done
 fi
 
-
 mkdir $OUTPUT_DIR/tmpfiles 2> /dev/null
-echo "  ${COL_ENTRY}>${RESET} Copying /tmp/ dirs"
+echo "  ${COL_ENTRY}>${RESET} Copying /tmp/ dirs where possible"
 
 if [ $PLATFORM = "solaris" ]
 then
@@ -873,6 +947,18 @@ then
 		mkdir -p "$OUTPUT_DIR/plist`dirname $line`" 2> /dev/null
 		cp -p "$line" "$OUTPUT_DIR/plist`dirname $line`" 2> /dev/null
 	done
+elif [ $PLATFORM = "android" ]
+then
+	echo "${COL_SECTION} Collecting APK files & Dumping package details"
+	mkdir $OUTPUT_DIR/apk
+	mkdir $OUTPUT_DIR/apk-sign
+	find / -type f -iname "*.apk" 2>/dev/null | while read line
+	do
+		mkdir -p "$OUTPUT_DIR/apk`dirname $line`" 2> /dev/null
+		mkdir -p "$OUTPUT_DIR/apk-sign`dirname $line`" 2> /dev/null
+		cp -p "$line" "$OUTPUT_DIR/apk`dirname $line`" 2> /dev/null
+		pm dump `dirname $line` 1> "$OUTPUT_DIR/apk-sign`dirname $line`/pm_dump" 2> /dev/null
+	done
 fi
 
 # ------------------------------------
@@ -881,12 +967,22 @@ fi
 
 echo "${COL_SECTION}SUID/SGID SEARCH [60% ]:${RESET}"
 mkdir $OUTPUT_DIR/setuid
-echo "  ${COL_ENTRY}>${RESET} Finding all SUID/SGID binaries"
-find / -type f -a \( -perm -u+s -o -perm -g+s \) 2>/dev/null | while read line
-do
-	mkdir -p "$OUTPUT_DIR/setuid`dirname $line`" 2> /dev/null
-	cp -p "$line" "$OUTPUT_DIR/setuid`dirname $line`" 2> /dev/null
-done
+if [ $PLATFORM = "android" ]
+then
+	echo "  ${COL_ENTRY}>${RESET} Finding all SUID/SGID binaries"
+	find / -type f -a -perm /6000 2>/dev/null | while read line
+	do
+		mkdir -p "$OUTPUT_DIR/setuid`dirname $line`" 2> /dev/null
+		cp -p "$line" "$OUTPUT_DIR/setuid`dirname $line`" 2> /dev/null
+	done
+else
+	echo "  ${COL_ENTRY}>${RESET} Finding all SUID/SGID binaries"
+	find / -type f -a \( -perm -u+s -o -perm -g+s \) 2>/dev/null | while read line
+	do
+		mkdir -p "$OUTPUT_DIR/setuid`dirname $line`" 2> /dev/null
+		cp -p "$line" "$OUTPUT_DIR/setuid`dirname $line`" 2> /dev/null
+	done
+fi
 
 
 # ------------------------------------
@@ -1075,7 +1171,40 @@ then
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
-	fi	
+	fi
+elif [ $PLATFORM = "android" ]
+then
+    if [ -x "$(command -v sha256sum)" ]
+	then
+		find / -type f -a -perm /6000 -exec sha256sum {} \; 2>/dev/null | while read line
+		do
+		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
+		done	
+	elif [ -x "$(command -v sha1sum)" ]
+	then
+		find / -type f -a -perm /6000 -exec sha1sum {} \; 2>/dev/null | while read line
+		do
+		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-sgid_suid 2> /dev/null
+		done	
+	elif [ -x "$(command -v md5sum)" ]
+	then
+		find / -type f -a -perm /6000 -exec md5sum {} \; 2>/dev/null | while read line
+		do
+		  echo $line >> $OUTPUT_DIR/hashes/md5sum-sgid_suid 2> /dev/null
+		done	
+	elif [ -x "$(command -v openssl)" ]
+	then
+		find / -type f -a -perm /6000 -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		do
+		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
+		done	
+	elif [ -x "$(command -v shasum)" ]
+	then
+		find / -type f -a -perm /6000 -exec shasum -a 256 {} \; 2>/dev/null | while read line
+		do
+		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
+		done	
+	fi		
 fi
 
 echo "  ${COL_ENTRY}>${RESET} Hashing all HOME dirs"
@@ -1261,9 +1390,9 @@ then
 	fi	
 fi
 
-echo "  ${COL_ENTRY}>${RESET} Hashing all /bin/* /sbin/* /usr/* /opt/* /tmp/* dirs"
 if [ $PLATFORM = "linux" ]
 then 
+	echo "  ${COL_ENTRY}>${RESET} Hashing all /bin/ /sbin/ /usr/ /opt/ /tmp/ dirs"
     if [ -x "$(command -v sha256sum)" ]
 	then
 		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -type f -exec sha256sum {} \; 2>/dev/null | while read line
@@ -1291,6 +1420,7 @@ then
 	fi
 elif [ $PLATFORM = "generic" ]
 then
+	echo "  ${COL_ENTRY}>${RESET} Hashing all /bin/ /sbin/ /usr/ /opt/ /tmp/ dirs"
     if [ -x "$(command -v sha256sum)" ]
 	then
 		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -type f -exec sha256sum {} \; 2>/dev/null | while read line
@@ -1318,6 +1448,7 @@ then
     fi		
 elif [ $PLATFORM = "solaris" ]
 then
+	echo "  ${COL_ENTRY}>${RESET} Hashing all /bin/ /sbin/ /usr/ /opt/ /tmp/ dirs"
     if [ -x "$(command -v sha256sum)" ]
 	then
 		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -type f -exec sha256sum {} \; 2>/dev/null | while read line
@@ -1351,6 +1482,7 @@ then
 	fi
 elif [ $PLATFORM = "aix" ]
 then
+	echo "  ${COL_ENTRY}>${RESET} Hashing all /bin/ /sbin/ /usr/ /opt/ /tmp/ dirs"
     if [ -x "$(command -v sha256sum)" ]
 	then
 		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -type f -exec sha256sum {} \; 2>/dev/null | while read line
@@ -1384,6 +1516,7 @@ then
 	fi
 elif [ $PLATFORM = "hpux" ]
 then
+	echo "  ${COL_ENTRY}>${RESET} Hashing all /bin/ /sbin/ /usr/ /opt/ /tmp/ dirs"
     if [ -x "$(command -v sha256sum)" ]
 	then
 		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -type f -exec sha256sum {} \; 2>/dev/null | while read line
@@ -1411,6 +1544,7 @@ then
 	fi
 elif [ $PLATFORM = "mac" ]
 then
+	echo "  ${COL_ENTRY}>${RESET} Hashing all /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ dirs"
     if [ -x "$(command -v sha256sum)" ]
 	then
 		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ -type f -exec sha256sum {} \; 2>/dev/null | while read line
@@ -1442,8 +1576,41 @@ then
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
 	fi	
+elif [ $PLATFORM = "android" ]
+then
+	echo "  ${COL_ENTRY}>${RESET} Hashing all /bin/ /storage/ /system/ /sys/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ dirs"
+    if [ -x "$(command -v sha256sum)" ]
+	then
+		find /bin/ /storage/ /system/ /sys/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		do
+		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
+		done	
+	elif [ -x "$(command -v sha1sum)" ]
+	then
+		find /bin/ /storage/ /system/ /sys/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		do
+		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-variousbins 2> /dev/null
+		done	
+	elif [ -x "$(command -v md5sum)" ]
+	then
+		find /bin/ /storage/ /system/ /sys/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -type f -exec md5sum {} \; 2>/dev/null | while read line
+		do
+		  echo $line >> $OUTPUT_DIR/hashes/md5sum-variousbins 2> /dev/null
+		done	
+	elif [ -x "$(command -v openssl)" ]
+	then
+		find /bin/ /storage/ /system/ /sys/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		do
+		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
+		done	
+	elif [ -x "$(command -v shasum)" ]
+	then
+		find /bin/ /storage/ /system/ /sys/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -type f -exec shasum -a 256 {} \; 2>/dev/null | while read line
+		do
+		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
+		done	
+	fi
 fi
-
 
 # ---------------------------
 # PART 8: NETWORK INFORMATION
@@ -1523,13 +1690,13 @@ fi
 echo "  ${COL_ENTRY}>${RESET} RPC"
 rpcinfo -p 1> $OUTPUT_DIR/network/rpcinfo.txt 2> /dev/null
 
-if [ -x /sbin/iptables ]
+if [ -x /sbin/iptables -o /system/bin/iptables ]
 then
     echo "  ${COL_ENTRY}>${RESET} IP Tables"
     iptables -L -v -n 1> $OUTPUT_DIR/network/iptables.txt 2> /dev/null
 fi
 
-if [ -x /sbin/ip6tables ]
+if [ -x /sbin/ip6tables -o /system/bin/ip6tables ]
 then
     echo "  ${COL_ENTRY}>${RESET} IP Tables (IPv6)"
     ip6tables -L -v -n 1> $OUTPUT_DIR/network/ip6tables.txt 2> /dev/null
