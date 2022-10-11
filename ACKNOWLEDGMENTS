@@ -2,6 +2,6 @@ unix_collector ACKNOWLEDGMENTS
 ==============================
 
 - Collective knowledge of Portcullis Security Team (now Cisco). Check out https://labs.portcullis.co.uk/ and https://github.com/CiscoCXSecurity.
-- Pentestmonkey @ https://github.com/pentestmonkey/unix-privesc-check/blob/master/upc.sh
+- Pentestmonkey (v1) and timb_machine (v2) @ https://github.com/pentestmonkey/unix-privesc-check/blob/master/upc.sh
 - Ian Ventura-Whiting (Fizz) 
 - Mike Trewartha 
