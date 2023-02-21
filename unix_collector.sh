@@ -940,14 +940,14 @@ fi
 
 if [ $PLATFORM = "mac" ]
 then
-	echo "${COL_SECTION} Searching plist files"
+	echo "${COL_SECTION} Searching plist files [55% ]: ${RESET}"
 	mkdir $OUTPUT_DIR/plist
 	find / -type f -iname "*.plist" 2>/dev/null | while read line
 	do  
 	    FILENAME=$(printf %q "$line")
 		echo $FILENAME >> $OUTPUT_DIR/plist/plist.files.txt
 	done
-	echo "${COL_SECTION} Copying all plist files"
+	echo "  ${COL_ENTRY}>${RESET} Copying all plist files"
 	while read pListFiles; do
 	    mkdir -p "$OUTPUT_DIR/plist$(dirname "$pListFiles")" 2> /dev/null
 		cp -p "$pListFiles" "$OUTPUT_DIR/plist$(dirname "$pListFiles")" 2> /dev/null
@@ -955,15 +955,18 @@ then
 
 elif [ $PLATFORM = "android" ]
 then
-	echo "${COL_SECTION} Collecting APK files & Dumping package details"
+	echo "${COL_SECTION} Searching for APK files [55% ]: ${RESET}" 
 	mkdir $OUTPUT_DIR/apk
-	mkdir $OUTPUT_DIR/apk-sign
 	find / -type f -iname "*.apk" 2>/dev/null | while read line
 	do
-		mkdir -p "$OUTPUT_DIR/apk`dirname $line`" 2> /dev/null
-		mkdir -p "$OUTPUT_DIR/apk-sign`dirname $line`" 2> /dev/null
-		cp -p "$line" "$OUTPUT_DIR/apk`dirname $line`" 2> /dev/null
+	    FILENAME=$(printf %q "$line")
+		echo $FILENAME >> $OUTPUT_DIR/apk/apk.files.txt
 	done
+	echo "  ${COL_ENTRY}>${RESET} Copying all apk files"
+	while read apkFiles; do
+	    mkdir -p "$OUTPUT_DIR/apk$(dirname "$apkFiles")" 2> /dev/null
+		cp -p "$apkFiles" "$OUTPUT_DIR/apk$(dirname "$apkFiles")" 2> /dev/null
+	done <$OUTPUT_DIR/apk/apk.files.txt
 fi
 
 # ------------------------------------
