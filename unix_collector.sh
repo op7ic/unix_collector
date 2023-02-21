@@ -630,9 +630,9 @@ then
     find / -iname "*.app" 1> $OUTPUT_DIR/software/software-apps.txt 2> /dev/null
 	find / -iname "*.plist" 1> $OUTPUT_DIR/software/software-plist.txt 2> /dev/null
     ls -la /Applications/ 1> $OUTPUT_DIR/software/software-Applications-folder.txt 2> /dev/null
-	mkdir $OUTPUT_DIR/software/System_Kernel_Extensions 2> /dev/null
+	mkdir $OUTPUT_DIR/software/System_Kernel_Extensions/ 2> /dev/null
 	cp -R /System/Library/Extensions/ 1> $OUTPUT_DIR/software/System_Kernel_Extensions/ 2> /dev/null
-	mkdir $OUTPUT_DIR/software/Library_Kernel_Extensions 2> /dev/null
+	mkdir $OUTPUT_DIR/software/Library_Kernel_Extensions/ 2> /dev/null
 	cp -R /Library/Extensions/ 1> $OUTPUT_DIR/software/Library_Kernel_Extensions/ 2> /dev/null
 elif [ $PLATFORM = "hpux" ]
 then
