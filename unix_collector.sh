@@ -288,7 +288,9 @@ cp /etc/passwd $OUTPUT_DIR/general/ 2> /dev/null
 cp /etc/group $OUTPUT_DIR/general/ 2> /dev/null
 cp /etc/ssh/sshd_config $OUTPUT_DIR/general/ 2> /dev/null
 cp /etc/ssh/ssh_config $OUTPUT_DIR/general/ 2> /dev/null
-
+zdump /etc/localtime 1> $OUTPUT_DIR/general/timezone.txt 2> /dev/null
+stat /lost+found 1> $OUTPUT_DIR/general/installation-time.txt 2> /dev/null
+ls -lct /etc | tail -1 1>> $OUTPUT_DIR/general/installation-time.txt 2> /dev/null
 	
 echo "  ${COL_ENTRY}>${RESET} Kerberos ticket list"
 klist 1> $OUTPUT_DIR/general/kerberos-ticket-list.txt 2> /dev/null
