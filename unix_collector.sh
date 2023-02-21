@@ -273,14 +273,25 @@ echo "  ${COL_ENTRY}>${RESET} SSH settings"
 sshd -T 1> $OUTPUT_DIR/general/sshd-t.txt 2> /dev/null
 
 echo "  ${COL_ENTRY}>${RESET} File timeline"
-echo "Inode,Hard Link Count,Full Path,Last Access,Last Modification,Last Status Change,File Creation,User,Group,File Permissions,File Size(bytes)" > $OUTPUT_DIR/general/timeline.csv
-find / -xdev -print0 | xargs -0 stat --printf="%i,%h,%n,%x,%y,%z,%w,%U,%G,%A,%s\n" 1>> $OUTPUT_DIR/general/timeline.csv 2>/dev/null
-
-if [ $PLATFORM != "mac" ]
+if [ $PLATFORM = "solaris" ]
 then
-    echo "  ${COL_ENTRY}>${RESET} File timeline"
+    echo "Inode,Hard Link Count,Full Path,Last Access,Last Modification,Last Status Change,File Creation,User,Group,File Permissions,File Size(bytes)" > $OUTPUT_DIR/general/timeline.csv
+    find / -xdev -print0 | xargs -0 stat --printf="%i,%h,%n,%x,%y,%z,%w,%U,%G,%A,%s\n" 1>> $OUTPUT_DIR/general/timeline.csv 2>/dev/null
+elif [ $PLATFORM = "linux" ]
+then
+    echo "Inode,Hard Link Count,Full Path,Last Access,Last Modification,Last Status Change,File Creation,User,Group,File Permissions,File Size(bytes)" > $OUTPUT_DIR/general/timeline.csv
+    find / -xdev -print0 | xargs -0 stat --printf="%i,%h,%n,%x,%y,%z,%w,%U,%G,%A,%s\n" 1>> $OUTPUT_DIR/general/timeline.csv 2>/dev/null
+elif [ $PLATFORM = "android" ]
+then
+    echo "Inode,Hard Link Count,Full Path,Last Access,Last Modification,Last Status Change,File Creation,User,Group,File Permissions,File Size(bytes)" > $OUTPUT_DIR/general/timeline.csv
+    find / -xdev -print0 | xargs -0 stat --printf="%i,%h,%n,%x,%y,%z,%w,%U,%G,%A,%s\n" 1>> $OUTPUT_DIR/general/timeline.csv 2>/dev/null
+elif [ $PLATFORM = "mac" ]
+then
     echo "Inode,Hard Link Count,Full Path,Last Access,Last Modification,Last Status Change,File Creation,User,Group,File Permissions,File Size(bytes)" > $OUTPUT_DIR/general/timeline.csv
     find / -xdev -print0 | xargs -0 stat -t "%i,%h,%n,%x,%y,%z,%w,%U,%G,%A,%s\n" 1>> $OUTPUT_DIR/general/timeline.csv 2>/dev/null
+elif [ $PLATFORM = "aix" ]
+then
+    find / -xdev -print0 | xargs -0 istat 1>> $OUTPUT_DIR/general/timeline.txt 2>/dev/null
 fi
 
 echo "  ${COL_ENTRY}>${RESET} FLS timeline body"
@@ -314,7 +325,7 @@ then
 	getprop -Z 1> $OUTPUT_DIR/general/android_getprop-Z.txt 2> /dev/null
 fi
 
-if [ $PLATFORM != "aix" ]
+if [ $PLATFORM = "aix" ]
 then
     echo "  ${COL_ENTRY}>${RESET} Processor"
     uname -p 1> $OUTPUT_DIR/general/processor.txt 2> /dev/null
