@@ -589,7 +589,7 @@ cp -R /var/spool $OUTPUT_DIR/general/spool/ 2> /dev/null
 if [ $PLATFORM = "mac" ]
 then
 	mkdir $OUTPUT_DIR/general/spool/private_var_spool/ 2> /dev/null
-	cp -R /private/var/spool/ $OUTPUT_DIR/general/spool/private_var_spool/
+	cp -R /private/var/spool/ $OUTPUT_DIR/general/spool/private_var_spool/ 2> /dev/null
 fi
 
 # ------------------------------------
