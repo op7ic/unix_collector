@@ -297,9 +297,6 @@ then
     find / -xdev -print0 2>/dev/null | xargs -0 istat 1>> $OUTPUT_DIR/general/timeline.txt 2>/dev/null
 fi
 
-echo "  ${COL_ENTRY}>${RESET} FLS timeline body"
-fls -r -m / /dev/* 1> $OUTPUT_DIR/general/timeline.body 2>/dev/null
-
 echo "  ${COL_ENTRY}>${RESET} Release"
 uname -r 1> $OUTPUT_DIR/general/release.txt 2> /dev/null
 cp /etc/*release $OUTPUT_DIR/general/ 2> /dev/null
