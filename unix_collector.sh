@@ -276,22 +276,22 @@ echo "  ${COL_ENTRY}>${RESET} File timeline"
 if [ $PLATFORM = "solaris" ]
 then
     echo "Inode,Hard Link Count,Full Path,Last Access,Last Modification,Last Status Change,File Creation,User,Group,File Permissions,File Size(bytes)" > $OUTPUT_DIR/general/timeline.csv
-    find / -xdev -print0 | xargs -0 stat --printf="%i,%h,%n,%x,%y,%z,%w,%U,%G,%A,%s\n" 1>> $OUTPUT_DIR/general/timeline.csv 2>/dev/null
+    find / -xdev -print0 2>/dev/null | xargs -0 stat --printf="%i,%h,%n,%x,%y,%z,%w,%U,%G,%A,%s\n" 1>> $OUTPUT_DIR/general/timeline.csv 2>/dev/null
 elif [ $PLATFORM = "linux" ]
 then
     echo "Inode,Hard Link Count,Full Path,Last Access,Last Modification,Last Status Change,File Creation,User,Group,File Permissions,File Size(bytes)" > $OUTPUT_DIR/general/timeline.csv
-    find / -xdev -print0 | xargs -0 stat --printf="%i,%h,%n,%x,%y,%z,%w,%U,%G,%A,%s\n" 1>> $OUTPUT_DIR/general/timeline.csv 2>/dev/null
+    find / -xdev -print0 2>/dev/null | xargs -0 stat --printf="%i,%h,%n,%x,%y,%z,%w,%U,%G,%A,%s\n" 1>> $OUTPUT_DIR/general/timeline.csv 2>/dev/null
 elif [ $PLATFORM = "android" ]
 then
     echo "Inode,Hard Link Count,Full Path,Last Access,Last Modification,Last Status Change,File Creation,User,Group,File Permissions,File Size(bytes)" > $OUTPUT_DIR/general/timeline.csv
-    find / -xdev -print0 | xargs -0 stat --printf="%i,%h,%n,%x,%y,%z,%w,%U,%G,%A,%s\n" 1>> $OUTPUT_DIR/general/timeline.csv 2>/dev/null
+    find / -xdev -print0 2>/dev/null | xargs -0 stat --printf="%i,%h,%n,%x,%y,%z,%w,%U,%G,%A,%s\n" 1>> $OUTPUT_DIR/general/timeline.csv 2>/dev/null
 elif [ $PLATFORM = "mac" ]
 then
     echo "Inode,Hard Link Count,Full Path,Last Access,Last Modification,Last Status Change,File Creation,User,Group,File Permissions,File Size(bytes)" > $OUTPUT_DIR/general/timeline.csv
-    find / -xdev -print0 | xargs -0 stat -t "%i,%h,%n,%x,%y,%z,%w,%U,%G,%A,%s\n" 1>> $OUTPUT_DIR/general/timeline.csv 2>/dev/null
+    find / -xdev -print0 2>/dev/null | xargs -0 stat -t "%i,%h,%n,%x,%y,%z,%w,%U,%G,%A,%s\n" 1>> $OUTPUT_DIR/general/timeline.csv 2>/dev/null
 elif [ $PLATFORM = "aix" ]
 then
-    find / -xdev -print0 | xargs -0 istat 1>> $OUTPUT_DIR/general/timeline.txt 2>/dev/null
+    find / -xdev -print0 2>/dev/null | xargs -0 istat 1>> $OUTPUT_DIR/general/timeline.txt 2>/dev/null
 fi
 
 echo "  ${COL_ENTRY}>${RESET} FLS timeline body"
