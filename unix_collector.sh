@@ -276,6 +276,13 @@ echo "  ${COL_ENTRY}>${RESET} File timeline"
 echo "Inode,Hard Link Count,Full Path,Last Access,Last Modification,Last Status Change,File Creation,User,Group,File Permissions,File Size(bytes)" > $OUTPUT_DIR/general/timeline.csv
 find / -xdev -print0 | xargs -0 stat --printf="%i,%h,%n,%x,%y,%z,%w,%U,%G,%A,%s\n" 1>> $OUTPUT_DIR/general/timeline.csv 2>/dev/null
 
+if [ $PLATFORM != "mac" ]
+then
+    echo "  ${COL_ENTRY}>${RESET} File timeline"
+    echo "Inode,Hard Link Count,Full Path,Last Access,Last Modification,Last Status Change,File Creation,User,Group,File Permissions,File Size(bytes)" > $OUTPUT_DIR/general/timeline.csv
+    find / -xdev -print0 | xargs -0 stat -t "%i,%h,%n,%x,%y,%z,%w,%U,%G,%A,%s\n" 1>> $OUTPUT_DIR/general/timeline.csv 2>/dev/null
+fi
+
 echo "  ${COL_ENTRY}>${RESET} FLS timeline body"
 fls -r -m / /dev/* 1> $OUTPUT_DIR/general/timeline.body 2>/dev/null
 
@@ -290,7 +297,7 @@ cp /etc/ssh/sshd_config $OUTPUT_DIR/general/ 2> /dev/null
 cp /etc/ssh/ssh_config $OUTPUT_DIR/general/ 2> /dev/null
 zdump /etc/localtime 1> $OUTPUT_DIR/general/timezone.txt 2> /dev/null
 stat /lost+found 1> $OUTPUT_DIR/general/installation-time.txt 2> /dev/null
-ls -lct /etc | tail -1 1>> $OUTPUT_DIR/general/installation-time.txt 2> /dev/null
+ls -lct /etc | tail -1 1> $OUTPUT_DIR/general/installation-time.txt 2> /dev/null
 	
 echo "  ${COL_ENTRY}>${RESET} Kerberos ticket list"
 klist 1> $OUTPUT_DIR/general/kerberos-ticket-list.txt 2> /dev/null
