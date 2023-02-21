@@ -287,7 +287,7 @@ then
     find / -xdev -print0 2>/dev/null | xargs -0 stat --printf="%i,%h,%n,%x,%y,%z,%w,%U,%G,%A,%s\n" 1>> $OUTPUT_DIR/general/timeline.csv 2>/dev/null
 elif [ $PLATFORM = "mac" ]
 then
-    find / -xdev -print0 2>/dev/null | xargs -0 stat -t 1>> $OUTPUT_DIR/general/timeline.txt 2>/dev/null
+    find / -xdev -print0 2>/dev/null | xargs -0 stat 1>> $OUTPUT_DIR/general/timeline.txt 2>/dev/null
 elif [ $PLATFORM = "generic" ]
 then
     echo "Inode,Hard Link Count,Full Path,Last Access,Last Modification,Last Status Change,File Creation,User,Group,File Permissions,File Size(bytes)" > $OUTPUT_DIR/general/timeline.csv
