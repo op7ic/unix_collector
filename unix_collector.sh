@@ -52,7 +52,7 @@ OUTPUT_DIR="collector-${HOSTNAME}-${COLLECTION_DATE}"
 TAR_FILE="collector-${HOSTNAME}-${COLLECTION_DATE}.tar"
 RSYNC_MAX_FILESIZE=500m
 TAR_MAX_FILESIZE=+500M
-HASH_MAX_FILESIZE=500M
+HASH_MAX_FILESIZE=-500M
 # ---------------------------
 # Parse ARGS
 # ---------------------------
@@ -1033,25 +1033,25 @@ if [ $PLATFORM = "linux" ]
 then 
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find / -size -$HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha256sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha256sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find / -size -$HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha1sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha1sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find / -size -$HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec md5sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec md5sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find / -size -$HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
@@ -1060,25 +1060,25 @@ elif [ $PLATFORM = "generic" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find / -size -$HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha256sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha256sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find / -size -$HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha1sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha1sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find / -size -$HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec md5sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec md5sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find / -size -$HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
@@ -1087,31 +1087,31 @@ elif [ $PLATFORM = "solaris" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find / -size -$HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha256sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha256sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find / -size -$HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha1sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha1sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find / -size -$HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec md5sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec md5sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v digest)" ]
 	then
-		find / -size -$HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec digest -a sha256 -v {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec digest -a sha256 -v {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find / -size -$HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
@@ -1120,31 +1120,31 @@ elif [ $PLATFORM = "aix" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find / -size -$HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha256sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha256sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find / -size -$HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha1sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha1sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find / -size -$HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec md5sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec md5sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v csum)" ]
 	then
-		find / -size -$HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec csum -h MD5 {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec csum -h MD5 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find / -size -$HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
@@ -1153,25 +1153,25 @@ elif [ $PLATFORM = "hpux" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find / -size -$HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha256sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha256sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find / -size -$HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha1sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha1sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find / -size -$HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec md5sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec md5sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find / -size -$HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
@@ -1180,31 +1180,31 @@ elif [ $PLATFORM = "mac" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find / -size -$HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha256sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha256sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find / -size -$HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha1sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha1sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find / -size -$HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec md5sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec md5sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find / -size -$HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v shasum)" ]
 	then
-		find / -size -$HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec shasum -a 256 {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec shasum -a 256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
@@ -1213,31 +1213,31 @@ elif [ $PLATFORM = "android" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find / -size -$HASH_MAX_FILESIZE -type f -a -perm /6000 -exec sha256sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a -perm /6000 -exec sha256sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find / -size -$HASH_MAX_FILESIZE -type f -a -perm /6000 -exec sha1sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a -perm /6000 -exec sha1sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find / -size -$HASH_MAX_FILESIZE -type f -a -perm /6000 -exec md5sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a -perm /6000 -exec md5sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find / -size -$HASH_MAX_FILESIZE -type f -a -perm /6000 -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a -perm /6000 -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v shasum)" ]
 	then
-		find / -size -$HASH_MAX_FILESIZE -type f -a -perm /6000 -exec shasum -a 256 {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a -perm /6000 -exec shasum -a 256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
@@ -1249,25 +1249,25 @@ if [ $PLATFORM = "linux" ]
 then 
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /home/ /root/ -size -$HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /home/ /root/ -size -$HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /home/ /root/ -size -$HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /home/ /root/ -size -$HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
@@ -1276,25 +1276,25 @@ elif [ $PLATFORM = "generic" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /home/ /root/ -size -$HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /home/ /root/ -size -$HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /home/ /root/ -size -$HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /home/ /root/ -size -$HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
@@ -1303,31 +1303,31 @@ elif [ $PLATFORM = "solaris" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /home/ /root/ /export/home/ -size -$HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ /export/home/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /home/ /root/ /export/home/ -size -$HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ /export/home/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /home/ /root/ /export/home/ -size -$HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ /export/home/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v digest)" ]
 	then
-		find /home/ /root/ /export/home/ -size -$HASH_MAX_FILESIZE -type f -exec digest -a sha256 {} \; 2>/dev/null | while read line
+		find /home/ /root/ /export/home/ -size $HASH_MAX_FILESIZE -type f -exec digest -a sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /home/ /root/ /export/home/ -size -$HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /home/ /root/ /export/home/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
@@ -1336,31 +1336,31 @@ elif [ $PLATFORM = "aix" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /home/ /root/ -size -$HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /home/ /root/ -size -$HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /home/ /root/ -size -$HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v csum)" ]
 	then
-		find /home/ /root/ -size -$HASH_MAX_FILESIZE -type f -exec csum -h MD5 {} \; 2>/dev/null | while read line
+		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec csum -h MD5 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /home/ /root/ -size -$HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
@@ -1369,25 +1369,25 @@ elif [ $PLATFORM = "hpux" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /home/ /root/ -size -$HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /home/ /root/ -size -$HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /home/ /root/ -size -$HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /home/ /root/ -size -$HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
@@ -1396,31 +1396,31 @@ elif [ $PLATFORM = "mac" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /Users/ -size -$HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /Users/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /Users/ -size -$HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /Users/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /Users/ -size -$HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /Users/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /Users/ -size -$HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /Users/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v shasum)" ]
 	then
-		find /Users/ -size -$HASH_MAX_FILESIZE -type f -exec shasum -a 256 {} \; 2>/dev/null | while read line
+		find /Users/ -size $HASH_MAX_FILESIZE -type f -exec shasum -a 256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
@@ -1432,25 +1432,25 @@ then
 	echo "  ${COL_ENTRY}>${RESET} Hashing all /bin/ /sbin/ /usr/ /opt/ /tmp/ dirs"
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size -$HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size -$HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size -$HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size -$HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
@@ -1460,25 +1460,25 @@ then
 	echo "  ${COL_ENTRY}>${RESET} Hashing all /bin/ /sbin/ /usr/ /opt/ /tmp/ dirs"
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size -$HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size -$HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size -$HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size -$HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done
@@ -1488,31 +1488,31 @@ then
 	echo "  ${COL_ENTRY}>${RESET} Hashing all /bin/ /sbin/ /usr/ /opt/ /tmp/ dirs"
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size -$HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size -$HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size -$HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v digest)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size -$HASH_MAX_FILESIZE -type f -exec digest -a sha256 {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec digest -a sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size -$HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
@@ -1522,31 +1522,31 @@ then
 	echo "  ${COL_ENTRY}>${RESET} Hashing all /bin/ /sbin/ /usr/ /opt/ /tmp/ dirs"
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size -$HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size -$HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size -$HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v csum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size -$HASH_MAX_FILESIZE -type f -exec csum -h MD5 {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec csum -h MD5 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/shaMD5sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size -$HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
@@ -1556,25 +1556,25 @@ then
 	echo "  ${COL_ENTRY}>${RESET} Hashing all /bin/ /sbin/ /usr/ /opt/ /tmp/ dirs"
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size -$HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size -$HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size -$HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size -$HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
@@ -1584,31 +1584,31 @@ then
 	echo "  ${COL_ENTRY}>${RESET} Hashing all /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ dirs"
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ -size -$HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ -size -$HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ -size -$HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ -size -$HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v shasum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ -size -$HASH_MAX_FILESIZE -type f -exec shasum -a 256 {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ -size $HASH_MAX_FILESIZE -type f -exec shasum -a 256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
@@ -1618,31 +1618,31 @@ then
 	echo "  ${COL_ENTRY}>${RESET} Hashing all /bin/ /storage/ /system/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ dirs"
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /bin/ /storage/ /system/ /sys/module/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -size -$HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /bin/ /storage/ /system/ /sys/module/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /bin/ /storage/ /system/ /sys/module/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -size -$HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /bin/ /storage/ /system/ /sys/module/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /bin/ /storage/ /system/ /sys/module/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -size -$HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /bin/ /storage/ /system/ /sys/module/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /bin/ /storage/ /system/ /sys/module/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -size -$HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /bin/ /storage/ /system/ /sys/module/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v shasum)" ]
 	then
-		find /bin/ /storage/ /system/ /sys/module/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -size -$HASH_MAX_FILESIZE -type f -exec shasum -a 256 {} \; 2>/dev/null | while read line
+		find /bin/ /storage/ /system/ /sys/module/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -size $HASH_MAX_FILESIZE -type f -exec shasum -a 256 {} \; 2>/dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
