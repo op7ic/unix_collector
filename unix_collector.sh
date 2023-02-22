@@ -764,18 +764,18 @@ then
 		mkdir $OUTPUT_DIR/homedir/home 1> /dev/null 2> /dev/null
 		mkdir $OUTPUT_DIR/homedir/root 1> /dev/null 2> /dev/null
 		mkdir $OUTPUT_DIR/homedir/home-export 1> /dev/null 2> /dev/null
-		rsync -av --max-size=$MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /home/ $OUTPUT_DIR/homedir/home/ 1> /dev/null 2> /dev/null
-		rsync -av --max-size=$MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /root/ $OUTPUT_DIR/homedir/root/ 1> /dev/null 2> /dev/null
-		rsync -av --max-size=$MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /export/home/ $OUTPUT_DIR/homedir/home-export/ 1> /dev/null 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude=$OUTPUT_DIR /home/ $OUTPUT_DIR/homedir/home/ 1> /dev/null 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude=$OUTPUT_DIR /root/ $OUTPUT_DIR/homedir/root/ 1> /dev/null 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude=$OUTPUT_DIR /export/home/ $OUTPUT_DIR/homedir/home-export/ 1> /dev/null 2> /dev/null
 	elif [ -x "$(command -v tar)" ]
 	then
 		mkdir $OUTPUT_DIR/homedir/home 1> /dev/null 2> /dev/null
 		mkdir $OUTPUT_DIR/homedir/root 1> /dev/null 2> /dev/null
 		mkdir $OUTPUT_DIR/homedir/home-export 1> /dev/null 2> /dev/null
 		find /home/ /export/home/ /root/ -size $TAR_MAX_FILESIZE >> $OUTPUT_DIR/homedir/oversized_files.txt
-		tar --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home/home.tar /home/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
-		tar --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/root/root.tar /root/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
-		tar --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home-export/home-export.tar /export/home/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home/home.tar /home/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/root/root.tar /root/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home-export/home-export.tar /export/home/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
 	fi
 elif [ $PLATFORM = "aix" ]
 then
@@ -783,15 +783,15 @@ then
 	then
 		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
 		mkdir $OUTPUT_DIR/homedir/root 2> /dev/null
-		rsync -av --max-size=$MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /home/ $OUTPUT_DIR/homedir/home/ 1> /dev/null 2> /dev/null
-		rsync -av --max-size=$MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /root/ $OUTPUT_DIR/homedir/root/ 1> /dev/null 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude=$OUTPUT_DIR /home/ $OUTPUT_DIR/homedir/home/ 1> /dev/null 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude=$OUTPUT_DIR /root/ $OUTPUT_DIR/homedir/root/ 1> /dev/null 2> /dev/null
 	elif [ -x "$(command -v tar)" ]
 	then
 		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
 		mkdir $OUTPUT_DIR/homedir/root 2> /dev/null
 		find /home/ /root/ -size $TAR_MAX_FILESIZE >> $OUTPUT_DIR/homedir/oversized_files.txt
-		tar --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home/home.tar /home/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
-		tar --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/root/root.tar /root/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home/home.tar /home/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/root/root.tar /root/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
 	fi 
 elif [ $PLATFORM = "mac" ]
 then
@@ -799,15 +799,15 @@ then
 	then
 		mkdir $OUTPUT_DIR/homedir/Users 2> /dev/null
 		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
-		rsync -av --max-size=$MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /Users/ $OUTPUT_DIR/homedir/Users/ 1> /dev/null 2> /dev/null
-		rsync -av --max-size=$MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /home/ $OUTPUT_DIR/homedir/home/ 1> /dev/null 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude=$OUTPUT_DIR /Users/ $OUTPUT_DIR/homedir/Users/ 1> /dev/null 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude=$OUTPUT_DIR /home/ $OUTPUT_DIR/homedir/home/ 1> /dev/null 2> /dev/null
 	elif [ -x "$(command -v tar)" ]
 	then
 		mkdir $OUTPUT_DIR/homedir/Users 2> /dev/null
 		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
 		find /Users/ /home/ -size $TAR_MAX_FILESIZE >> $OUTPUT_DIR/homedir/oversized_files.txt
-		tar --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home/Users.tar /Users/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
-		tar --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home/home.tar /home/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home/Users.tar /Users/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home/home.tar /home/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
 	fi 	
 elif [ $PLATFORM = "linux" ]
 then
@@ -815,15 +815,15 @@ then
 	then
 		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
 		mkdir $OUTPUT_DIR/homedir/root 2> /dev/null
-		rsync -av --max-size=$MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /home/ $OUTPUT_DIR/homedir/home/ 1> /dev/null 2> /dev/null
-		rsync -av --max-size=$MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /root/ $OUTPUT_DIR/homedir/root/ 1> /dev/null 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude=$OUTPUT_DIR /home/ $OUTPUT_DIR/homedir/home/ 1> /dev/null 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude=$OUTPUT_DIR /root/ $OUTPUT_DIR/homedir/root/ 1> /dev/null 2> /dev/null
 	elif [ -x "$(command -v tar)" ]
 	then
 		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
 		mkdir $OUTPUT_DIR/homedir/root 2> /dev/null
 		find /root/ /home/ -size $TAR_MAX_FILESIZE >> $OUTPUT_DIR/homedir/oversized_files.txt 2> /dev/null
-		tar --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home/home.tar /home/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
-		tar --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/root/root.tar /root/ --exclude-from$OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home/home.tar /home/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/root/root.tar /root/ --exclude-from$OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
 	fi 
 elif [ $PLATFORM = "generic" ]
 then
@@ -831,15 +831,15 @@ then
 	then
 		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
 		mkdir $OUTPUT_DIR/homedir/root 2> /dev/null
-		rsync -av --max-size=$MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /home/ $OUTPUT_DIR/homedir/home/ 1> /dev/null 2> /dev/null
-		rsync -av --max-size=$MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /root/ $OUTPUT_DIR/homedir/root/ 1> /dev/null 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude=$OUTPUT_DIR /home/ $OUTPUT_DIR/homedir/home/ 1> /dev/null 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude=$OUTPUT_DIR /root/ $OUTPUT_DIR/homedir/root/ 1> /dev/null 2> /dev/null
 	elif [ -x "$(command -v tar)" ]
 	then
 		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
 		mkdir $OUTPUT_DIR/homedir/root 2> /dev/null
 		find /home/ /root/ -size $TAR_MAX_FILESIZE >> $OUTPUT_DIR/homedir/oversized_files.txt 2> /dev/null
-		tar --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home/home.tar /home/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
-		tar --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/root/root.tar /root/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home/home.tar /home/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/root/root.tar /root/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
 	fi 
 elif [ $PLATFORM = "hpux" ]
 then
@@ -847,15 +847,15 @@ then
 	then
 		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
 		mkdir $OUTPUT_DIR/homedir/root 2> /dev/null
-		rsync -av --max-size=$MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /home/ $OUTPUT_DIR/homedir/home/ 1> /dev/null 2> /dev/null
-		rsync -av --max-size=$MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /root/ $OUTPUT_DIR/homedir/root/ 1> /dev/null 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude=$OUTPUT_DIR /home/ $OUTPUT_DIR/homedir/home/ 1> /dev/null 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude=$OUTPUT_DIR /root/ $OUTPUT_DIR/homedir/root/ 1> /dev/null 2> /dev/null
 	elif [ -x "$(command -v tar)" ]
 	then
 		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
 		mkdir $OUTPUT_DIR/homedir/root 2> /dev/null
 		find /home/ /root/ -size $TAR_MAX_FILESIZE >> $OUTPUT_DIR/homedir/oversized_files.txt 2> /dev/null
-		tar --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home/home.tar /home/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
-		tar --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/root/root.tar /root/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home/home.tar /home/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/root/root.tar /root/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
 	fi 
 fi
 
@@ -907,7 +907,7 @@ then
 	if [ -x "$(command -v rsync)" ]
 	then
 		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
-		rsync -av --max-size=$MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /tmp/ $OUTPUT_DIR/tmpfiles/tmp 1> /dev/null 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /tmp/ $OUTPUT_DIR/tmpfiles/tmp 1> /dev/null 2> /dev/null
 	elif [ -x "$(command -v tar)" ]
 	then
 		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
@@ -919,7 +919,7 @@ then
 	if [ -x "$(command -v rsync)" ]
 	then
 		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
-		rsync -av --max-size=$MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /tmp/ $OUTPUT_DIR/tmpfiles/tmp 1> /dev/null 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /tmp/ $OUTPUT_DIR/tmpfiles/tmp 1> /dev/null 2> /dev/null
 	elif [ -x "$(command -v tar)" ]
 	then
 		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
@@ -931,7 +931,7 @@ then
 	if [ -x "$(command -v rsync)" ]
 	then
 		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
-		rsync -av --max-size=$MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /tmp/ $OUTPUT_DIR/tmpfiles/tmp 1> /dev/null 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /tmp/ $OUTPUT_DIR/tmpfiles/tmp 1> /dev/null 2> /dev/null
 	elif [ -x "$(command -v tar)" ]
 	then
 		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
@@ -944,11 +944,11 @@ then
 	then
 		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
 		mkdir $OUTPUT_DIR/tmpfiles/private_tmp 2> /dev/null
-		rsync -av --max-size=$MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /tmp/ $OUTPUT_DIR/tmpfiles/tmp 1> /dev/null 2> /dev/null
-		rsync -av --max-size=$MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /private/tmp/ $OUTPUT_DIR/tmpfiles/private_tmp 1> /dev/null 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /tmp/ $OUTPUT_DIR/tmpfiles/tmp 1> /dev/null 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /private/tmp/ $OUTPUT_DIR/tmpfiles/private_tmp 1> /dev/null 2> /dev/null
 	elif [ -x "$(command -v tar)" ]
 	then
-	    find /tmp/ -size $TAR_MAX_FILESIZE >> $OUTPUT_DIR/tmpfiles/oversized_files.txt 2> /dev/null
+	    find /tmp/ /private/tmp/ -size $TAR_MAX_FILESIZE >> $OUTPUT_DIR/tmpfiles/oversized_files.txt 2> /dev/null
 		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/tmp.tar /tmp/ --exclude-from --exclude-from $OUTPUT_DIR/tmpfiles/oversized_files.txt 1> /dev/null 2> /dev/null
 		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/private_tmp.tar /private/tmp/ --exclude-from $OUTPUT_DIR/tmpfiles/oversized_files.txt 1> /dev/null 2> /dev/null
 	fi 
@@ -957,7 +957,7 @@ then
 	if [ -x "$(command -v rsync)" ]
 	then
 		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
-		rsync -av --max-size=$MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /tmp/ $OUTPUT_DIR/tmpfiles/tmp 1> /dev/null 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /tmp/ $OUTPUT_DIR/tmpfiles/tmp 1> /dev/null 2> /dev/null
 	elif [ -x "$(command -v tar)" ]
 	then
 		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
@@ -969,7 +969,7 @@ then
 	if [ -x "$(command -v rsync)" ]
 	then
 		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
-		rsync -av --max-size=$MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /tmp/ $OUTPUT_DIR/tmpfiles/tmp 1> /dev/null 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /tmp/ $OUTPUT_DIR/tmpfiles/tmp 1> /dev/null 2> /dev/null
 	elif [ -x "$(command -v tar)" ]
 	then
 		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
@@ -983,7 +983,7 @@ if [ $PLATFORM = "mac" ]
 then
 	echo "${COL_SECTION} Searching plist files [55% ]: ${RESET}"
 	mkdir $OUTPUT_DIR/plist
-	find / -type f -iname "*.plist" 2>/dev/null | while read line
+	find / -size $TAR_MAX_FILESIZE -type f -iname "*.plist" 2>/dev/null | while read line
 	do  
 	    FILENAME=$(printf %q "$line")
 		echo $FILENAME >> $OUTPUT_DIR/plist/plist.files.txt
@@ -998,7 +998,7 @@ elif [ $PLATFORM = "android" ]
 then
 	echo "${COL_SECTION} Searching for APK files [55% ]: ${RESET}" 
 	mkdir $OUTPUT_DIR/apk
-	find / -type f -iname "*.apk" 2>/dev/null | while read line
+	find / -size $TAR_MAX_FILESIZE -type f -iname "*.apk" 2>/dev/null | while read line
 	do
 	    FILENAME=$(printf %q "$line")
 		echo $FILENAME >> $OUTPUT_DIR/apk/apk.files.txt
