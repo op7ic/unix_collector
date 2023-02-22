@@ -39,7 +39,7 @@
 # ---------------------------
 # Global Variables
 # ---------------------------
-VERSION="1.4"
+VERSION="1.5"
 HOSTNAME=`hostname`
 PLATFORM="none"
 SHORT_DATE=`date +%B" "%Y`
@@ -51,6 +51,7 @@ DISPLAYHELP="OFF"
 OUTPUT_DIR="collector-${HOSTNAME}-${COLLECTION_DATE}"
 TAR_FILE="collector-${HOSTNAME}-${COLLECTION_DATE}.tar"
 RSYNC_MAX_FILESIZE=500m
+TAR_MAX_FILESIZE=+500M
 HASH_MAX_FILESIZE=500M
 # ---------------------------
 # Parse ARGS
@@ -771,9 +772,9 @@ then
 		mkdir $OUTPUT_DIR/homedir/home 1> /dev/null 2> /dev/null
 		mkdir $OUTPUT_DIR/homedir/root 1> /dev/null 2> /dev/null
 		mkdir $OUTPUT_DIR/homedir/home-export 1> /dev/null 2> /dev/null
-		tar --exclude=$OUTPUT_DIR --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' -cvf $OUTPUT_DIR/homedir/home/home.tar /home/ 1> /dev/null 2> /dev/null
-		tar --exclude=$OUTPUT_DIR --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' -cvf $OUTPUT_DIR/homedir/root/root.tar /root/ 1> /dev/null 2> /dev/null
-		tar --exclude=$OUTPUT_DIR --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' -cvf $OUTPUT_DIR/homedir/home-export/home-export.tar /export/home/ 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' -cvf $OUTPUT_DIR/homedir/home/home.tar /home/ --exclude-from <(find /home/ -size $TAR_MAX_FILESIZE) 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' -cvf $OUTPUT_DIR/homedir/root/root.tar /root/ --exclude-from <(find /root/ -size $TAR_MAX_FILESIZE) 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' -cvf $OUTPUT_DIR/homedir/home-export/home-export.tar /export/home/ --exclude-from <(find /export/home/ -size $TAR_MAX_FILESIZE) 1> /dev/null 2> /dev/null
 	fi
 elif [ $PLATFORM = "aix" ]
 then
@@ -787,8 +788,8 @@ then
 	then
 		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
 		mkdir $OUTPUT_DIR/homedir/root 2> /dev/null
-		tar --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home/home.tar /home/ 1> /dev/null 2> /dev/null
-		tar --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/root/root.tar /root/ 1> /dev/null 2> /dev/null
+		tar --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home/home.tar /home/ --exclude-from <(find /home/ -size $TAR_MAX_FILESIZE) 1> /dev/null 2> /dev/null
+		tar --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/root/root.tar /root/ --exclude-from <(find /root/ -size $TAR_MAX_FILESIZE) 1> /dev/null 2> /dev/null
 	fi 
 elif [ $PLATFORM = "mac" ]
 then
@@ -802,8 +803,8 @@ then
 	then
 		mkdir $OUTPUT_DIR/homedir/Users 2> /dev/null
 		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
-		tar --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home/Users.tar /Users/ 1> /dev/null 2> /dev/null
-		tar --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home/home.tar /home/ 1> /dev/null 2> /dev/null
+		tar --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home/Users.tar /Users/ --exclude-from <(find /Users/ -size $TAR_MAX_FILESIZE) 1> /dev/null 2> /dev/null
+		tar --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home/home.tar /home/ --exclude-from <(find /home/ -size $TAR_MAX_FILESIZE) 1> /dev/null 2> /dev/null
 	fi 	
 elif [ $PLATFORM = "linux" ]
 then
@@ -817,8 +818,8 @@ then
 	then
 		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
 		mkdir $OUTPUT_DIR/homedir/root 2> /dev/null
-		tar --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home/home.tar /home/ 1> /dev/null 2> /dev/null
-		tar --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/root/root.tar /root/ 1> /dev/null 2> /dev/null
+		tar --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home/home.tar /home/ --exclude-from <(find /home/ -size +$HASH_MAX_FILESIZE) 1> /dev/null 2> /dev/null
+		tar --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/root/root.tar /root/ --exclude-from <(find /root/ -size +$HASH_MAX_FILESIZE) 1> /dev/null 2> /dev/null
 	fi 
 elif [ $PLATFORM = "generic" ]
 then
@@ -832,8 +833,8 @@ then
 	then
 		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
 		mkdir $OUTPUT_DIR/homedir/root 2> /dev/null
-		tar --exclude=$OUTPUT_DIR --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' -cvf $OUTPUT_DIR/homedir/home/home.tar /home/ 1> /dev/null 2> /dev/null
-		tar --exclude=$OUTPUT_DIR --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' -cvf $OUTPUT_DIR/homedir/root/root.tar /root/ 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' -cvf $OUTPUT_DIR/homedir/home/home.tar /home/ --exclude-from <(find /home/ -size $TAR_MAX_FILESIZE) 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' -cvf $OUTPUT_DIR/homedir/root/root.tar /root/ --exclude-from <(find /root/ -size $TAR_MAX_FILESIZE) 1> /dev/null 2> /dev/null
 	fi 
 elif [ $PLATFORM = "hpux" ]
 then
@@ -847,8 +848,8 @@ then
 	then
 		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
 		mkdir $OUTPUT_DIR/homedir/root 2> /dev/null
-		tar --exclude=$OUTPUT_DIR --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' -cvf $OUTPUT_DIR/homedir/home/home.tar /home/ 1> /dev/null 2> /dev/null
-		tar --exclude=$OUTPUT_DIR --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' -cvf $OUTPUT_DIR/homedir/root/root.tar /root/ 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' -cvf $OUTPUT_DIR/homedir/home/home.tar /home/ --exclude-from <(find /home/ -size $TAR_MAX_FILESIZE) 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' -cvf $OUTPUT_DIR/homedir/root/root.tar /root/ --exclude-from <(find /root/ -size $TAR_MAX_FILESIZE) 1> /dev/null 2> /dev/null
 	fi 
 fi
 
@@ -904,7 +905,7 @@ then
 	elif [ -x "$(command -v tar)" ]
 	then
 		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
-		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/tmp.tar /tmp/ 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/tmp.tar /tmp/ --exclude-from <(find /tmp/ -size $TAR_MAX_FILESIZE) 1> /dev/null 2> /dev/null
 	fi 
 elif [ $PLATFORM = "aix" ]
 then
@@ -915,7 +916,7 @@ then
 	elif [ -x "$(command -v tar)" ]
 	then
 		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
-		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/tmp.tar /tmp/ 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/tmp.tar /tmp/ --exclude-from <(find /tmp/ -size $TAR_MAX_FILESIZE) 1> /dev/null 2> /dev/null
 	fi 
 elif [ $PLATFORM = "linux" ]
 then
@@ -926,7 +927,7 @@ then
 	elif [ -x "$(command -v tar)" ]
 	then
 		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
-		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/tmp.tar /tmp/ 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/tmp.tar /tmp/ --exclude-from <(find /tmp/ -size $TAR_MAX_FILESIZE) 1> /dev/null 2> /dev/null
 	fi 
 elif [ $PLATFORM = "mac" ]
 then
@@ -938,8 +939,8 @@ then
 		rsync -av --max-size=$MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /private/tmp/ $OUTPUT_DIR/tmpfiles/private_tmp 1> /dev/null 2> /dev/null
 	elif [ -x "$(command -v tar)" ]
 	then
-		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/tmp.tar /tmp/ 1> /dev/null 2> /dev/null
-		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/private_tmp.tar /private/tmp/ 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/tmp.tar /tmp/ --exclude-from <(find /tmp/ -size $TAR_MAX_FILESIZE) 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/private_tmp.tar /private/tmp/ --exclude-from <(find /private/tmp/ -size $TAR_MAX_FILESIZE) 1> /dev/null 2> /dev/null
 	fi 
 elif [ $PLATFORM = "generic" ]
 then
@@ -950,7 +951,7 @@ then
 	elif [ -x "$(command -v tar)" ]
 	then
 		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
-		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/tmp.tar /tmp/ 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/tmp.tar /tmp/ --exclude-from <(find /tmp/ -size $TAR_MAX_FILESIZE) 1> /dev/null 2> /dev/null
 	fi 
 elif [ $PLATFORM = "hpux" ]
 then
@@ -961,7 +962,7 @@ then
 	elif [ -x "$(command -v tar)" ]
 	then
 		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
-		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/tmp.tar /tmp/ 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/tmp.tar /tmp/ --exclude-from <(find /tmp/ -size $TAR_MAX_FILESIZE) 1> /dev/null 2> /dev/null
 	fi 
 fi
 
