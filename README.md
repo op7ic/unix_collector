@@ -32,6 +32,7 @@ A shell script for basic forensic collection of various artefacts from UNIX syst
 * Copy specific /proc/ files into output directory.
 * Copy system logs (i.e /var/log or /var/adm/) into output directory.
 * TAR entire output directory and use hostname as file name with current date.
+* Where copy or hashing operation happens, files over 500MB will be skipped. This default behaviour can be modified inside the script by changing RSYNC_MAX_FILESIZE, TAR_MAX_FILESIZE and HASH_MAX_FILESIZE global variables.
 
 # Requirements
 
