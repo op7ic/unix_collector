@@ -296,7 +296,8 @@ then
     find / -xdev -print0 2>/dev/null | xargs -0 stat --printf="%i,%h,%n,%x,%y,%z,%w,%U,%G,%A,%s\n" 1>> $OUTPUT_DIR/general/timeline.csv 2>/dev/null
 elif [ $PLATFORM = "aix" ]
 then
-    find / -xdev -print0 2>/dev/null | xargs -0 istat 1>> $OUTPUT_DIR/general/timeline.txt 2>/dev/null
+	echo "device number,inode,file name,nlink,uid,gid,rdev,size,access time,modified time,inode change time,io size,block size" > timeline.csv
+	find / -xdev 2>/dev/null | perl -n -e '$_ =~ s/\x0a//g; $_ =~ s/\x0d//g;print $_ . "," . join(",", stat($_)) . "\n";' 1>> timeline.csv 2>/dev/null
 fi
 
 echo "  ${COL_ENTRY}>${RESET} Release"
