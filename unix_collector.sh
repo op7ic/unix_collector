@@ -440,7 +440,7 @@ fi
 if [ -d /var/spool/cron/crontabs ]
 then
     mkdir $OUTPUT_DIR/general/crontabs 2> /dev/null
-    for name in `ls /var/spool/cron/crontabs/`
+    for name in `ls /var/spool/cron/crontabs/` 2> /dev/null
     do
         ls -lL /var/spool/cron/crontabs/$name 1>> $OUTPUT_DIR/general/crontabs/perms 2> /dev/null
         cp /var/spool/cron/crontabs/$name $OUTPUT_DIR/general/crontabs/$name 2> /dev/null
@@ -453,7 +453,7 @@ fi
 if [ -d /etc/cron.d ]
 then
     mkdir $OUTPUT_DIR/general/cron.d 2> /dev/null
-    for name in `ls /etc/cron.d/`
+    for name in `ls /etc/cron.d/` 2> /dev/null
     do
         if [ -f $name ]
         then
@@ -473,7 +473,7 @@ fi
 if [ -d /etc/cron.hourly ]
 then
     mkdir $OUTPUT_DIR/general/cron.hourly 2> /dev/null
-    for name in `ls /etc/cron.hourly/`
+    for name in `ls /etc/cron.hourly/` 2> /dev/null
     do
         if [ -f $name ]
         then
@@ -485,7 +485,7 @@ fi
 if [ -d /etc/cron.daily ]
 then
     mkdir $OUTPUT_DIR/general/cron.daily 2> /dev/null
-    for name in `ls /etc/cron.daily/`
+    for name in `ls /etc/cron.daily/` 2> /dev/null
     do
         if [ -f $name ]
         then
@@ -497,7 +497,7 @@ fi
 if [ -d /etc/cron.weekly ]
 then
     mkdir $OUTPUT_DIR/general/cron.weekly 2> /dev/null
-    for name in `ls /etc/cron.weekly/`
+    for name in `ls /etc/cron.weekly/` 2> /dev/null
     do
         if [ -f $name ]
         then
@@ -509,7 +509,7 @@ fi
 if [ -d /etc/cron.monthly ]
 then
     mkdir $OUTPUT_DIR/general/cron.monthly 2> /dev/null
-    for name in `ls /etc/cron.monthly/`
+    for name in `ls /etc/cron.monthly/` 2> /dev/null
     do
         if [ -f $name ]
         then
