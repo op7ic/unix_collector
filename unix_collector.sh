@@ -549,7 +549,7 @@ fi
 if [ -d /var/spool/cron/atjobs ]
 then
     mkdir $OUTPUT_DIR/general/atjobs 2> /dev/null
-    for name in `ls /var/spool/cron/atjobs/`
+    for name in `ls /var/spool/cron/atjobs/` 2> /dev/null
     do
         cp /var/spool/cron/atjobs/$name $OUTPUT_DIR/general/atjobs/$name 2> /dev/null
     done
