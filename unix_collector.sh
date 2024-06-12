@@ -1709,6 +1709,7 @@ fi
 echo "  ${COL_ENTRY}>${RESET} IP addr"
 ip addr 1> $OUTPUT_DIR/network/ipaddr.txt 2> /dev/null
 ip netconf 1> $OUTPUT_DIR/network/ipnetconf.txt 2> /dev/null
+ifconfig -a 1> $OUTPUT_DIR/network/ifconfig-a.txt 2> /dev/null
 
 echo "  ${COL_ENTRY}>${RESET} IP forwarding"
 if [ $PLATFORM = "aix" ]
