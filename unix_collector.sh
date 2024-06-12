@@ -50,7 +50,7 @@
 # ---------------------------
 # Global Variables
 # ---------------------------
-VERSION="1.5"
+VERSION="1.6"
 HOSTNAME=`hostname`
 PLATFORM="none"
 SHORT_DATE=`date +%B" "%Y`
