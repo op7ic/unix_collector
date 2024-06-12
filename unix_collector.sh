@@ -1792,6 +1792,8 @@ esxcli vm process list 1> $OUTPUT_DIR/virtual/esxi_vm_process_list.txt 2> /dev/n
 esxcli storage vmfs extent list 1> $OUTPUT_DIR/virtual/esxi_vmfs_list.txt 2> /dev/null
 esxcli storage filesystem list 1> $OUTPUT_DIR/virtual/esxi_volumes_list.txt 2> /dev/null
 esxcli network ip connection list 1> $OUTPUT_DIR/virtual/esxi_network_connection_list.txt 2> /dev/null
+vmware -vl 1> $OUTPUT_DIR/virtual/esxi_version2.txt 2> /dev/null
+vmkchdev -l 1> $OUTPUT_DIR/virtual/esxi_devices.txt 2> /dev/null
 
 #VBox
 VBoxManage list vms 1> $OUTPUT_DIR/virtual/vbox_vm_list.txt 2> /dev/null
