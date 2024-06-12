@@ -828,8 +828,8 @@ then
 		mkdir $OUTPUT_DIR/homedir/Users 2> /dev/null
 		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
 		find /Users/ /home/ -size $TAR_MAX_FILESIZE >> $OUTPUT_DIR/homedir/oversized_files.txt
-		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home/Users.tar /Users/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
-		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home/home.tar /home/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt -cvf $OUTPUT_DIR/homedir/home/Users.tar /Users/  1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt -cvf $OUTPUT_DIR/homedir/home/home.tar /home/  1> /dev/null 2> /dev/null
 	fi 	
 elif [ $PLATFORM = "linux" ]
 then
