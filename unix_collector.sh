@@ -795,9 +795,9 @@ then
 		mkdir $OUTPUT_DIR/homedir/root 1> /dev/null 2> /dev/null
 		mkdir $OUTPUT_DIR/homedir/home-export 1> /dev/null 2> /dev/null
 		find /home/ /export/home/ /root/ -size $TAR_MAX_FILESIZE >> $OUTPUT_DIR/homedir/oversized_files.txt
-		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home/home.tar /home/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
-		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/root/root.tar /root/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
-		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home-export/home-export.tar /export/home/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvfX $OUTPUT_DIR/homedir/home/home.tar $OUTPUT_DIR/homedir/oversized_files.txt /home/ 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvfX $OUTPUT_DIR/homedir/root/root.tar $OUTPUT_DIR/homedir/oversized_files.txt /root/ 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvfX $OUTPUT_DIR/homedir/home-export/home-export.tar $OUTPUT_DIR/homedir/oversized_files.txt /export/home/ 1> /dev/null 2> /dev/null
 	fi
 elif [ $PLATFORM = "aix" ]
 then
@@ -934,7 +934,7 @@ then
 	then
 		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
 		find /tmp/ -size $TAR_MAX_FILESIZE >> $OUTPUT_DIR/tmpfiles/oversized_files.txt 2> /dev/null
-		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/tmp.tar /tmp/ --exclude-from $OUTPUT_DIR/tmpfiles/oversized_files.txt 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvfX $OUTPUT_DIR/tmpfiles/tmp.tar $OUTPUT_DIR/tmpfiles/oversized_files.txt /tmp/ 1> /dev/null 2> /dev/null
 	fi 
 elif [ $PLATFORM = "aix" ]
 then
