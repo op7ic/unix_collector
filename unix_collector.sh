@@ -455,7 +455,7 @@ then
     mkdir $OUTPUT_DIR/general/cron.d 2> /dev/null
     for name in `ls /etc/cron.d/`
     do
-        if [ -f $name ]
+        if [ -f /etc/cron.d/$name ]
         then
 	    ls -lL /etc/cron.d/$name 1>> $OUTPUT_DIR/general/cron.d/perms 2> /dev/null
             cp /etc/cron.d/$name $OUTPUT_DIR/general/cron.d/$name 2> /dev/null
@@ -475,7 +475,7 @@ then
     mkdir $OUTPUT_DIR/general/cron.hourly 2> /dev/null
     for name in `ls /etc/cron.hourly/` 
     do
-        if [ -f $name ]
+        if [ -f /etc/cron.hourly/$name ]
         then
 	    ls -lL /etc/cron.d/$name 1>> $OUTPUT_DIR/general/cron.d/perms 2> /dev/null
             cp /etc/cron.hourly/$name $OUTPUT_DIR/general/cron.hourly/$name 2> /dev/null
@@ -487,9 +487,9 @@ then
     mkdir $OUTPUT_DIR/general/cron.daily 2> /dev/null
     for name in `ls /etc/cron.daily/` 
     do
-        if [ -f $name ]
+        if [ -f /etc/cron.daily/$name ]
         then
-	    ls -lL /etc/cron.daily/$name $OUTPUT_DIR/general/cron.daily/perms 2> /dev/null
+	    ls -lL /etc/cron.daily/$name 1>> $OUTPUT_DIR/general/cron.daily/perms 2> /dev/null
             cp /etc/cron.daily/$name $OUTPUT_DIR/general/cron.daily/$name 2> /dev/null
         fi
     done
@@ -499,9 +499,9 @@ then
     mkdir $OUTPUT_DIR/general/cron.weekly 2> /dev/null
     for name in `ls /etc/cron.weekly/`
     do
-        if [ -f $name ]
+        if [ -f /etc/cron.weekly/$name ]
         then
-	    ls -lL /etc/cron.weekly/$name $OUTPUT_DIR/general/cron.weekly/perms 2> /dev/null
+	    ls -lL /etc/cron.weekly/$name 1>> $OUTPUT_DIR/general/cron.weekly/perms 2> /dev/null
             cp /etc/cron.weekly/$name $OUTPUT_DIR/general/cron.weekly/$name 2> /dev/null
         fi
     done
@@ -511,9 +511,9 @@ then
     mkdir $OUTPUT_DIR/general/cron.monthly 2> /dev/null
     for name in `ls /etc/cron.monthly/`
     do
-        if [ -f $name ]
+        if [ -f /etc/cron.monthly/$name ]
         then
-	    ls -lL /etc/cron.monthly/$name $OUTPUT_DIR/general/cron.monthly/perms 2> /dev/null
+	    ls -lL /etc/cron.monthly/$name 1>> $OUTPUT_DIR/general/cron.monthly/perms 2> /dev/null
             cp /etc/cron.monthly/$name $OUTPUT_DIR/general/cron.monthly/$name 2> /dev/null
         fi
     done
@@ -824,7 +824,7 @@ then
 		mkdir $OUTPUT_DIR/homedir/root 2> /dev/null
 		find /root/ /home/ -size $TAR_MAX_FILESIZE >> $OUTPUT_DIR/homedir/oversized_files.txt 2> /dev/null
 		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home/home.tar /home/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
-		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/root/root.tar /root/ --exclude-from$OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/root/root.tar /root/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
 	fi 
 elif [ $PLATFORM = "generic" ]
 then
@@ -950,7 +950,7 @@ then
 	elif [ -x "$(command -v tar)" ]
 	then
 	    find /tmp/ /private/tmp/ -size $TAR_MAX_FILESIZE >> $OUTPUT_DIR/tmpfiles/oversized_files.txt 2> /dev/null
-		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/tmp.tar /tmp/ --exclude-from --exclude-from $OUTPUT_DIR/tmpfiles/oversized_files.txt 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/tmp.tar /tmp/ --exclude-from $OUTPUT_DIR/tmpfiles/oversized_files.txt 1> /dev/null 2> /dev/null
 		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/private_tmp.tar /private/tmp/ --exclude-from $OUTPUT_DIR/tmpfiles/oversized_files.txt 1> /dev/null 2> /dev/null
 	fi 
 elif [ $PLATFORM = "generic" ]
@@ -1759,6 +1759,46 @@ then
     cat -s /etc/opt/ipf/ipf.conf 1> $OUTPUT_DIR/network/ipf.conf 2> /dev/null
 fi
 
+
+# ---------------------------
+# PART 9: VIRTUAL SYSTEMS INFORMATION
+# ---------------------------
+
+echo "${COL_SECTION}VIRTUAL SYSTEMS INFORMATION [95% ]:${RESET}"
+mkdir $OUTPUT_DIR/virtual
+
+# VMWARE
+esxcli system version get 1> $OUTPUT_DIR/virtual/esxi_version.txt 2> /dev/null
+esxcli system hostname get 1> $OUTPUT_DIR/virtual/esxi_hostname.txt 2> /dev/null
+esxcli system stats installtime get 1> $OUTPUT_DIR/virtual/esxi_installtime.txt 2> /dev/null
+esxcli system account list 1> $OUTPUT_DIR/virtual/esxi_account_list.txt 2> /dev/null
+esxcli network firewall get  1> $OUTPUT_DIR/virtual/esxi_firewall_status.txt 2> /dev/null
+esxcli software vib list 1> $OUTPUT_DIR/virtual/esxi_software_vib_list.txt 2> /dev/null
+esxcli network firewall ruleset list 1> $OUTPUT_DIR/virtual/esxi_firewall_ruleset.txt 2> /dev/null
+esxcli network ip interface ipv4 get 1> $OUTPUT_DIR/virtual/esxi_ip4.txt 2> /dev/null
+esxcli network vm list 1> $OUTPUT_DIR/virtual/esxi_vm_network_vm_list.txt 2> /dev/null
+esxcli vm process list 1> $OUTPUT_DIR/virtual/esxi_vm_process_list.txt 2> /dev/null
+esxcli storage vmfs extent list 1> $OUTPUT_DIR/virtual/esxi_vmfs_list.txt 2> /dev/null
+esxcli storage filesystem list 1> $OUTPUT_DIR/virtual/esxi_volumes_list.txt 2> /dev/null
+esxcli network ip connection list 1> $OUTPUT_DIR/virtual/esxi_network_connection_list.txt 2> /dev/null
+
+#VBox
+VBoxManage list vms 1> $OUTPUT_DIR/virtual/vbox_vm_list.txt 2> /dev/null
+VBoxManage list runningvms 1> $OUTPUT_DIR/virtual/vbox_running_vm_list.txt 2> /dev/null
+VBoxManage list ostypes 1> $OUTPUT_DIR/virtual/vbox_ostypes_list.txt 2> /dev/null
+VBoxManage list hostinfo 1> $OUTPUT_DIR/virtual/vbox_hostinfo.txt 2> /dev/null
+VBoxManage list hddbackends 1> $OUTPUT_DIR/virtual/vbox_hddbackends.txt 2> /dev/null
+VBoxManage list systemproperties 1> $OUTPUT_DIR/virtual/vbox_systemproperties.txt 2> /dev/null
+VBoxManage list extpacks 1> $OUTPUT_DIR/virtual/vbox_extpacks.txt 2> /dev/null
+VBoxManage list groups 1> $OUTPUT_DIR/virtual/vbox_groups.txt 2> /dev/null
+VBoxManage list cloudproviders 1> $OUTPUT_DIR/virtual/vbox_cloudproviders.txt 2> /dev/null
+VBoxManage list cloudprofiles 1> $OUTPUT_DIR/virtual/vbox_cloudprofiles.txt 2> /dev/null
+
+# VIRT 
+virsh list --all 1> $OUTPUT_DIR/virtual/virt_vm_list.txt 2> /dev/null
+virsh list --all --name 1> $OUTPUT_DIR/virtual/virt_vm_list_names.txt 2> /dev/null
+virsh hostname 1> $OUTPUT_DIR/virtual/virt_hostname.txt 2> /dev/null
+virsh sysinfo 1> $OUTPUT_DIR/virtual/virt_sysinfo.txt 2> /dev/null
 
 # --------------------------------
 # PART 9: CLEANUP / CREATE ARCHIVE
