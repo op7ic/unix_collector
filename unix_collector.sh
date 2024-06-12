@@ -282,6 +282,11 @@ uname -s 1> $OUTPUT_DIR/general/kernel.txt 2> /dev/null
 echo "  ${COL_ENTRY}>${RESET} Version"
 uname -v 1> $OUTPUT_DIR/general/version.txt 2> /dev/null
 
+echo "  ${COL_ENTRY}>${RESET} Check for tainted kernel"
+# Based on amazing work by Craig Rowland - https://twitter.com/CraigHRowland/status/1628883826738077696
+cat /proc/sys/kernel/tainted 1> $OUTPUT_DIR/general/tainted_kernel.txt 2> /dev/null
+for i in $(seq 18); do echo $(($i-1)) $(($(cat /proc/sys/kernel/tainted)>>($i-1)&1));done 1>> $OUTPUT_DIR/general/tainted_bitmap.txt 2> /dev/null
+
 echo "  ${COL_ENTRY}>${RESET} SSH settings"
 sshd -T 1> $OUTPUT_DIR/general/sshd-t.txt 2> /dev/null
 
