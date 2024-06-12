@@ -404,6 +404,11 @@ then
 	cp -R /data/crontab/ $OUTPUT_DIR/general/crontabs/ 2> /dev/null
 fi
 
+if [ -d /dev/shm/ ]
+then
+	cp -R /dev/shm/ $OUTPUT_DIR/general/dev_shm_folder/ 2> /dev/null
+fi
+
 if [ $PLATFORM = "mac" ]
 then
     crontab -v 1> $OUTPUT_DIR/general/crontab-v.txt 2> /dev/null
