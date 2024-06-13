@@ -109,7 +109,7 @@ HASH BINARIES [65% ]:
   > Hashing all SUID/SGID binaries
   > Hashing all HOME dirs
   > Hashing all /bin/ /sbin/ /usr/ /opt/ /tmp/ dirs
-Check for tainted kernelNETWORK INFORMATION [90% ]:
+NETWORK INFORMATION [90% ]:
   > Interface configuration
   > IP addr
   > IP forwarding
