@@ -58,13 +58,14 @@ Execute ```unix_collector``` on MacOS while specifying platform:
 
 # Sample Output
 ```
+
   _   _ _   _ _____  __   ____ ___  _     _     _____ ____ _____ ___  ____
  | | | | \ | |_ _\ \/ /  / ___/ _ \| |   | |   | ____/ ___|_   _/ _ \|  _ \
  | | | |  \| || | \  /  | |  | | | | |   | |   |  _|| |     | || | | | |_) |
  | |_| | |\  || | /  \  | |__| |_| | |___| |___| |__| |___  | || |_| |  _ <
-  \___/|_| \_|___/_/\_\  \____\___/|_____|_____|_____\____| |_| \___/|_| \_"
+  \___/|_| \_|___/_/\_\  \____\___/|_____|_____|_____\____| |_| \___/|_| \_\
 
-A live forensic collection script for various artefacts from UNIX-like systems 1.3 by op7ic
+A live forensic collection script for UNIX-like systems. Version: 1.7 by op7ic
 
 
 PLATFORM: GNU/Linux
@@ -78,30 +79,37 @@ GENERAL INFORMATION [15%  ]:
   > Hostname
   > Kernel
   > Version
+  > Check for tainted kernel
+  > SSH settings
+  > File timeline
   > Release
-  > Processor
+  > Kerberos ticket list
   > Full OS Info
   > Process list
-  > Cron scheduler
+  > Cron and other scheduler files
   > Kernel Modules
   > At scheduler
   > Kernel settings
   > Environment
   > ulimit
   > Auditd
+  > spool files
 INSTALLED SOFTWARE AND PATCHES [25% ]:
   > Installed software (this could take a few mins)
   > Installed patches
-  > Compiler tools
-LOG FILE COLLECTION [50% ]:
+  > Compiler tools (NFS skip)
+LOG, HOME and PROC FILE COLLECTION [50% ]:
   > Copying logs
+  > Copying home dirs
+  > Copying proc dirs
+  > Copying /tmp/ and /var/tmp/ dirs where possible
 SUID/SGID SEARCH [60% ]:
   > Finding all SUID/SGID binaries
 HASH BINARIES [65% ]:
   > Hashing all SUID/SGID binaries
   > Hashing all HOME dirs
-  > Hashing all /bin /sbin /usr/ /opt/ /tmp/ dirs
-NETWORK INFORMATION [90% ]:
+  > Hashing all /bin/ /sbin/ /usr/ /opt/ /tmp/ dirs
+Check for tainted kernelNETWORK INFORMATION [90% ]:
   > Interface configuration
   > IP addr
   > IP forwarding
@@ -116,6 +124,7 @@ NETWORK INFORMATION [90% ]:
   > IP Tables (IPv6)
 FINISHING [100%]:
   > Removing empty files
+  > Removing oversize file list
   > Creating TAR file
   > Removing temporary directory
 ```
