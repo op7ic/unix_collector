@@ -34,6 +34,7 @@
 #     > CentOS
 #     > Red Hat
 #     > Android
+#     > VMware ESXi
 #     > Probably others as well.
 # 
 # Commandline Options
