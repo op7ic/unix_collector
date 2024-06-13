@@ -50,7 +50,7 @@
 # ---------------------------
 # Global Variables
 # ---------------------------
-VERSION="1.6"
+VERSION="1.7"
 HOSTNAME=`hostname`
 PLATFORM="none"
 SHORT_DATE=`date +%B" "%Y`
@@ -922,7 +922,7 @@ then
 fi
 
 mkdir $OUTPUT_DIR/tmpfiles 2> /dev/null
-echo "  ${COL_ENTRY}>${RESET} Copying /tmp/ dirs where possible"
+echo "  ${COL_ENTRY}>${RESET} Copying /tmp/ and /var/tmp/ dirs where possible"
 
 if [ $PLATFORM = "solaris" ]
 then
@@ -930,11 +930,13 @@ then
 	then
 		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
 		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /tmp/ $OUTPUT_DIR/tmpfiles/tmp 1> /dev/null 2> /dev/null
+		mkdir $OUTPUT_DIR/tmpfiles/var_tmp 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /var/tmp/ $OUTPUT_DIR/tmpfiles/var_tmp 1> /dev/null 2> /dev/null
 	elif [ -x "$(command -v tar)" ]
 	then
-		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
-		find /tmp/ -size $TAR_MAX_FILESIZE >> $OUTPUT_DIR/tmpfiles/oversized_files.txt 2> /dev/null
+		find /tmp/ /var/tmp/ -size $TAR_MAX_FILESIZE >> $OUTPUT_DIR/tmpfiles/oversized_files.txt 2> /dev/null
 		tar --exclude=$OUTPUT_DIR -cvfX $OUTPUT_DIR/tmpfiles/tmp.tar $OUTPUT_DIR/tmpfiles/oversized_files.txt /tmp/ 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvfX $OUTPUT_DIR/tmpfiles/var_tmp.tar $OUTPUT_DIR/tmpfiles/oversized_files.txt /var/tmp/ 1> /dev/null 2> /dev/null
 	fi 
 elif [ $PLATFORM = "aix" ]
 then
@@ -942,11 +944,13 @@ then
 	then
 		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
 		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /tmp/ $OUTPUT_DIR/tmpfiles/tmp 1> /dev/null 2> /dev/null
+		mkdir $OUTPUT_DIR/tmpfiles/var_tmp 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /var/tmp/ $OUTPUT_DIR/tmpfiles/var_tmp 1> /dev/null 2> /dev/null
 	elif [ -x "$(command -v tar)" ]
 	then
-		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
-		find /tmp/ -size $TAR_MAX_FILESIZE >> $OUTPUT_DIR/tmpfiles/oversized_files.txt 2> /dev/null
+		find /tmp/ /var/tmp/ -size $TAR_MAX_FILESIZE >> $OUTPUT_DIR/tmpfiles/oversized_files.txt 2> /dev/null
 		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/tmp.tar /tmp/ --exclude-from $OUTPUT_DIR/tmpfiles/oversized_files.txt 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/var_tmp.tar /var/tmp/ --exclude-from $OUTPUT_DIR/tmpfiles/oversized_files.txt 1> /dev/null 2> /dev/null
 	fi 
 elif [ $PLATFORM = "linux" ]
 then
@@ -954,25 +958,30 @@ then
 	then
 		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
 		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /tmp/ $OUTPUT_DIR/tmpfiles/tmp 1> /dev/null 2> /dev/null
+		mkdir $OUTPUT_DIR/tmpfiles/var_tmp 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /var/tmp/ $OUTPUT_DIR/tmpfiles/var_tmp 1> /dev/null 2> /dev/null
 	elif [ -x "$(command -v tar)" ]
 	then
-		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
-		find /tmp/ -size $TAR_MAX_FILESIZE >> $OUTPUT_DIR/tmpfiles/oversized_files.txt 2> /dev/null
+		find /tmp/ /var/tmp/ -size $TAR_MAX_FILESIZE >> $OUTPUT_DIR/tmpfiles/oversized_files.txt 2> /dev/null
 		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/tmp.tar /tmp/ --exclude-from $OUTPUT_DIR/tmpfiles/oversized_files.txt 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/var_tmp.tar /var/tmp/ --exclude-from $OUTPUT_DIR/tmpfiles/oversized_files.txt 1> /dev/null 2> /dev/null
 	fi 
 elif [ $PLATFORM = "mac" ]
 then
 	if [ -x "$(command -v rsync)" ]
 	then
 		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
-		mkdir $OUTPUT_DIR/tmpfiles/private_tmp 2> /dev/null
 		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /tmp/ $OUTPUT_DIR/tmpfiles/tmp 1> /dev/null 2> /dev/null
+		mkdir $OUTPUT_DIR/tmpfiles/private_tmp 2> /dev/null
 		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /private/tmp/ $OUTPUT_DIR/tmpfiles/private_tmp 1> /dev/null 2> /dev/null
+		mkdir $OUTPUT_DIR/tmpfiles/var_tmp 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /var/tmp/ $OUTPUT_DIR/tmpfiles/var_tmp 1> /dev/null 2> /dev/null
 	elif [ -x "$(command -v tar)" ]
 	then
-	    find /tmp/ /private/tmp/ -size $TAR_MAX_FILESIZE >> $OUTPUT_DIR/tmpfiles/oversized_files.txt 2> /dev/null
+	    find /tmp/ /private/tmp/ /var/tmp/ -size $TAR_MAX_FILESIZE >> $OUTPUT_DIR/tmpfiles/oversized_files.txt 2> /dev/null
 		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/tmp.tar /tmp/ --exclude-from $OUTPUT_DIR/tmpfiles/oversized_files.txt 1> /dev/null 2> /dev/null
 		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/private_tmp.tar /private/tmp/ --exclude-from $OUTPUT_DIR/tmpfiles/oversized_files.txt 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/var_tmp.tar /var/tmp/ --exclude-from $OUTPUT_DIR/tmpfiles/oversized_files.txt 1> /dev/null 2> /dev/null
 	fi 
 elif [ $PLATFORM = "generic" ]
 then
@@ -980,11 +989,13 @@ then
 	then
 		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
 		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /tmp/ $OUTPUT_DIR/tmpfiles/tmp 1> /dev/null 2> /dev/null
+		mkdir $OUTPUT_DIR/tmpfiles/var_tmp 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /var/tmp/ $OUTPUT_DIR/tmpfiles/var_tmp 1> /dev/null 2> /dev/null
 	elif [ -x "$(command -v tar)" ]
 	then
-		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
-		find /tmp/ -size $TAR_MAX_FILESIZE >> $OUTPUT_DIR/tmpfiles/oversized_files.txt 2> /dev/null
+		find /tmp/ /var/tmp/ -size $TAR_MAX_FILESIZE >> $OUTPUT_DIR/tmpfiles/oversized_files.txt 2> /dev/null
 		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/tmp.tar /tmp/ --exclude-from $OUTPUT_DIR/tmpfiles/oversized_files.txt 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/var_tmp.tar /var/tmp/ --exclude-from $OUTPUT_DIR/tmpfiles/oversized_files.txt 1> /dev/null 2> /dev/null
 	fi 
 elif [ $PLATFORM = "hpux" ]
 then
@@ -992,11 +1003,13 @@ then
 	then
 		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
 		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /tmp/ $OUTPUT_DIR/tmpfiles/tmp 1> /dev/null 2> /dev/null
+		mkdir $OUTPUT_DIR/tmpfiles/var_tmp 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /var/tmp/ $OUTPUT_DIR/tmpfiles/var_tmp 1> /dev/null 2> /dev/null
 	elif [ -x "$(command -v tar)" ]
 	then
-		mkdir $OUTPUT_DIR/tmpfiles/tmp 2> /dev/null
-		find /tmp/ -size $TAR_MAX_FILESIZE >> $OUTPUT_DIR/tmpfiles/oversized_files.txt 2> /dev/null
+		find /tmp/ /var/tmp/ -size $TAR_MAX_FILESIZE >> $OUTPUT_DIR/tmpfiles/oversized_files.txt 2> /dev/null
 		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/tmp.tar /tmp/ --exclude-from $OUTPUT_DIR/tmpfiles/oversized_files.txt 1> /dev/null 2> /dev/null
+		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/var_tmp.tar /var/tmp/ --exclude-from $OUTPUT_DIR/tmpfiles/oversized_files.txt 1> /dev/null 2> /dev/null
 	fi 
 fi
 
