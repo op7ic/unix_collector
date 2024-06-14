@@ -35,6 +35,9 @@
 #     > Red Hat
 #     > Android
 #     > VMware ESXi
+#     > FreeBSD
+#     > OpenBSD
+#     > NetScaler
 #     > Probably others as well.
 # 
 # Commandline Options
