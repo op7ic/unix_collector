@@ -15,6 +15,9 @@ A shell script for basic forensic collection of various artefacts from UNIX syst
 * Red Hat
 * Android
 * Vmware ESXi
+* FreeBSD
+* NetScaler
+* OpenBSD
 * Probably others as well.
 
 # Script Activities
