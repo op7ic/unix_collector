@@ -23,7 +23,7 @@ A shell script for basic forensic collection of various artefacts from UNIX syst
 # Features
 
 * Runs everything from a single script
-* No installation, external libraries needed
+* No installation or external libraries needed
 
 # Script Activities
 
