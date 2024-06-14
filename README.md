@@ -39,7 +39,7 @@ A shell script for basic forensic collection of various artefacts from UNIX syst
 * Hash files which are marked as SGID or SUID and save details in output directory.
 * Copy various files such as cron job, plist or other files into output directory.
 * Copy SUID/SGID binaries into output directory.
-* Copy home directories into output directory.
+* Copy home and tmp directories into output directory.
 * Copy specific /proc/ files into output directory.
 * Copy system logs (i.e /var/log or /var/adm/) into output directory.
 * Copy /dev/shm into output directory.
