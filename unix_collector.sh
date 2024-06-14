@@ -349,7 +349,10 @@ then
 	getprop 1> $OUTPUT_DIR/general/android_getprop.txt 2> /dev/null
 	getprop -T 1> $OUTPUT_DIR/general/android_getprop-T.txt 2> /dev/null
 	getprop -Z 1> $OUTPUT_DIR/general/android_getprop-Z.txt 2> /dev/null
+	lsof -l 1> $OUTPUT_DIR/general/android_lsof_l.txt 2> /dev/null
 fi
+echo "  ${COL_ENTRY}>${RESET} LSOF"
+lsof -nPl 1> $OUTPUT_DIR/general/lsof_nPl.txt 2> /dev/null
 
 if [ $PLATFORM = "aix" ]
 then
@@ -369,9 +372,28 @@ fi
 
 echo "  ${COL_ENTRY}>${RESET} Process list"
 ps -efl 1> $OUTPUT_DIR/general/ps.txt 2> /dev/null
-ps -auxww 1> $OUTPUT_DIR/general/ps-auxww 2> /dev/null
-ps -deaf 1> $OUTPUT_DIR/general/ps-deaf 2> /dev/null
-ps -aux 1> $OUTPUT_DIR/general/ps-aux 2> /dev/null
+ps -auxww 1> $OUTPUT_DIR/general/ps-auxww.txt 2> /dev/null
+ps -deaf 1> $OUTPUT_DIR/general/ps-deaf.txt 2> /dev/null
+ps -aux 1> $OUTPUT_DIR/general/ps-aux.txt 2> /dev/null
+pstree 1> $OUTPUT_DIR/general/pstree.txt 2> /dev/null
+pstree -a 1> $OUTPUT_DIR/general/pstree_a.txt 2> /dev/null
+pstree -p -n 1> $OUTPUT_DIR/general/pstree_p_n.txt 2> /dev/null
+ps -eo args | grep "^/" | awk '{print $1}' | sort -u 1> $OUTPUT_DIR/general/running_executables.txt 2> /dev/null
+ps -c | awk '{print $4}' | sort -u | grep "^/" 1> $OUTPUT_DIR/general/running_executables_esxi.txt 2> /dev/null
+
+if [ $PLATFORM = "solaris" ]
+then
+	ptree 1> $OUTPUT_DIR/general/ptree.txt 2> /dev/null
+fi
+
+if [ $PLATFORM = "aix" ]
+then
+	proctree -a 1> $OUTPUT_DIR/general/proctree_a.txt 2> /dev/null
+	pstat -a 1> $OUTPUT_DIR/general/pstat_a.txt 2> /dev/null
+	pstat -f 1> $OUTPUT_DIR/general/pstat_f.txt 2> /dev/null
+	pstat -A 1> $OUTPUT_DIR/general/pstat_A.txt 2> /dev/null
+	pstat -p 1> $OUTPUT_DIR/general/pstat_p.txt 2> /dev/null
+fi
 
 if [ $PLATFORM = "android" ]
 then
