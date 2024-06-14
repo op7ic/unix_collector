@@ -336,6 +336,8 @@ ls -lct /etc | tail -1 1> $OUTPUT_DIR/general/installation-time.txt 2> /dev/null
 	
 echo "  ${COL_ENTRY}>${RESET} Kerberos ticket list"
 klist 1> $OUTPUT_DIR/general/kerberos-ticket-list.txt 2> /dev/null
+echo "  ${COL_ENTRY}>${RESET} Mount points"
+mount 1> $OUTPUT_DIR/general/mount.txt 2> /dev/null
 
 if [ $PLATFORM = "android" ]
 then
@@ -1840,8 +1842,92 @@ then
     virsh hostname 1> $OUTPUT_DIR/virtual/virt_hostname.txt 2> /dev/null
     virsh sysinfo 1> $OUTPUT_DIR/virtual/virt_sysinfo.txt 2> /dev/null
 fi
+
+# ---------------------------
+# PART 10: CONTAINER INFORMATION
+# ---------------------------
+
+if [ -x "$(command -v containerd)" -o -x "$(command -v docker)" -o -x "$(command -v lxc)" -o -x "$(command -v pct)" -o -x "$(command -v podman)" ]
+then
+    echo "${COL_SECTION}CONTAINER INFORMATION [96% ]:${RESET}"
+	mkdir $OUTPUT_DIR/containers
+    if [ -x "$(command -v containerd)" ]
+	then
+	    echo "  ${COL_ENTRY}>${RESET} Collecting containerd config"
+		containerd config dump 1> $OUTPUT_DIR/containers/containerd_config_all.txt 2> /dev/null
+		containerd -v 1> $OUTPUT_DIR/containers/containerd_config_all.txt 2> /dev/null
+	fi
+	
+	if [ -x "$(command -v docker)" ]
+	then
+	    echo "  ${COL_ENTRY}>${RESET} Collecting docker information"
+		docker container ls --all --size 1> $OUTPUT_DIR/containers/docker_all_containers.txt 2> /dev/null
+		docker image ls --all 1> $OUTPUT_DIR/containers/docker_all_images.txt 2> /dev/null
+		docker info 1> $OUTPUT_DIR/containers/docker_info.txt 2> /dev/null
+		docker version 1> $OUTPUT_DIR/containers/docker_version.txt 2> /dev/null
+		docker network ls 1> $OUTPUT_DIR/containers/docker_network.txt 2> /dev/null
+		docker stats --all --no-stream --no-trunc 1> $OUTPUT_DIR/containers/docker_stats.txt 2> /dev/null
+		docker volume ls 1> $OUTPUT_DIR/containers/docker_volume.txt 2> /dev/null
+		docker container ps --all | sed 1d | awk '{print $1}' 1>> $OUTPUT_DIR/containers/docker_ids.txt 2> /dev/null
+		while read -r containerid; do docker container logs "$containerid" 1>> $OUTPUT_DIR/containers/docker_logs_$containerid.txt 2> /dev/null; done < $OUTPUT_DIR/containers/docker_ids.txt 2> /dev/null
+		while read -r containerid; do docker inspect "$containerid" 1>> $OUTPUT_DIR/containers/docker_inspect_$containerid.txt 2> /dev/null; done < $OUTPUT_DIR/containers/docker_ids.txt 2> /dev/null
+		while read -r containerid; do docker top "$containerid" 1>> $OUTPUT_DIR/containers/docker_processes_$containerid.txt 2> /dev/null; done < $OUTPUT_DIR/containers/docker_ids.txt 2> /dev/null
+		while read -r containerid; do docker network inspect "$containerid" 1>> $OUTPUT_DIR/containers/docker_network_config_inspect_$containerid.txt 2> /dev/null; done < $OUTPUT_DIR/containers/docker_ids.txt 2> /dev/null
+		while read -r containerid; do docker volume inspect "$containerid" 1>> $OUTPUT_DIR/containers/docker_volume_inspect_$containerid.txt 2> /dev/null; done < $OUTPUT_DIR/containers/docker_ids.txt 2> /dev/null
+		while read -r containerid; do docker diff "$containerid" 1>> $OUTPUT_DIR/containers/docker_filesystem_diff_$containerid.txt 2> /dev/null; done < $OUTPUT_DIR/containers/docker_ids.txt 2> /dev/null
+	fi
+	
+	if [ -x "$(command -v lxc)" ]
+	then
+	    echo "  ${COL_ENTRY}>${RESET} Collecting LXC information"
+		lxc list --all-projects --format compact 1> $OUTPUT_DIR/containers/lxc_all_containers_and_vms.txt 2> /dev/null
+		lxc image list --format compact 1> $OUTPUT_DIR/containers/lxc_images.txt 2> /dev/null
+		lxc info 1> $OUTPUT_DIR/containers/lxc_info.txt 2> /dev/null
+		lxc profile list --format compact 1> $OUTPUT_DIR/containers/lxc_profiles.txt 2> /dev/null
+		lxc storage list --format compact 1> $OUTPUT_DIR/containers/lxc_storage.txt 2> /dev/null
+		lxc warning list --format compact 1> $OUTPUT_DIR/containers/lxc_warnings.txt 2> /dev/null
+		lxc version 1> $OUTPUT_DIR/containers/lxc_version.txt 2> /dev/null
+		lxc list --format compact | sed 1d | awk '{print $1}' 1>> $OUTPUT_DIR/containers/lxc_container_ids.txt 2> /dev/null
+		while read -r containerid; do lxc info "$containerid" --show-log 1>> $OUTPUT_DIR/containers/lxc_info_logs_$containerid.txt 2> /dev/null; done < $OUTPUT_DIR/containers/lxc_container_ids.txt 2> /dev/null
+		while read -r containerid; do lxc config show "$containerid" 1>> $OUTPUT_DIR/containers/lxc_config_container_$containerid.txt 2> /dev/null; done < $OUTPUT_DIR/containers/lxc_container_ids.txt 2> /dev/null
+		while read -r containerid; do lxc network info "$containerid" 1>> $OUTPUT_DIR/containers/lxc_network_info_$containerid.txt 2> /dev/null; done < $OUTPUT_DIR/containers/lxc_container_ids.txt 2> /dev/null
+		while read -r containerid; do lxc profile show "$containerid" 1>> $OUTPUT_DIR/containers/lxc_profile_$containerid.txt 2> /dev/null; done < $OUTPUT_DIR/containers/lxc_container_ids.txt 2> /dev/null
+		lxc storage list --format compact | sed 1d | awk '{print $1}' 1> $OUTPUT_DIR/containers/lxc_storage_ids.txt 2> /dev/null
+		while read -r containerid; do lxc storage show "$containerid" 1>> $OUTPUT_DIR/containers/lxc_storage_details_$containerid.txt 2> /dev/null; done < $OUTPUT_DIR/containers/lxc_storage_ids.txt 2> /dev/null
+	fi
+	
+	if [ -x "$(command -v pct)" ]
+	then
+	    echo "  ${COL_ENTRY}>${RESET} Collecting PROXMOX information"
+		pct list 1> $OUTPUT_DIR/containers/proxmox_container_list.txt 2> /dev/null
+		pct cpusets 1> $OUTPUT_DIR/containers/proxmox_cpuset.txt 2> /dev/null
+		pct list | sed -e '1d' | awk '{print $1}' 1>> $OUTPUT_DIR/containers/proxmox_container_ids.txt 2> /dev/null
+		while read -r containerid; do pct config "$containerid" --current 1>> $OUTPUT_DIR/containers/proxmox_config_details_$containerid.txt 2> /dev/null; done < $OUTPUT_DIR/containers/proxmox_container_ids.txt 2> /dev/null
+		while read -r containerid; do pct listsnapshot "$containerid" 1>> $OUTPUT_DIR/containers/proxmox_listsnapshot_details_$containerid.txt 2> /dev/null; done < $OUTPUT_DIR/containers/proxmox_container_ids.txt 2> /dev/null
+	fi
+	
+	if [ -x "$(command -v podman)" ]
+	then
+	    echo "  ${COL_ENTRY}>${RESET} Collecting PODMAN information"
+		podman container ls --all --size 1> $OUTPUT_DIR/containers/podman_container_list.txt 2> /dev/null
+		podman image ls --all 1> $OUTPUT_DIR/containers/podman_image_list.txt 2> /dev/null
+		podman version 1> $OUTPUT_DIR/containers/podman_version.txt 2> /dev/null
+		podman network ls 1> $OUTPUT_DIR/containers/podman_networks.txt 2> /dev/null
+		podman volume ls 1> $OUTPUT_DIR/containers/podman_volumes.txt 2> /dev/null
+		podman container ps --all | sed 1d | awk '{print $1}' 1> $OUTPUT_DIR/containers/podman_container_ids.txt 2> /dev/null
+		while read -r containerid; do podman container logs "$containerid" --current 1>> $OUTPUT_DIR/containers/podman_logs_$containerid.txt 2> /dev/null; done < $OUTPUT_DIR/containers/podman_container_ids.txt 2> /dev/null
+		while read -r containerid; do podman inspect "$containerid" 1>> $OUTPUT_DIR/containers/podman_inspect_details_$containerid.txt 2> /dev/null; done < $OUTPUT_DIR/containers/podman_container_ids.txt 2> /dev/null
+		while read -r containerid; do podman network inspect "$containerid" --current 1>> $OUTPUT_DIR/containers/podman_network_details_$containerid.txt 2> /dev/null; done < $OUTPUT_DIR/containers/podman_container_ids.txt 2> /dev/null
+		while read -r containerid; do podman top "$containerid" 1>> $OUTPUT_DIR/containers/podman_process_details_$containerid.txt 2> /dev/null; done < $OUTPUT_DIR/containers/podman_container_ids.txt 2> /dev/null
+		while read -r containerid; do podman diff "$containerid" --current 1>> $OUTPUT_DIR/containers/podman_filesystem_diff_$containerid.txt 2> /dev/null; done < $OUTPUT_DIR/containers/podman_container_ids.txt 2> /dev/null
+		podman volume ls | sed 1d | awk '{print $2}' 1> $OUTPUT_DIR/containers/podman_storage_ids.txt 2> /dev/null 
+		while read -r containerid; do podman volume inspect "$containerid" 1>> $OUTPUT_DIR/containers/podman_volume_details_$containerid.txt 2> /dev/null; done < $OUTPUT_DIR/containers/podman_storage_ids.txt 2> /dev/null
+		
+	fi
+fi
+
 # --------------------------------
-# PART 9: CLEANUP / CREATE ARCHIVE
+# PART 11: CLEANUP / CREATE ARCHIVE
 # --------------------------------
 
 echo "${COL_SECTION}FINISHING [100%]:${RESET}"
