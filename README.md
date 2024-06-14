@@ -18,6 +18,7 @@ A shell script for basic forensic collection of various artefacts from UNIX syst
 * FreeBSD
 * NetScaler
 * OpenBSD
+* Any IoT platform that is based on Linux/Unix
 * Probably others as well.
 
 # Features
