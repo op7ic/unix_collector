@@ -20,6 +20,11 @@ A shell script for basic forensic collection of various artefacts from UNIX syst
 * OpenBSD
 * Probably others as well.
 
+# Features
+
+* Runs everything from a single script
+* No installation, external libraries needed
+
 # Script Activities
 
 * Enumerate basic host information such as kernel version, processes, hostname and save details in output directory.
