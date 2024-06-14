@@ -136,3 +136,7 @@ FINISHING [100%]:
   > Creating TAR file
   > Removing temporary directory
 ```
+
+# License
+
+The unix_collector project uses the [GNU General Public License v3.0](LICENSE) software license.
