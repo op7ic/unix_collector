@@ -38,6 +38,7 @@
 #     > FreeBSD
 #     > OpenBSD
 #     > NetScaler
+#     > Any IoT platform that is based on Linux/Unix
 #     > Probably others as well.
 # 
 # Commandline Options
