@@ -2,6 +2,9 @@
 
 A shell script for basic forensic collection of various artefacts from UNIX systems. ```unix_collector``` is a script that runs on various Unix systems and attempts to collect artefacts which could be analysed in attempt to identify potential system compromise. ```unix_collector``` is written as a single shell script so it can be easily uploaded and run (as opposed to un-tarred, compiled and installed). It can run either as a normal user or as root. It does a better job when running as root because it can read more files of course.
 
+
+[![Imgur](https://i.imgur.com/6xMcGIg.gif)](#)
+
 # Available platforms
 
 * Sun Solaris
@@ -39,12 +42,13 @@ A shell script for basic forensic collection of various artefacts from UNIX syst
 * Hash files which are marked as SGID or SUID and save details in output directory.
 * Copy various files such as cron job, plist or other files into output directory.
 * Copy SUID/SGID binaries into output directory.
-* Copy home directories into output directory.
+* Copy home and tmp directories into output directory.
 * Copy specific /proc/ files into output directory.
 * Copy system logs (i.e /var/log or /var/adm/) into output directory.
 * Copy /dev/shm into output directory.
-* TAR entire output directory and use hostname as file name with current date.
+* Gather information about containers.
 * Where copy or hashing operation happens, files over 500MB will be skipped. This default behaviour can be modified inside the script by changing RSYNC_MAX_FILESIZE, TAR_MAX_FILESIZE and HASH_MAX_FILESIZE global variables.
+* TAR entire output directory and use hostname as file name with current date.
 
 # Requirements
 
