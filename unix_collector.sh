@@ -1832,37 +1832,46 @@ then
     echo "${COL_SECTION}VIRTUAL SYSTEMS INFORMATION [95% ]:${RESET}"
     mkdir $OUTPUT_DIR/virtual
     # VMWARE
-    esxcli system version get 1> $OUTPUT_DIR/virtual/esxi_version.txt 2> /dev/null
-    esxcli system hostname get 1> $OUTPUT_DIR/virtual/esxi_hostname.txt 2> /dev/null
-    esxcli system stats installtime get 1> $OUTPUT_DIR/virtual/esxi_installtime.txt 2> /dev/null
-    esxcli system account list 1> $OUTPUT_DIR/virtual/esxi_account_list.txt 2> /dev/null
-    esxcli network firewall get  1> $OUTPUT_DIR/virtual/esxi_firewall_status.txt 2> /dev/null
-    esxcli software vib list 1> $OUTPUT_DIR/virtual/esxi_software_vib_list.txt 2> /dev/null
-    esxcli network firewall ruleset list 1> $OUTPUT_DIR/virtual/esxi_firewall_ruleset.txt 2> /dev/null
-    esxcli network ip interface ipv4 get 1> $OUTPUT_DIR/virtual/esxi_ip4.txt 2> /dev/null
-    esxcli network vm list 1> $OUTPUT_DIR/virtual/esxi_vm_network_vm_list.txt 2> /dev/null
-    esxcli vm process list 1> $OUTPUT_DIR/virtual/esxi_vm_process_list.txt 2> /dev/null
-    esxcli storage vmfs extent list 1> $OUTPUT_DIR/virtual/esxi_vmfs_list.txt 2> /dev/null
-    esxcli storage filesystem list 1> $OUTPUT_DIR/virtual/esxi_volumes_list.txt 2> /dev/null
-    esxcli network ip connection list 1> $OUTPUT_DIR/virtual/esxi_network_connection_list.txt 2> /dev/null
-    vmware -vl 1> $OUTPUT_DIR/virtual/esxi_version2.txt 2> /dev/null
-    vmkchdev -l 1> $OUTPUT_DIR/virtual/esxi_devices.txt 2> /dev/null
+	if [ -x "$(command -v esxcli)" ]
+	then
+		esxcli system version get 1> $OUTPUT_DIR/virtual/esxi_version.txt 2> /dev/null
+		esxcli system hostname get 1> $OUTPUT_DIR/virtual/esxi_hostname.txt 2> /dev/null
+		esxcli system stats installtime get 1> $OUTPUT_DIR/virtual/esxi_installtime.txt 2> /dev/null
+		esxcli system account list 1> $OUTPUT_DIR/virtual/esxi_account_list.txt 2> /dev/null
+		esxcli network firewall get  1> $OUTPUT_DIR/virtual/esxi_firewall_status.txt 2> /dev/null
+		esxcli software vib list 1> $OUTPUT_DIR/virtual/esxi_software_vib_list.txt 2> /dev/null
+		esxcli network firewall ruleset list 1> $OUTPUT_DIR/virtual/esxi_firewall_ruleset.txt 2> /dev/null
+		esxcli network ip interface ipv4 get 1> $OUTPUT_DIR/virtual/esxi_ip4.txt 2> /dev/null
+		esxcli network vm list 1> $OUTPUT_DIR/virtual/esxi_vm_network_vm_list.txt 2> /dev/null
+		esxcli vm process list 1> $OUTPUT_DIR/virtual/esxi_vm_process_list.txt 2> /dev/null
+		esxcli storage vmfs extent list 1> $OUTPUT_DIR/virtual/esxi_vmfs_list.txt 2> /dev/null
+		esxcli storage filesystem list 1> $OUTPUT_DIR/virtual/esxi_volumes_list.txt 2> /dev/null
+		esxcli network ip connection list 1> $OUTPUT_DIR/virtual/esxi_network_connection_list.txt 2> /dev/null
+		vmware -vl 1> $OUTPUT_DIR/virtual/esxi_version2.txt 2> /dev/null
+		vmkchdev -l 1> $OUTPUT_DIR/virtual/esxi_devices.txt 2> /dev/null
+	fi
     #VBox
-    VBoxManage list vms 1> $OUTPUT_DIR/virtual/vbox_vm_list.txt 2> /dev/null
-    VBoxManage list runningvms 1> $OUTPUT_DIR/virtual/vbox_running_vm_list.txt 2> /dev/null
-    VBoxManage list ostypes 1> $OUTPUT_DIR/virtual/vbox_ostypes_list.txt 2> /dev/null
-    VBoxManage list hostinfo 1> $OUTPUT_DIR/virtual/vbox_hostinfo.txt 2> /dev/null
-    VBoxManage list hddbackends 1> $OUTPUT_DIR/virtual/vbox_hddbackends.txt 2> /dev/null
-    VBoxManage list systemproperties 1> $OUTPUT_DIR/virtual/vbox_systemproperties.txt 2> /dev/null
-    VBoxManage list extpacks 1> $OUTPUT_DIR/virtual/vbox_extpacks.txt 2> /dev/null
-    VBoxManage list groups 1> $OUTPUT_DIR/virtual/vbox_groups.txt 2> /dev/null
-    VBoxManage list cloudproviders 1> $OUTPUT_DIR/virtual/vbox_cloudproviders.txt 2> /dev/null
-    VBoxManage list cloudprofiles 1> $OUTPUT_DIR/virtual/vbox_cloudprofiles.txt 2> /dev/null
+	if [ -x "$(command -v VBoxManage)" ]
+	then
+		VBoxManage list vms 1> $OUTPUT_DIR/virtual/vbox_vm_list.txt 2> /dev/null
+		VBoxManage list runningvms 1> $OUTPUT_DIR/virtual/vbox_running_vm_list.txt 2> /dev/null
+		VBoxManage list ostypes 1> $OUTPUT_DIR/virtual/vbox_ostypes_list.txt 2> /dev/null
+		VBoxManage list hostinfo 1> $OUTPUT_DIR/virtual/vbox_hostinfo.txt 2> /dev/null
+		VBoxManage list hddbackends 1> $OUTPUT_DIR/virtual/vbox_hddbackends.txt 2> /dev/null
+		VBoxManage list systemproperties 1> $OUTPUT_DIR/virtual/vbox_systemproperties.txt 2> /dev/null
+		VBoxManage list extpacks 1> $OUTPUT_DIR/virtual/vbox_extpacks.txt 2> /dev/null
+		VBoxManage list groups 1> $OUTPUT_DIR/virtual/vbox_groups.txt 2> /dev/null
+		VBoxManage list cloudproviders 1> $OUTPUT_DIR/virtual/vbox_cloudproviders.txt 2> /dev/null
+		VBoxManage list cloudprofiles 1> $OUTPUT_DIR/virtual/vbox_cloudprofiles.txt 2> /dev/null
+	fi
     # VIRT 
-    virsh list --all 1> $OUTPUT_DIR/virtual/virt_vm_list.txt 2> /dev/null
-    virsh list --all --name 1> $OUTPUT_DIR/virtual/virt_vm_list_names.txt 2> /dev/null
-    virsh hostname 1> $OUTPUT_DIR/virtual/virt_hostname.txt 2> /dev/null
-    virsh sysinfo 1> $OUTPUT_DIR/virtual/virt_sysinfo.txt 2> /dev/null
+	if [ -x "$(command -v VBoxManage)" ]
+	then
+		virsh list --all 1> $OUTPUT_DIR/virtual/virt_vm_list.txt 2> /dev/null
+		virsh list --all --name 1> $OUTPUT_DIR/virtual/virt_vm_list_names.txt 2> /dev/null
+		virsh hostname 1> $OUTPUT_DIR/virtual/virt_hostname.txt 2> /dev/null
+		virsh sysinfo 1> $OUTPUT_DIR/virtual/virt_sysinfo.txt 2> /dev/null
+	fi
 fi
 
 # ---------------------------
