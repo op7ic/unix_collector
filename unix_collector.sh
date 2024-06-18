@@ -438,6 +438,12 @@ then
 	cp -R /dev/shm/ $OUTPUT_DIR/general/dev_shm_folder/ 2> /dev/null
 fi
 
+if [ -d /run/shm ]
+then
+	cp -R /run/shm/ $OUTPUT_DIR/general/run_shm_folder/ 2> /dev/null
+fi
+
+
 if [ $PLATFORM = "mac" ]
 then
     crontab -v 1> $OUTPUT_DIR/general/crontab-v.txt 2> /dev/null

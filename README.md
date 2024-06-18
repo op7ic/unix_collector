@@ -28,9 +28,6 @@ A shell script for basic forensic collection of various artefacts from UNIX syst
 
 * Runs everything from a single script
 * No installation or external libraries needed
-
-# Script Activities
-
 * Enumerate basic host information such as kernel version, processes, hostname and save details in output directory.
 * Enumerate files written to the disk and create basic timeline using 'stat' command.
 * Enumerate network information and save details in output directory.
