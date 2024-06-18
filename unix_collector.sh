@@ -764,11 +764,20 @@ then
     cp -R /var/adm/ $OUTPUT_DIR/logs/ 2> /dev/null
 	cp -R /var/log/ $OUTPUT_DIR/logs/ 2> /dev/null
 	cp -R /var/nslog/ $OUTPUT_DIR/logs/ 2> /dev/null
+	cp -R /var/nsproflog/ $OUTPUT_DIR/logs/ 2> /dev/null
+	cp -R /var/nssynclog/ $OUTPUT_DIR/logs/ 2> /dev/null
+	cp -R /var/share/adm/lastlog $OUTPUT_DIR/logs/ 2> /dev/null
+	cp -R /var/share/adm/wtmpx $OUTPUT_DIR/logs/ 2> /dev/null
+	cp -R /system/volatile/utmpx $OUTPUT_DIR/logs/ 2> /dev/null
+	cp -R /var/svc/log $OUTPUT_DIR/logs/ 2> /dev/null
+	cp -R /var/webui/logs $OUTPUT_DIR/logs/ 2> /dev/null
 elif [ $PLATFORM = "aix" ]
 then
     cp -R /var/adm/ $OUTPUT_DIR/logs/ 2> /dev/null
 	cp -R /var/log/ $OUTPUT_DIR/logs/ 2> /dev/null
 	cp -R /var/nslog/ $OUTPUT_DIR/logs/ 2> /dev/null
+	cp -R /var/nsproflog/ $OUTPUT_DIR/logs/ 2> /dev/null
+	cp -R /var/nssynclog/ $OUTPUT_DIR/logs/ 2> /dev/null
 	fcstkrpt -a 1> $OUTPUT_DIR/general/fast-fail-log.txt 2> /dev/null
 	errpt -a 1> $OUTPUT_DIR/general/crash-log.txt 2> /dev/null
 elif [ $PLATFORM = "android" ]
@@ -794,16 +803,24 @@ then
     cp -R /var/log/ $OUTPUT_DIR/logs/ 2> /dev/null
     cp -R /var/adm/ $OUTPUT_DIR/logs/ 2> /dev/null
 	cp -R /var/nslog/ $OUTPUT_DIR/logs/ 2> /dev/null
+	cp -R /var/nsproflog/ $OUTPUT_DIR/logs/ 2> /dev/null
+	cp -R /var/nssynclog/ $OUTPUT_DIR/logs/ 2> /dev/null
+	cp -R /var/run/log $OUTPUT_DIR/logs/ 2> /dev/null
 elif [ $PLATFORM = "generic" ]
 then
     cp -R /var/log/ $OUTPUT_DIR/logs/ 2> /dev/null
     cp -R /var/adm/ $OUTPUT_DIR/logs/ 2> /dev/null
 	cp -R /var/nslog/ $OUTPUT_DIR/logs/ 2> /dev/null
+	cp -R /var/nsproflog/ $OUTPUT_DIR/logs/ 2> /dev/null
+	cp -R /var/nssynclog/ $OUTPUT_DIR/logs/ 2> /dev/null
+	cp -R /var/run/log $OUTPUT_DIR/logs/ 2> /dev/null
 elif [ $PLATFORM = "hpux" ]
 then
     cp -R /var/log/ $OUTPUT_DIR/logs/ 2> /dev/null
     cp -R /var/adm/ $OUTPUT_DIR/logs/ 2> /dev/null
 	cp -R /var/nslog/ $OUTPUT_DIR/logs/ 2> /dev/null
+	cp -R /var/nsproflog/ $OUTPUT_DIR/logs/ 2> /dev/null
+	cp -R /var/nssynclog/ $OUTPUT_DIR/logs/ 2> /dev/null
 fi
 
 echo "  ${COL_ENTRY}>${RESET} Copying home dirs"
