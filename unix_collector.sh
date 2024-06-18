@@ -55,7 +55,7 @@
 # ---------------------------
 # Global Variables
 # ---------------------------
-VERSION="1.7"
+VERSION="1.8"
 HOSTNAME=`hostname`
 PLATFORM="none"
 SHORT_DATE=`date +%B" "%Y`
