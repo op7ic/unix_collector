@@ -69,6 +69,7 @@ TAR_FILE="collector-${HOSTNAME}-${COLLECTION_DATE}.tar"
 RSYNC_MAX_FILESIZE=-500m
 TAR_MAX_FILESIZE=-500M
 HASH_MAX_FILESIZE=-500M
+TABLES="filter nat mangle raw security";
 # ---------------------------
 # Parse ARGS
 # ---------------------------
@@ -1830,13 +1831,21 @@ rpcinfo -p 1> $OUTPUT_DIR/network/rpcinfo.txt 2> /dev/null
 if [ -x /sbin/iptables -o -x /system/bin/iptables ]
 then
     echo "  ${COL_ENTRY}>${RESET} IP Tables"
-    iptables -L -v -n 1> $OUTPUT_DIR/network/iptables.txt 2> /dev/null
+    for table in ${TABLES}
+    do
+        iptables -t ${table} -nvL 1> $OUTPUT_DIR/network/iptables.txt 2> /dev/null;
+    done
+    unset table
 fi
 
 if [ -x /sbin/ip6tables -o -x /system/bin/ip6tables ]
 then
     echo "  ${COL_ENTRY}>${RESET} IP Tables (IPv6)"
-    ip6tables -L -v -n 1> $OUTPUT_DIR/network/ip6tables.txt 2> /dev/null
+    for table in ${TABLES}
+    do
+        ip6tables -t ${table} -nvL 1> $OUTPUT_DIR/network/ip6tables.txt 2> /dev/null;
+    done
+    unset table
 fi
 
 if [ -f /etc/ipf/ipf.conf -o -f /etc/opt/ipf/ipf.conf ]
