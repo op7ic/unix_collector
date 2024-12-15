@@ -35,6 +35,7 @@ A shell script for basic forensic collection of various artefacts from UNIX syst
 * Enumerate patch and installed software information and save details in output directory.
 * Enumerate process list and other process information and save details in output directory.
 * Enumerate application lists, plist/apk for iOS/Android save them in output directory.
+* Enumerate hardware information.
 * Enumerate virtual controller information (ESXi,VMBox,VIRT) and save details in output directory.
 * Hash files in various folders such as /home/ /opt/ /usr/ and save details in output directory.
 * Hash files which are marked as SGID or SUID and save details in output directory.
