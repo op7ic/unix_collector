@@ -1,6 +1,6 @@
 # unix_collector
 
-A shell script for basic forensic collection of various artefacts from UNIX systems. ```unix_collector``` is a script that runs on various Unix systems and attempts to collect artefacts which could be analysed in attempt to identify potential system compromise. ```unix_collector``` is written as a single shell script so it can be easily uploaded and run (as opposed to un-tarred, compiled and installed). It can run either as a normal user or as root. It does a better job when running as root because it can read more files of course.
+A shell script for basic forensic collection of various artefacts from UNIX systems. ```unix_collector``` is a script that runs on various Unix systems and attempts to collect artefacts which could be analysed in attempt to identify potential system compromise. ```unix_collector``` is written as a single shell script so it can be easily uploaded and run (as opposed to un-tarred, compiled, installed or requiring internet connection to download components). It can run either as a normal user or as root. It does a better job when running as root because it can read more files of course.
 
 
 [![Imgur](https://i.imgur.com/6xMcGIg.gif)](#)
@@ -26,8 +26,9 @@ A shell script for basic forensic collection of various artefacts from UNIX syst
 
 # Features
 
-* Runs everything from a single script
-* No installation or external libraries needed
+* Runs everything from a single script.
+* No installation or external libraries needed.
+* No internet connection needed.
 * Enumerate basic host information such as kernel version, processes, hostname and save details in output directory.
 * Enumerate files written to the disk and create basic timeline using 'stat' command.
 * Enumerate network information and save details in output directory.
@@ -44,7 +45,7 @@ A shell script for basic forensic collection of various artefacts from UNIX syst
 * Copy system logs (i.e /var/log or /var/adm/) into output directory.
 * Copy /dev/shm into output directory.
 * Gather information about containers.
-* Where copy or hashing operation happens, files over 500MB will be skipped. This default behaviour can be modified inside the script by changing RSYNC_MAX_FILESIZE, TAR_MAX_FILESIZE and HASH_MAX_FILESIZE global variables.
+* Where copy or hashing operation happens, files over 500MB will be skipped. This default behavior can be modified inside the script by changing RSYNC_MAX_FILESIZE, TAR_MAX_FILESIZE and HASH_MAX_FILESIZE global variables.
 * TAR entire output directory and use hostname as file name with current date.
 
 # Requirements
