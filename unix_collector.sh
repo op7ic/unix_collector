@@ -333,7 +333,7 @@ cp /etc/ssh/ssh_config $OUTPUT_DIR/general/ 2> /dev/null
 zdump /etc/localtime 1> $OUTPUT_DIR/general/timezone.txt 2> /dev/null
 stat /lost+found 1> $OUTPUT_DIR/general/installation-time.txt 2> /dev/null
 ls -lct /etc | tail -1 1> $OUTPUT_DIR/general/installation-time.txt 2> /dev/null
-	
+
 echo "  ${COL_ENTRY}>${RESET} Kerberos ticket list"
 klist 1> $OUTPUT_DIR/general/kerberos-ticket-list.txt 2> /dev/null
 echo "  ${COL_ENTRY}>${RESET} Mount points"
@@ -343,13 +343,13 @@ if [ $PLATFORM = "android" ]
 then
     echo "  ${COL_ENTRY}>${RESET} Android Features"
     pm list features 1> $OUTPUT_DIR/general/pm_list_features.txt 2> /dev/null
-	echo "  ${COL_ENTRY}>${RESET} Android Users"
-	pm list users 1> $OUTPUT_DIR/general/android_users.txt 2> /dev/null
-	echo "  ${COL_ENTRY}>${RESET} Android Properties"
-	getprop 1> $OUTPUT_DIR/general/android_getprop.txt 2> /dev/null
-	getprop -T 1> $OUTPUT_DIR/general/android_getprop-T.txt 2> /dev/null
-	getprop -Z 1> $OUTPUT_DIR/general/android_getprop-Z.txt 2> /dev/null
-	lsof -l 1> $OUTPUT_DIR/general/android_lsof_l.txt 2> /dev/null
+    echo "  ${COL_ENTRY}>${RESET} Android Users"
+    pm list users 1> $OUTPUT_DIR/general/android_users.txt 2> /dev/null
+    echo "  ${COL_ENTRY}>${RESET} Android Properties"
+    getprop 1> $OUTPUT_DIR/general/android_getprop.txt 2> /dev/null
+    getprop -T 1> $OUTPUT_DIR/general/android_getprop-T.txt 2> /dev/null
+    getprop -Z 1> $OUTPUT_DIR/general/android_getprop-Z.txt 2> /dev/null
+    lsof -l 1> $OUTPUT_DIR/general/android_lsof_l.txt 2> /dev/null
 fi
 echo "  ${COL_ENTRY}>${RESET} LSOF"
 lsof -nPl 1> $OUTPUT_DIR/general/lsof_nPl.txt 2> /dev/null
