@@ -1974,8 +1974,7 @@ then
 		esxcli hardware trustedboot get 1> $OUTPUT_DIR/virtual/esxi_hardware_trustedboot_details.txt 2> /dev/null		
 		vmware -vl 1> $OUTPUT_DIR/virtual/esxi_version2.txt 2> /dev/null
 		vmkchdev -l 1> $OUTPUT_DIR/virtual/esxi_devices.txt 2> /dev/null
-		dmesg -a 1> $OUTPUT_DIR/virtual/esxi_dmesg_a.txt 2> /dev/null
-		dmesg -s 1> $OUTPUT_DIR/virtual/esxi_dmesg_s.txt 2> /dev/null
+		esxcli system process list 1> $OUTPUT_DIR/virtual/esxi_system_process_list.txt 2> /dev/null
 	fi
     #VBox
 	if [ -x "$(command -v VBoxManage)" ]
