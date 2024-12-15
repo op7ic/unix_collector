@@ -55,7 +55,7 @@
 # ---------------------------
 # Global Variables
 # ---------------------------
-VERSION="1.8"
+VERSION="1.9"
 HOSTNAME=`hostname`
 PLATFORM="none"
 SHORT_DATE=`date +%B" "%Y`
@@ -370,7 +370,7 @@ then
     eeprom 1> $OUTPUT_DIR/general/eeprom.txt 2> /dev/null
 fi
 
-echo "  ${COL_ENTRY}>${RESET} Process list"
+echo "  ${COL_ENTRY}>${RESET} Process list and information" 
 ps -efl 1> $OUTPUT_DIR/general/ps.txt 2> /dev/null
 ps -auxww 1> $OUTPUT_DIR/general/ps-auxww.txt 2> /dev/null
 ps -deaf 1> $OUTPUT_DIR/general/ps-deaf.txt 2> /dev/null
