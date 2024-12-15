@@ -259,7 +259,7 @@ mkdir $OUTPUT_DIR
 # PART 2: THE BASICS
 # ------------------
 echo "${COL_SECTION}BASIC INFORMATION [0%  ]:${RESET}"
-echo "  ${COL_ENTRY}>${RESET} UNIX Collector"
+echo "  ${COL_ENTRY}>${RESET} UNIX Collector Version"
 echo $VERSION 1> $OUTPUT_DIR/collector-version.txt 2> /dev/null
 
 echo "  ${COL_ENTRY}>${RESET} UNIX Collector Date"
@@ -269,7 +269,7 @@ echo "  ${COL_ENTRY}>${RESET} UNIX Collector User"
 id 1> $OUTPUT_DIR/collector-user.txt 2> /dev/null
 
 echo "  ${COL_ENTRY}>${RESET} UNIX Collector Platform"
-echo $PLATFORM > $OUTPUT_DIR/platform.txt
+echo $PLATFORM > $OUTPUT_DIR/collector-platform.txt
 
 # ---------------------------
 # PART 3: GENERAL INFORMATION
