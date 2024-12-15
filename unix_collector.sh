@@ -678,6 +678,100 @@ then
 	cp -R /private/var/spool/ $OUTPUT_DIR/general/spool/private_var_spool/ 2> /dev/null
 fi
 
+
+echo "  ${COL_ENTRY}>${RESET} Hardware information"
+mkdir $OUTPUT_DIR/hardware/ 2> /dev/null
+
+if [ $PLATFORM = "linux" ]
+then
+    cat /proc/cpuinfo 1> $OUTPUT_DIR/hardware/cpuinfo.txt 2> /dev/null
+	dmesg 1> $OUTPUT_DIR/hardware/dmesg.txt 2> /dev/null
+	dmesg -a 1> $OUTPUT_DIR/hardware/dmesg_a.txt 2> /dev/null
+	dmesg -s 1> $OUTPUT_DIR/hardware/dmesg_s.txt 2> /dev/null
+	dmidecode 1> $OUTPUT_DIR/hardware/dmidecode.txt 2> /dev/null
+	hwinfo 1> $OUTPUT_DIR/hardware/hwinfo.txt 2> /dev/null
+	lscpu 1> $OUTPUT_DIR/hardware/lscpu.txt 2> /dev/null
+	lshw 1> $OUTPUT_DIR/hardware/lshw.txt 2> /dev/null
+	lspci 1> $OUTPUT_DIR/hardware/lspci.txt 2> /dev/null
+	lspci -vv 1> $OUTPUT_DIR/hardware/lspci_vv.txt 2> /dev/null
+	lspci -nn -k 1> $OUTPUT_DIR/hardware/lspci_nn_k.txt 2> /dev/null
+	lsscsi 1> $OUTPUT_DIR/hardware/lsscsi.txt 2> /dev/null
+	lshal 1> $OUTPUT_DIR/hardware/lshal.txt 2> /dev/null
+	lsusb 1> $OUTPUT_DIR/hardware/lsusb.txt 2> /dev/null
+	lsusb -vv 1> $OUTPUT_DIR/hardware/lsusb_vv.txt 2> /dev/null
+	lshw -businfo 1> $OUTPUT_DIR/hardware/lshw_businfo.txt 2> /dev/null
+	lspci -vvknnqq 1> $OUTPUT_DIR/hardware/lspci_vvknnqq.txt 2> /dev/null
+fi
+if [ $PLATFORM = "android" ]
+then
+    dmesg 1> $OUTPUT_DIR/hardware/dmesg.txt 2> /dev/null
+fi
+if [ $PLATFORM = "mac" ]
+then
+    dmesg 1> $OUTPUT_DIR/hardware/dmesg.txt 2> /dev/null
+	hostinfo 1> $OUTPUT_DIR/hardware/hostinfo.txt 2> /dev/null
+	ioreg -l 1> $OUTPUT_DIR/hardware/ioreg.txt 2> /dev/null
+	nvram -p 1> $OUTPUT_DIR/hardware/nvram_p.txt 2> /dev/null
+	systemstats 1> $OUTPUT_DIR/hardware/systemstats.txt 2> /dev/null
+fi
+if [ $PLATFORM = "solaris" ]
+then
+    cfgadm -l 1> $OUTPUT_DIR/hardware/cfgadm.txt 2> /dev/null
+	dmesg 1> $OUTPUT_DIR/hardware/dmesg.txt 2> /dev/null
+	dmesg -a 1> $OUTPUT_DIR/hardware/dmesg_a.txt 2> /dev/null
+	dmesg -s 1> $OUTPUT_DIR/hardware/dmesg_s.txt 2> /dev/null
+	prtconf -v 1> $OUTPUT_DIR/hardware/prtconf.txt 2> /dev/null
+	psrinfo -v 1> $OUTPUT_DIR/hardware/psrinfo.txt 2> /dev/null
+	smbios 1> $OUTPUT_DIR/hardware/smbios.txt 2> /dev/null
+fi
+if [ $PLATFORM = "aix" ]
+then
+    alog -o -t boot 1> $OUTPUT_DIR/hardware/alog_boot.txt 2> /dev/null
+	bootlist -o -m normal 1> $OUTPUT_DIR/hardware/bootlist.txt 2> /dev/null
+	lsdev -P 1> $OUTPUT_DIR/hardware/lsdev.txt 2> /dev/null
+	mpstat 1> $OUTPUT_DIR/hardware/mpstat.txt 2> /dev/null
+	prtconf -v 1> $OUTPUT_DIR/hardware/prtconf.txt 2> /dev/null
+fi
+if [ $PLATFORM = "hpux" ]
+then
+    machinfo 1> $OUTPUT_DIR/hardware/machinfo.txt 2> /dev/null
+	lsdev 1> $OUTPUT_DIR/hardware/lsdev.txt 2> /dev/null
+	ioscan -kfnC disk 1> $OUTPUT_DIR/hardware/ioscan_disk.txt 2> /dev/null
+	isocan -kfnC tape 1> $OUTPUT_DIR/hardware/ioscan_tape.txt 2> /dev/null
+	ioscan -kfnC lan 1> $OUTPUT_DIR/hardware/ioscan_lan.txt 2> /dev/null
+	ioscan -kfnC fc 1> $OUTPUT_DIR/hardware/ioscan_fibre_channel.txt 2> /dev/null
+	ioscan -kfnC processor 1> $OUTPUT_DIR/hardware/ioscan_processor.txt 2> /dev/null
+	/opt/ignite/bin/print_manifest  1> $OUTPUT_DIR/hardware/print_manifest.txt 2> /dev/null
+	echo "selall;info;wait;infolog" | /usr/sbin/cstm 1> $OUTPUT_DIR/hardware/cstm_hardwareinfo.txt 2> /dev/null
+	echo "selclass qualifier memory;info;wait;infolog"|cstm 1> $OUTPUT_DIR/hardware/cstm_memoryinfo.txt 2> /dev/null
+	lssf 1> $OUTPUT_DIR/hardware/lssf.txt 2> /dev/null
+	
+fi
+if [ $PLATFORM = "generic" ]
+then
+	dmesg 1> $OUTPUT_DIR/hardware/dmesg.txt 2> /dev/null
+	dmesg -a 1> $OUTPUT_DIR/hardware/dmesg_a.txt 2> /dev/null
+	dmesg -s 1> $OUTPUT_DIR/hardware/dmesg_s.txt 2> /dev/null
+	hwinfo 1> $OUTPUT_DIR/hardware/hwinfo.txt 2> /dev/null
+	lscpu 1> $OUTPUT_DIR/hardware/lscpu.txt 2> /dev/null
+	lshw 1> $OUTPUT_DIR/hardware/lshw.txt 2> /dev/null
+	lspci 1> $OUTPUT_DIR/hardware/lspci.txt 2> /dev/null
+	lspci -vv 1> $OUTPUT_DIR/hardware/lspci_vv.txt 2> /dev/null
+	lspci -nn -k 1> $OUTPUT_DIR/hardware/lspci_nn_k.txt 2> /dev/null
+	lshal 1> $OUTPUT_DIR/hardware/lshal.txt 2> /dev/null
+	lsscsi 1> $OUTPUT_DIR/hardware/lsscsi.txt 2> /dev/null
+	lsusb 1> $OUTPUT_DIR/hardware/lsusb.txt 2> /dev/null
+	lsusb -vv 1> $OUTPUT_DIR/hardware/lsusb_vv.txt 2> /dev/null
+	pciconf -l 1> $OUTPUT_DIR/hardware/pciconf.txt 2> /dev/null
+	pciconf -l -v 1> $OUTPUT_DIR/hardware/pciconf_l_v.txt 2> /dev/null
+	pcidump -v 1> $OUTPUT_DIR/hardware/pcidump.txt 2> /dev/null
+	usbconfig show_ifdrv 1> $OUTPUT_DIR/hardware/usbconfig_show_ifdrv.txt 2> /dev/null
+	usbdevs -v 1> $OUTPUT_DIR/hardware/usbdevs_v.txt 2> /dev/null
+	lshw -businfo 1> $OUTPUT_DIR/hardware/lshw_businfo.txt 2> /dev/null
+	lspci -vvknnqq 1> $OUTPUT_DIR/hardware/lspci_vvknnqq.txt 2> /dev/null
+fi
+
+
 # ------------------------------------
 # PART 4: INSTALLED SOFTWARE / PATCHES
 # ------------------------------------
@@ -1870,8 +1964,18 @@ then
 		esxcli storage vmfs extent list 1> $OUTPUT_DIR/virtual/esxi_vmfs_list.txt 2> /dev/null
 		esxcli storage filesystem list 1> $OUTPUT_DIR/virtual/esxi_volumes_list.txt 2> /dev/null
 		esxcli network ip connection list 1> $OUTPUT_DIR/virtual/esxi_network_connection_list.txt 2> /dev/null
+		esxcli hardware cpu list 1> $OUTPUT_DIR/virtual/esxi_hardware_cpu_list.txt 2> /dev/null
+		esxcli hardware usb passthrough device list 1> $OUTPUT_DIR/virtual/esxi_hardware_usb_passthrough_list.txt 2> /dev/null
+		esxcli hardware bootdevice list 1> $OUTPUT_DIR/virtual/esxi_hardware_bootdevice_list.txt 2> /dev/null
+		esxcli hardware clock get 1> $OUTPUT_DIR/virtual/esxi_hardware_clock_list.txt 2> /dev/null
+		esxcli hardware memory get 1> $OUTPUT_DIR/virtual/esxi_hardware_memory_list.txt 2> /dev/null
+		esxcli hardware pci list 1> $OUTPUT_DIR/virtual/esxi_hardware_pci_list.txt 2> /dev/null
+		esxcli hardware platform get 1> $OUTPUT_DIR/virtual/esxi_hardware_platform_details.txt 2> /dev/null
+		esxcli hardware trustedboot get 1> $OUTPUT_DIR/virtual/esxi_hardware_trustedboot_details.txt 2> /dev/null		
 		vmware -vl 1> $OUTPUT_DIR/virtual/esxi_version2.txt 2> /dev/null
 		vmkchdev -l 1> $OUTPUT_DIR/virtual/esxi_devices.txt 2> /dev/null
+		dmesg -a 1> $OUTPUT_DIR/virtual/esxi_dmesg_a.txt 2> /dev/null
+		dmesg -s 1> $OUTPUT_DIR/virtual/esxi_dmesg_s.txt 2> /dev/null
 	fi
     #VBox
 	if [ -x "$(command -v VBoxManage)" ]
