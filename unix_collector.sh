@@ -381,6 +381,71 @@ pstree -p -n 1> $OUTPUT_DIR/general/pstree_p_n.txt 2> /dev/null
 ps -eo args | grep "^/" | awk '{print $1}' | sort -u 1> $OUTPUT_DIR/general/running_executables.txt 2> /dev/null
 ps -c | awk '{print $4}' | sort -u | grep "^/" 1> $OUTPUT_DIR/general/running_executables_esxi.txt 2> /dev/null
 
+mkdir $OUTPUT_DIR/process_info/ 2> /dev/null
+for pid in /proc/[0-9]*; do echo "PID: $(echo ${pid} | sed -e 's:/proc/::')" 2> /dev/null && ls -la /proc/$(echo ${pid} | sed -e 's:/proc/::')/fd; done 1> $OUTPUT_DIR/process_info/all_process_handles.txt 2> /dev/null
+ls -l /proc/[0-9]*/cwd 1> $OUTPUT_DIR/process_info/process_working_directory.txt 2> /dev/null
+ls -l /proc/[0-9]*/exe 2> /dev/null | grep -E "\(deleted\)" | awk -F"/proc/|/exe" '{print $2}' 1> $OUTPUT_DIR/process_info/deleted_processes_ids.txt 2> /dev/null
+ls -l /proc/[0-9]*/exe 2> /dev/null | grep -E "\(deleted\)" 1> $OUTPUT_DIR/process_info/deleted_processes.txt 2> /dev/null
+for pid in $(find /proc -maxdepth 1 -type d -name '[0-9]*'); do echo $(basename $pid); done 1> $OUTPUT_DIR/process_info/all_process_ids.txt 2> /dev/null
+
+
+if [ $PLATFORM = "generic" ]
+then
+	find /proc/[0-9]*/exe -type l -exec sha256sum {} \; >> $OUTPUT_DIR/process_info/sha256sum_running_processes_proc_exe 2> /dev/null
+	find /proc/[0-9]*/file -type l -exec sha256sum {} \; >> $OUTPUT_DIR/process_info/sha256sum_running_processes_proc_file 2> /dev/null
+	find /proc/[0-9]*/exe -type l -exec sha1sum {} \; >> $OUTPUT_DIR/process_info/sha1sum_running_processes_proc_exe 2> /dev/null
+	find /proc/[0-9]*/file -type l -exec sha1sum {} \; >> $OUTPUT_DIR/process_info/sha1sum_running_processes_proc_file 2> /dev/null
+	find /proc/[0-9]*/exe -type l -exec md5sum {} \; >> $OUTPUT_DIR/process_info/md5sum_running_processes_proc_exe 2> /dev/null
+	find /proc/[0-9]*/file -type l -exec md5sum {} \; >> $OUTPUT_DIR/process_info/md5sum_running_processes_proc_file 2> /dev/null
+	find /proc/[0-9]*/exe -type l -exec openssl dgst -sha256 {} \; >> $OUTPUT_DIR/process_info/openssl_sha256_running_processes_proc_exe 2> /dev/null
+	find /proc/[0-9]*/file -type l -exec openssl dgst -sha256 {} \; >> $OUTPUT_DIR/process_info/openssl_sha256_running_processes_proc_file 2> /dev/null
+	ps -axo args | grep "^/" | awk '{print $1}' | sort -u | xargs -I {} shasum -a 256 {} >> $OUTPUT_DIR/process_info/sha256sum_running_processes 2> /dev/null
+	ps -axo args | grep "^/" | awk '{print $1}' | sort -u | xargs -I {} shasum -a 1 {} >> $OUTPUT_DIR/process_info/sha256sum_running_processes 2> /dev/null
+	ps -axo comm | grep "^/" | sort -u | xargs -I {} md5 -q {} >> $OUTPUT_DIR/process_info/md5sum_running_processes 2> /dev/null
+	ps -axo args | grep ^/ | awk '{print $1}' | sort -u 1> $OUTPUT_DIR/process_info/process_running_paths.txt 2> /dev/null
+fi
+
+if [ $PLATFORM = "linux" ]
+then
+	find /proc/[0-9]*/exe -type l -exec sha256sum {} \; >> $OUTPUT_DIR/process_info/sha256sum_running_processes 2> /dev/null
+	find /proc/[0-9]*/exe -type l -exec sha1sum {} \; >> $OUTPUT_DIR/process_info/sha1sum_running_processes 2> /dev/null
+	find /proc/[0-9]*/exe -type l -exec md5sum {} \; >> $OUTPUT_DIR/process_info/md5sum_running_processes 2> /dev/null
+	find /proc/[0-9]*/exe -type l -exec openssl dgst -sha256 {} \; >> $OUTPUT_DIR/process_info/openssl_sha256_running_processes 2> /dev/null
+fi
+
+if [ $PLATFORM = "aix" ]
+then
+	find /proc/[0-9]*/object/a.out -type l -exec sha256sum {} \; >> $OUTPUT_DIR/process_info/sha256sum_running_processes 2> /dev/null
+	find /proc/[0-9]*/object/a.out -type l -exec sha1sum {} \; >> $OUTPUT_DIR/process_info/sha1sum_running_processes 2> /dev/null
+	find /proc/[0-9]*/object/a.out -type l -exec md5sum {} \; >> $OUTPUT_DIR/process_info/md5sum_running_processes 2> /dev/null
+	find /proc/[0-9]*/object/a.out -type l -exec openssl dgst -sha256 {} \; >> $OUTPUT_DIR/process_info/openssl_sha256_running_processes 2> /dev/null
+fi
+
+if [ $PLATFORM = "solaris" ]
+then
+	find /proc/[0-9]*/path/a.out -type l -exec sha256sum {} \; >> $OUTPUT_DIR/process_info/sha256sum_running_processes 2> /dev/null
+	find /proc/[0-9]*/path/a.out -type l -exec sha1sum {} \; >> $OUTPUT_DIR/process_info/sha1sum_running_processes 2> /dev/null
+	find /proc/[0-9]*/path/a.out -type l -exec md5sum {} \; >> $OUTPUT_DIR/process_info/md5sum_running_processes 2> /dev/null
+	find /proc/[0-9]*/path/a.out -type l -exec openssl dgst -sha256 {} \; >> $OUTPUT_DIR/process_info/openssl_sha256_running_processes 2> /dev/null
+fi
+
+if [ $PLATFORM = "hpux" ]
+then
+	find /proc/[0-9]*/exe -type l -exec sha256sum {} \; >> $OUTPUT_DIR/process_info/sha256sum_running_processes 2> /dev/null
+	find /proc/[0-9]*/exe -type l -exec sha1sum {} \; >> $OUTPUT_DIR/process_info/sha1sum_running_processes 2> /dev/null
+	find /proc/[0-9]*/exe -type l -exec md5sum {} \; >> $OUTPUT_DIR/process_info/md5sum_running_processes 2> /dev/null
+	find /proc/[0-9]*/exe -type l -exec openssl dgst -sha256 {} \; >> $OUTPUT_DIR/process_info/openssl_sha256_running_processes 2> /dev/null
+fi
+
+if [ $PLATFORM = "mac" ]
+then
+
+	ps -axo comm | grep "^/" | sort -u | xargs -I {} shasum -a 256 {} >> $OUTPUT_DIR/process_info/sha256sum_running_processes 2> /dev/null
+	ps -axo comm | grep "^/" | sort -u | xargs -I {} shasum -a 1 {} >> $OUTPUT_DIR/process_info/sha1sum_running_processes 2> /dev/null
+	ps -axo comm | grep "^/" | sort -u | xargs -I {} md5 -q {} >> $OUTPUT_DIR/process_info/md5sum_running_processes 2> /dev/null
+fi
+
+
 if [ $PLATFORM = "solaris" ]
 then
 	ptree 1> $OUTPUT_DIR/general/ptree.txt 2> /dev/null
