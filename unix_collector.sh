@@ -644,7 +644,7 @@ ulimit -a 1> $OUTPUT_DIR/general/ulimit-a.txt 2> /dev/null
 if [ $PLATFORM = "solaris" ]
 then
     echo "  ${COL_ENTRY}>${RESET} Zones"
-    zoneadm list 1> $OUTPUT_DIR/general/zones.txt 2> /dev/null
+    zoneadm list -i -v 1> $OUTPUT_DIR/general/zoneadm_list.txt 2> /dev/null
 fi
 
 if [ $PLATFORM = "linux" ]
