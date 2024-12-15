@@ -117,12 +117,12 @@ then
     elif [ -x /usr/sbin/sam -o -x /usr/bin/sam ]
     then
         PLATFORM="hpux"
-	elif [ -x /usr/bin/osacompile ]
-	then
-	    PLATFORM="mac"
-	elif [ -x /system/bin/app_process -o -x /system/bin/getprop ]
-	then
-	    PLATFORM="android"
+    elif [ -x /usr/bin/osacompile ]
+    then
+        PLATFORM="mac"
+    elif [ -x /system/bin/app_process -o -x /system/bin/getprop ]
+    then
+        PLATFORM="android"
     elif [ -x /usr/bin/rpm -o -x /bin/rpm -o -x /usr/bin/dpkg -o -x /usr/bin/emerge ]
     then
         PLATFORM="linux"
