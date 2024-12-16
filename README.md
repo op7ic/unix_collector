@@ -1,6 +1,9 @@
 # unix_collector
 
-A self-contained shell script for forensic collection of various artefacts from UNIX systems. ```unix_collector``` is a script that runs on various Unix systems and attempts to collect artefacts which could be analysed in attempt to identify potential system compromise. ```unix_collector``` is written as a single shell script so it can be easily uploaded and run (as opposed to un-tarred, compiled, installed or requiring internet connection to download components). It can run either as a normal user or as root. It does a better job when running as root because it can read more files of course.
+
+The unix_collector is a self-contained shell script designed for the forensic collection of various artifacts from Unix-based systems located deep inside internal network. It runs on multiple Unix platforms and gathers data that can be analyzed to identify potential system compromises.
+
+As a single shell script, ```unix_collector``` is easy to upload and execute, without the need for untarring, compiling, installation, or an internet connection to download additional components. The script can be run either as a normal user or as root, though it performs more effectively when executed as root, as this allows it to access a wider range of system files and artifacts. 
 
 
 [![Imgur](https://i.imgur.com/6xMcGIg.gif)](#)
