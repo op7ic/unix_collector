@@ -370,6 +370,47 @@ then
     eeprom 1> $OUTPUT_DIR/general/eeprom.txt 2> /dev/null
 fi
 
+
+echo "  ${COL_ENTRY}>${RESET} Stroage Info"
+arcstat 1> $OUTPUT_DIR/general/storage_arcstat.txt 2> /dev/null
+blkid 1> $OUTPUT_DIR/general/storage_blkid.txt 2> /dev/null
+df 1> $OUTPUT_DIR/general/storage_df.txt 2> /dev/null
+df -h 1> $OUTPUT_DIR/general/storage_df_h.txt 2> /dev/null
+df -n 1> $OUTPUT_DIR/general/storage_df_n.txt 2> /dev/null
+diskutil list 1> $OUTPUT_DIR/general/storage_diskutil.txt 2> /dev/null
+fdisk -l 1> $OUTPUT_DIR/general/storage_fdisk.txt 2> /dev/null
+findmnt --ascii 1> $OUTPUT_DIR/general/storage_findmnt.txt 2> /dev/null
+geom disk list 1> $OUTPUT_DIR/general/storage_geom_disk_list.txt 2> /dev/null
+geom -t 1> $OUTPUT_DIR/general/storage_geom_t.txt 2> /dev/null
+gstat -b  1> $OUTPUT_DIR/general/storage_gstat_b.txt 2> /dev/null
+iostat -d -l 1> $OUTPUT_DIR/general/storage_iostat_d_l.txt 2> /dev/null
+iscsiadm -m node 1> $OUTPUT_DIR/general/storage_iscsiadm_node.txt 2> /dev/null
+iscsiadm -s 1> $OUTPUT_DIR/general/storage_iscsiadm_s.txt 2> /dev/null
+lparstat -i 1> $OUTPUT_DIR/general/storage_lparstat.txt 2> /dev/null
+ls -l /dev/disk/by-* 1> $OUTPUT_DIR/general/storage_disks_dev.txt 2> /dev/null
+ls -l /vmfs/devices/disks 1> $OUTPUT_DIR/general/storage_disks_vmfs.txt 2> /dev/null
+lsblk 1> $OUTPUT_DIR/general/storage_lsblk.txt 2> /dev/null
+lsblk -l 1> $OUTPUT_DIR/general/storage_lsblk_l.txt 2> /dev/null
+lsblk -f 1> $OUTPUT_DIR/general/storage_lsblk_f.txt 2> /dev/null
+lsfs 1> $OUTPUT_DIR/general/storage_lsfs.txt 2> /dev/null
+lspv 1> $OUTPUT_DIR/general/storage_lspv.txt 2> /dev/null
+lsvg 1> $OUTPUT_DIR/general/storage_lsvg.txt 2> /dev/null
+lvdisplay 1> $OUTPUT_DIR/general/storage_lvdisplay.txt 2> /dev/null
+lvs 1> $OUTPUT_DIR/general/storage_lvs.txt 2> /dev/null
+cat /proc/mdstat 1> $OUTPUT_DIR/general/storage_mdstat.txt 2> /dev/null
+mdadm --detail --scan --verbose 1> $OUTPUT_DIR/general/storage_mdadm.txt 2> /dev/null
+mount 1> $OUTPUT_DIR/general/storage_mount.txt 2> /dev/null
+pdisk -l 1> $OUTPUT_DIR/general/storage_pdisk.txt 2> /dev/null
+pvdisplay 1> $OUTPUT_DIR/general/storage_pvdisplay.txt 2> /dev/null
+pvesm status 1> $OUTPUT_DIR/general/storage_pvesm.txt 2> /dev/null
+pvs 1> $OUTPUT_DIR/general/storage_pvs.txt 2> /dev/null
+vgdisplay 1> $OUTPUT_DIR/general/storage_vgdisplay.txt 2> /dev/null
+vgs 1> $OUTPUT_DIR/general/storage_vgs.txt 2> /dev/null
+zfs list -o name,avail,used,usedsnap,usedds,usedrefreserv,usedchild,sharenfs,mountpoint 1> $OUTPUT_DIR/general/storage_zfs_list.txt 2> /dev/null
+zpool history 1> $OUTPUT_DIR/general/storage_zpool_history.txt 2> /dev/null
+zpool list -v 1> $OUTPUT_DIR/general/storage_zpool_list.txt 2> /dev/null
+zpool status -v 1> $OUTPUT_DIR/general/storage_zpool_status.txt 2> /dev/null
+
 echo "  ${COL_ENTRY}>${RESET} Process list and information" 
 ps -efl 1> $OUTPUT_DIR/general/ps.txt 2> /dev/null
 ps -auxww 1> $OUTPUT_DIR/general/ps-auxww.txt 2> /dev/null
@@ -2010,12 +2051,12 @@ fi
 # ---------------------------
 # PART 9: VIRTUAL SYSTEMS INFORMATION
 # ---------------------------
-if [ -x "$(command -v esxcli)" -o -x "$(command -v VBoxManage)" -o -x "$(command -v virsh)" ]
+if [ -x "$(command -v esxcli)" -o -x "$(command -v VBoxManage)" -o -x "$(command -v virsh)" -o -x "$(command -v vim-cmd)" -o -x "$(command -v vmctl)" -o -x "$(command -v qm)"]
 then
     echo "${COL_SECTION}VIRTUAL SYSTEMS INFORMATION [95% ]:${RESET}"
     mkdir $OUTPUT_DIR/virtual
     # VMWARE
-	if [ -x "$(command -v esxcli)" ]
+	if [ -x "$(command -v esxcli)"  -o -x "$(command -v vm-support)" ]
 	then
 		esxcli system version get 1> $OUTPUT_DIR/virtual/esxi_version.txt 2> /dev/null
 		esxcli system hostname get 1> $OUTPUT_DIR/virtual/esxi_hostname.txt 2> /dev/null
@@ -2041,6 +2082,10 @@ then
 		vmware -vl 1> $OUTPUT_DIR/virtual/esxi_version2.txt 2> /dev/null
 		vmkchdev -l 1> $OUTPUT_DIR/virtual/esxi_devices.txt 2> /dev/null
 		esxcli system process list 1> $OUTPUT_DIR/virtual/esxi_system_process_list.txt 2> /dev/null
+		vm-support -V 1> $OUTPUT_DIR/virtual/esxi_vm_support.txt 2> /dev/null
+		esxcli storage nfs list 1> $OUTPUT_DIR/virtual/esxi_nfs_storage_list.txt 2> /dev/null
+		esxcli storage nfs41 list 1> $OUTPUT_DIR/virtual/esxi_nfs4.1_storage_list.txt 2> /dev/null
+ 
 	fi
     #VBox
 	if [ -x "$(command -v VBoxManage)" ]
@@ -2057,13 +2102,32 @@ then
 		VBoxManage list cloudprofiles 1> $OUTPUT_DIR/virtual/vbox_cloudprofiles.txt 2> /dev/null
 	fi
     # VIRT 
-	if [ -x "$(command -v VBoxManage)" ]
+	if [ -x "$(command -v virsh)" ]
 	then
 		virsh list --all 1> $OUTPUT_DIR/virtual/virt_vm_list.txt 2> /dev/null
 		virsh list --all --name 1> $OUTPUT_DIR/virtual/virt_vm_list_names.txt 2> /dev/null
 		virsh hostname 1> $OUTPUT_DIR/virtual/virt_hostname.txt 2> /dev/null
 		virsh sysinfo 1> $OUTPUT_DIR/virtual/virt_sysinfo.txt 2> /dev/null
+		virsh net-list --all --name 1> $OUTPUT_DIR/virtual/virt_network_list.txt 2> /dev/null
+		virsh nodeinfo 1> $OUTPUT_DIR/virtual/virt_nodeinfo.txt 2> /dev/null
+		virsh pool-list --all 1> $OUTPUT_DIR/virtual/virt_pool_list.txt 2> /dev/null
 	fi
+    # vmctl 
+	if [ -x "$(command -v vmctl)" ]
+	then
+		vmctl status 1> $OUTPUT_DIR/virtual/vmctl_status.txt 2> /dev/null
+	fi
+    # vim-cmd  
+	if [ -x "$(command -v vim-cmd )" ]
+	then
+		vim-cmd vmsvc/getallvms 1> $OUTPUT_DIR/virtual/vim-cmd_getallvms.txt 2> /dev/null
+	fi
+    # qm 
+	if [ -x "$(command -v qm )" ]
+	then
+		qm list 1> $OUTPUT_DIR/virtual/proxmox_qm_list.txt 2> /dev/null		
+	fi
+
 fi
 
 # ---------------------------
