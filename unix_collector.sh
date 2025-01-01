@@ -606,7 +606,7 @@ then
     do
         ls -lL /var/spool/cron/crontabs/$name 1>> $OUTPUT_DIR/general/crontabs/perms 2> /dev/null
         cp /var/spool/cron/crontabs/$name $OUTPUT_DIR/general/crontabs/$name 2> /dev/null
-	cat /var/spool/cron/crontabs/$name | grep -v "^#" | while read null null null null null name null
+	cat /var/spool/cron/crontabs/$name 2> /dev/null | grep -v "^#" | while read null null null null null name null
 	do
 	    ls -lL $name 1>> $OUTPUT_DIR/general/crontabs/perms 2> /dev/null
 	done
@@ -619,11 +619,11 @@ then
     do
         if [ -f /etc/cron.d/$name ]
         then
-	    ls -lL /etc/cron.d/$name 1>> $OUTPUT_DIR/general/cron.d/perms 2> /dev/null
+	        ls -lL /etc/cron.d/$name 1>> $OUTPUT_DIR/general/cron.d/perms 2> /dev/null
             cp /etc/cron.d/$name $OUTPUT_DIR/general/cron.d/$name 2> /dev/null
 	    if [ $PLATFORM = "linux" ]
 	    then
-		cat /etc/cron.d/$name | grep -v "^#" | while read null null null null null user name null
+		cat /etc/cron.d/$name 2> /dev/null | grep -v "^#" | while read null null null null null user name null
 		do
 		    echo "$user:" 1>> $OUTPUT_DIR/general/cron.d/perms 2> /dev/null
 		    ls -lL /etc/cron.d/$name 1>> $OUTPUT_DIR/general/cron.d/perms 2> /dev/null
@@ -639,7 +639,7 @@ then
     do
         if [ -f /etc/cron.hourly/$name ]
         then
-	    ls -lL /etc/cron.d/$name 1>> $OUTPUT_DIR/general/cron.d/perms 2> /dev/null
+	        ls -lL /etc/cron.d/$name 1>> $OUTPUT_DIR/general/cron.d/perms 2> /dev/null
             cp /etc/cron.hourly/$name $OUTPUT_DIR/general/cron.hourly/$name 2> /dev/null
         fi
     done
@@ -651,7 +651,7 @@ then
     do
         if [ -f /etc/cron.daily/$name ]
         then
-	    ls -lL /etc/cron.daily/$name 1>> $OUTPUT_DIR/general/cron.daily/perms 2> /dev/null
+	        ls -lL /etc/cron.daily/$name 1>> $OUTPUT_DIR/general/cron.daily/perms 2> /dev/null
             cp /etc/cron.daily/$name $OUTPUT_DIR/general/cron.daily/$name 2> /dev/null
         fi
     done
@@ -663,7 +663,7 @@ then
     do
         if [ -f /etc/cron.weekly/$name ]
         then
-	    ls -lL /etc/cron.weekly/$name 1>> $OUTPUT_DIR/general/cron.weekly/perms 2> /dev/null
+	        ls -lL /etc/cron.weekly/$name 1>> $OUTPUT_DIR/general/cron.weekly/perms 2> /dev/null
             cp /etc/cron.weekly/$name $OUTPUT_DIR/general/cron.weekly/$name 2> /dev/null
         fi
     done
@@ -675,7 +675,7 @@ then
     do
         if [ -f /etc/cron.monthly/$name ]
         then
-	    ls -lL /etc/cron.monthly/$name 1>> $OUTPUT_DIR/general/cron.monthly/perms 2> /dev/null
+	        ls -lL /etc/cron.monthly/$name 1>> $OUTPUT_DIR/general/cron.monthly/perms 2> /dev/null
             cp /etc/cron.monthly/$name $OUTPUT_DIR/general/cron.monthly/$name 2> /dev/null
         fi
     done
@@ -1038,9 +1038,9 @@ then
 		mkdir $OUTPUT_DIR/homedir/home 1> /dev/null 2> /dev/null
 		mkdir $OUTPUT_DIR/homedir/root 1> /dev/null 2> /dev/null
 		mkdir $OUTPUT_DIR/homedir/home-export 1> /dev/null 2> /dev/null
-		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude=$OUTPUT_DIR /home/ $OUTPUT_DIR/homedir/home/ 1> /dev/null 2> /dev/null
-		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude=$OUTPUT_DIR /root/ $OUTPUT_DIR/homedir/root/ 1> /dev/null 2> /dev/null
-		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude=$OUTPUT_DIR /export/home/ $OUTPUT_DIR/homedir/home-export/ 1> /dev/null 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude $OUTPUT_DIR /home/ $OUTPUT_DIR/homedir/home/ 1> /dev/null 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude $OUTPUT_DIR /root/ $OUTPUT_DIR/homedir/root/ 1> /dev/null 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude $OUTPUT_DIR /export/home/ $OUTPUT_DIR/homedir/home-export/ 1> /dev/null 2> /dev/null
 	elif [ -x "$(command -v tar)" ]
 	then
 		mkdir $OUTPUT_DIR/homedir/home 1> /dev/null 2> /dev/null
@@ -1057,8 +1057,8 @@ then
 	then
 		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
 		mkdir $OUTPUT_DIR/homedir/root 2> /dev/null
-		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude=$OUTPUT_DIR /home/ $OUTPUT_DIR/homedir/home/ 1> /dev/null 2> /dev/null
-		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude=$OUTPUT_DIR /root/ $OUTPUT_DIR/homedir/root/ 1> /dev/null 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude $OUTPUT_DIR /home/ $OUTPUT_DIR/homedir/home/ 1> /dev/null 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude $OUTPUT_DIR /root/ $OUTPUT_DIR/homedir/root/ 1> /dev/null 2> /dev/null
 	elif [ -x "$(command -v tar)" ]
 	then
 		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
@@ -1073,8 +1073,8 @@ then
 	then
 		mkdir $OUTPUT_DIR/homedir/Users 2> /dev/null
 		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
-		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude=$OUTPUT_DIR /Users/ $OUTPUT_DIR/homedir/Users/ 1> /dev/null 2> /dev/null
-		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude=$OUTPUT_DIR /home/ $OUTPUT_DIR/homedir/home/ 1> /dev/null 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude $OUTPUT_DIR /Users/ $OUTPUT_DIR/homedir/Users/ 1> /dev/null 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude $OUTPUT_DIR /home/ $OUTPUT_DIR/homedir/home/ 1> /dev/null 2> /dev/null
 	elif [ -x "$(command -v tar)" ]
 	then
 		mkdir $OUTPUT_DIR/homedir/Users 2> /dev/null
@@ -1089,8 +1089,8 @@ then
 	then
 		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
 		mkdir $OUTPUT_DIR/homedir/root 2> /dev/null
-		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude=$OUTPUT_DIR /home/ $OUTPUT_DIR/homedir/home/ 1> /dev/null 2> /dev/null
-		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude=$OUTPUT_DIR /root/ $OUTPUT_DIR/homedir/root/ 1> /dev/null 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude $OUTPUT_DIR /home/ $OUTPUT_DIR/homedir/home/ 1> /dev/null 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude $OUTPUT_DIR /root/ $OUTPUT_DIR/homedir/root/ 1> /dev/null 2> /dev/null
 	elif [ -x "$(command -v tar)" ]
 	then
 		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
@@ -1105,8 +1105,8 @@ then
 	then
 		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
 		mkdir $OUTPUT_DIR/homedir/root 2> /dev/null
-		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude=$OUTPUT_DIR /home/ $OUTPUT_DIR/homedir/home/ 1> /dev/null 2> /dev/null
-		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude=$OUTPUT_DIR /root/ $OUTPUT_DIR/homedir/root/ 1> /dev/null 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude $OUTPUT_DIR /home/ $OUTPUT_DIR/homedir/home/ 1> /dev/null 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude $OUTPUT_DIR /root/ $OUTPUT_DIR/homedir/root/ 1> /dev/null 2> /dev/null
 	elif [ -x "$(command -v tar)" ]
 	then
 		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
@@ -1121,8 +1121,8 @@ then
 	then
 		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
 		mkdir $OUTPUT_DIR/homedir/root 2> /dev/null
-		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude=$OUTPUT_DIR /home/ $OUTPUT_DIR/homedir/home/ 1> /dev/null 2> /dev/null
-		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude=$OUTPUT_DIR /root/ $OUTPUT_DIR/homedir/root/ 1> /dev/null 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude $OUTPUT_DIR /home/ $OUTPUT_DIR/homedir/home/ 1> /dev/null 2> /dev/null
+		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude $OUTPUT_DIR /root/ $OUTPUT_DIR/homedir/root/ 1> /dev/null 2> /dev/null
 	elif [ -x "$(command -v tar)" ]
 	then
 		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
@@ -2051,7 +2051,7 @@ fi
 # ---------------------------
 # PART 9: VIRTUAL SYSTEMS INFORMATION
 # ---------------------------
-if [ -x "$(command -v esxcli)" -o -x "$(command -v VBoxManage)" -o -x "$(command -v virsh)" -o -x "$(command -v vim-cmd)" -o -x "$(command -v vmctl)" -o -x "$(command -v qm)"]
+if [ -x "$(command -v esxcli)" -o -x "$(command -v VBoxManage)" -o -x "$(command -v virsh)" -o -x "$(command -v vim-cmd)" -o -x "$(command -v vmctl)" -o -x "$(command -v qm)" ]
 then
     echo "${COL_SECTION}VIRTUAL SYSTEMS INFORMATION [95% ]:${RESET}"
     mkdir $OUTPUT_DIR/virtual
