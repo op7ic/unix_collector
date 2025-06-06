@@ -2519,21 +2519,126 @@ then
 	
 	if [ -x "$(command -v podman)" ]
 	then
-	    echo "  ${COL_ENTRY}>${RESET} Collecting PODMAN information"
+		echo "  ${COL_ENTRY}>${RESET} Collecting PODMAN information"
 		podman container ls --all --size 1> $OUTPUT_DIR/containers/podman_container_list.txt 2> /dev/null
 		podman image ls --all 1> $OUTPUT_DIR/containers/podman_image_list.txt 2> /dev/null
 		podman version 1> $OUTPUT_DIR/containers/podman_version.txt 2> /dev/null
 		podman network ls 1> $OUTPUT_DIR/containers/podman_networks.txt 2> /dev/null
 		podman volume ls 1> $OUTPUT_DIR/containers/podman_volumes.txt 2> /dev/null
-		podman container ps --all | sed 1d | awk '{print $1}' 1> $OUTPUT_DIR/containers/podman_container_ids.txt 2> /dev/null
-		while read -r containerid; do podman container logs "$containerid" --current 1>> $OUTPUT_DIR/containers/podman_logs_$containerid.txt 2> /dev/null; done < $OUTPUT_DIR/containers/podman_container_ids.txt 2> /dev/null
-		while read -r containerid; do podman inspect "$containerid" 1>> $OUTPUT_DIR/containers/podman_inspect_details_$containerid.txt 2> /dev/null; done < $OUTPUT_DIR/containers/podman_container_ids.txt 2> /dev/null
-		while read -r containerid; do podman network inspect "$containerid" --current 1>> $OUTPUT_DIR/containers/podman_network_details_$containerid.txt 2> /dev/null; done < $OUTPUT_DIR/containers/podman_container_ids.txt 2> /dev/null
-		while read -r containerid; do podman top "$containerid" 1>> $OUTPUT_DIR/containers/podman_process_details_$containerid.txt 2> /dev/null; done < $OUTPUT_DIR/containers/podman_container_ids.txt 2> /dev/null
-		while read -r containerid; do podman diff "$containerid" --current 1>> $OUTPUT_DIR/containers/podman_filesystem_diff_$containerid.txt 2> /dev/null; done < $OUTPUT_DIR/containers/podman_container_ids.txt 2> /dev/null
-		podman volume ls | sed 1d | awk '{print $2}' 1> $OUTPUT_DIR/containers/podman_storage_ids.txt 2> /dev/null 
-		while read -r containerid; do podman volume inspect "$containerid" 1>> $OUTPUT_DIR/containers/podman_volume_details_$containerid.txt 2> /dev/null; done < $OUTPUT_DIR/containers/podman_storage_ids.txt 2> /dev/null
+		podman info 1> $OUTPUT_DIR/containers/podman_info.txt 2> /dev/null
+		podman system info --format json 1> $OUTPUT_DIR/containers/podman_info_json.txt 2> /dev/null
+		podman system df 1> $OUTPUT_DIR/containers/podman_system_df.txt 2> /dev/null
+		podman pod ls --format json 1> $OUTPUT_DIR/containers/podman_pods_json.txt 2> /dev/null
+		podman pod ls 1> $OUTPUT_DIR/containers/podman_pods.txt 2> /dev/null
+		podman events --since 24h --format json 2>&1 | head -100 > $OUTPUT_DIR/containers/podman_events_24h.txt 2> /dev/null
+		podman secret ls 1> $OUTPUT_DIR/containers/podman_secrets_list.txt 2> /dev/null
+		if podman machine list &>/dev/null; then
+			podman machine list 1> $OUTPUT_DIR/containers/podman_machine_list.txt 2> /dev/null
+			podman machine info 1> $OUTPUT_DIR/containers/podman_machine_info.txt 2> /dev/null
+		fi
+		podman container ps --all --format "{{.ID}}" 1> $OUTPUT_DIR/containers/podman_container_ids.txt 2> /dev/null
+		while read -r containerid; do
+			if [ -n "$containerid" ]; then
+				echo "=== Container: $containerid ===" >> $OUTPUT_DIR/containers/podman_container_details.txt
+				echo "--- Logs (last 100 lines) ---" >> $OUTPUT_DIR/containers/podman_container_details.txt
+				podman container logs "$containerid" --tail 100 >> $OUTPUT_DIR/containers/podman_container_details.txt 2> /dev/null
+				echo "--- Inspect ---" >> $OUTPUT_DIR/containers/podman_container_details.txt
+				podman inspect "$containerid" >> $OUTPUT_DIR/containers/podman_container_details.txt 2> /dev/null
+				echo "--- Processes ---" >> $OUTPUT_DIR/containers/podman_container_details.txt
+				podman top "$containerid" >> $OUTPUT_DIR/containers/podman_container_details.txt 2> /dev/null
+				echo "--- Filesystem Diff ---" >> $OUTPUT_DIR/containers/podman_container_details.txt
+				podman diff "$containerid" >> $OUTPUT_DIR/containers/podman_container_details.txt 2> /dev/null
+				echo "--- Stats ---" >> $OUTPUT_DIR/containers/podman_container_details.txt
+				podman stats "$containerid" --no-stream >> $OUTPUT_DIR/containers/podman_container_details.txt 2> /dev/null
+				echo "--- Port Mappings ---" >> $OUTPUT_DIR/containers/podman_container_details.txt
+				podman port "$containerid" >> $OUTPUT_DIR/containers/podman_container_details.txt 2> /dev/null
+				echo "--- Health Check ---" >> $OUTPUT_DIR/containers/podman_container_details.txt
+				podman healthcheck run "$containerid" >> $OUTPUT_DIR/containers/podman_container_details.txt 2> /dev/null
+				echo "--- Mounts ---" >> $OUTPUT_DIR/containers/podman_container_details.txt
+				podman inspect "$containerid" --format "{{json .Mounts}}" >> $OUTPUT_DIR/containers/podman_container_details.txt 2> /dev/null
+				echo "" >> $OUTPUT_DIR/containers/podman_container_details.txt
+				podman logs "$containerid" > "$OUTPUT_DIR/containers/podman_logs_${containerid}.txt" 2> /dev/null
+				podman inspect "$containerid" > "$OUTPUT_DIR/containers/podman_inspect_${containerid}.json" 2> /dev/null
+			fi
+		done < $OUTPUT_DIR/containers/podman_container_ids.txt 2> /dev/null
+
+		podman network ls --format "{{.Name}}" | while read netname; do
+			if [ -n "$netname" ]; then
+				echo "=== Network: $netname ===" >> $OUTPUT_DIR/containers/podman_network_configs.txt
+				podman network inspect "$netname" >> $OUTPUT_DIR/containers/podman_network_configs.txt 2> /dev/null
+				echo "" >> $OUTPUT_DIR/containers/podman_network_configs.txt
+			fi
+		done
 		
+		podman volume ls --format "{{.Name}}" 1> $OUTPUT_DIR/containers/podman_volume_ids.txt 2> /dev/null
+		while read -r volumeid; do
+			if [ -n "$volumeid" ]; then
+				echo "=== Volume: $volumeid ===" >> $OUTPUT_DIR/containers/podman_volume_details.txt
+				podman volume inspect "$volumeid" >> $OUTPUT_DIR/containers/podman_volume_details.txt 2> /dev/null
+				echo "" >> $OUTPUT_DIR/containers/podman_volume_details.txt
+			fi
+		done < $OUTPUT_DIR/containers/podman_volume_ids.txt 2> /dev/null
+
+		podman image ls --format "{{.ID}}" --no-trunc | while read imageid; do
+			if [ -n "$imageid" ]; then
+				echo "=== Image: $imageid ===" >> $OUTPUT_DIR/containers/podman_image_details.txt
+				podman image inspect "$imageid" >> $OUTPUT_DIR/containers/podman_image_details.txt 2> /dev/null
+				podman image history "$imageid" >> $OUTPUT_DIR/containers/podman_image_details.txt 2> /dev/null
+				podman image tree "$imageid" >> $OUTPUT_DIR/containers/podman_image_details.txt 2> /dev/null
+				echo "" >> $OUTPUT_DIR/containers/podman_image_details.txt
+			fi
+		done
+		
+		podman pod ls --format "{{.ID}}" | while read podid; do
+			if [ -n "$podid" ]; then
+				echo "=== Pod: $podid ===" >> $OUTPUT_DIR/containers/podman_pod_details.txt
+				podman pod inspect "$podid" >> $OUTPUT_DIR/containers/podman_pod_details.txt 2> /dev/null
+				podman pod stats "$podid" --no-stream >> $OUTPUT_DIR/containers/podman_pod_details.txt 2> /dev/null
+				podman pod top "$podid" >> $OUTPUT_DIR/containers/podman_pod_details.txt 2> /dev/null
+				echo "" >> $OUTPUT_DIR/containers/podman_pod_details.txt
+			fi
+		done
+		
+		podman image ls --filter dangling=true 1> $OUTPUT_DIR/containers/podman_dangling_images.txt 2> /dev/null
+		podman system prune --dry-run 1> $OUTPUT_DIR/containers/podman_prune_dryrun.txt 2> /dev/null
+		
+		if [ -d "$HOME/.config/containers" ]; then
+			echo "  ${COL_ENTRY}>${RESET} Collecting Podman configuration"
+			ls -la "$HOME/.config/containers/" > $OUTPUT_DIR/containers/podman_config_listing.txt 2> /dev/null
+			# Copy non-sensitive configs
+			for conf in storage.conf containers.conf registries.conf; do
+				if [ -f "$HOME/.config/containers/$conf" ]; then
+					cp "$HOME/.config/containers/$conf" "$OUTPUT_DIR/containers/podman_$conf" 2> /dev/null
+				fi
+			done
+		fi
+		
+		if [ -d "/etc/containers" ]; then
+			ls -la /etc/containers/ > $OUTPUT_DIR/containers/podman_etc_config_listing.txt 2> /dev/null
+			for conf in storage.conf containers.conf registries.conf policy.json; do
+				if [ -f "/etc/containers/$conf" ]; then
+					cp "/etc/containers/$conf" "$OUTPUT_DIR/containers/podman_etc_$conf" 2> /dev/null
+				fi
+			done
+		fi
+		
+		if [ "$EUID" -ne 0 ]; then
+			echo "Running as rootless podman" > $OUTPUT_DIR/containers/podman_rootless.txt
+			podman unshare cat /proc/self/uid_map >> $OUTPUT_DIR/containers/podman_rootless.txt 2> /dev/null
+			podman unshare cat /proc/self/gid_map >> $OUTPUT_DIR/containers/podman_rootless.txt 2> /dev/null
+		fi
+		
+		if [ -d "$HOME/.config/systemd/user" ]; then
+			find "$HOME/.config/systemd/user" -name "*podman*" -o -name "*container*" 2>/dev/null > $OUTPUT_DIR/containers/podman_systemd_units.txt
+		fi
+	
+		podman container ls --format "{{.Names}}" | while read cname; do
+			if [ -n "$cname" ]; then
+				echo "=== Container: $cname ===" >> $OUTPUT_DIR/containers/podman_systemd_generate.txt
+				podman generate systemd "$cname" >> $OUTPUT_DIR/containers/podman_systemd_generate.txt 2> /dev/null
+				echo "" >> $OUTPUT_DIR/containers/podman_systemd_generate.txt
+			fi
+		done
 	fi
 fi
 
