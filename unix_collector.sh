@@ -411,6 +411,29 @@ zpool history 1> $OUTPUT_DIR/general/storage_zpool_history.txt 2> /dev/null
 zpool list -v 1> $OUTPUT_DIR/general/storage_zpool_list.txt 2> /dev/null
 zpool status -v 1> $OUTPUT_DIR/general/storage_zpool_status.txt 2> /dev/null
 
+echo "  ${COL_ENTRY}>${RESET} Enhanced process information"
+mkdir -p $OUTPUT_DIR/process_info/maps
+mkdir -p $OUTPUT_DIR/process_info/limits
+mkdir -p $OUTPUT_DIR/process_info/environ
+
+for pid in /proc/[0-9]*; do
+    PID_NUM=$(basename $pid)
+    cat $pid/maps > $OUTPUT_DIR/process_info/maps/maps_${PID_NUM}.txt 2>/dev/null
+    cat $pid/limits > $OUTPUT_DIR/process_info/limits/limits_${PID_NUM}.txt 2>/dev/null
+    cat $pid/environ | tr '\0' '\n' > $OUTPUT_DIR/process_info/environ/environ_${PID_NUM}.txt 2>/dev/null
+    cat $pid/smaps > $OUTPUT_DIR/process_info/maps/smaps_${PID_NUM}.txt 2>/dev/null
+    ls -la $pid/fd > $OUTPUT_DIR/process_info/fd_detailed_${PID_NUM}.txt 2>/dev/null
+done
+
+echo "  ${COL_ENTRY}>${RESET} Process network namespaces"
+for pid in /proc/[0-9]*; do
+    PID_NUM=$(basename $pid)
+    if [ -d "$pid/net" ]; then
+        cat $pid/net/tcp > $OUTPUT_DIR/process_info/net_tcp_${PID_NUM}.txt 2>/dev/null
+        cat $pid/net/udp > $OUTPUT_DIR/process_info/net_udp_${PID_NUM}.txt 2>/dev/null
+    fi
+done
+
 echo "  ${COL_ENTRY}>${RESET} Process list and information" 
 ps -efl 1> $OUTPUT_DIR/general/ps.txt 2> /dev/null
 ps -auxww 1> $OUTPUT_DIR/general/ps-auxww.txt 2> /dev/null
@@ -549,6 +572,18 @@ then
 	cp -R /run/shm/ $OUTPUT_DIR/general/run_shm_folder/ 2> /dev/null
 fi
 
+echo "  ${COL_ENTRY}>${RESET} Systemd timers and services"
+mkdir -p $OUTPUT_DIR/general/systemd
+systemctl list-timers --all --no-pager > $OUTPUT_DIR/general/systemd/timers_all.txt 2>/dev/null
+systemctl list-units --all --no-pager > $OUTPUT_DIR/general/systemd/units_all.txt 2>/dev/null
+systemctl list-units --failed --no-pager > $OUTPUT_DIR/general/systemd/units_failed.txt 2>/dev/null
+systemctl list-unit-files --type=service --no-pager > $OUTPUT_DIR/general/systemd/services_all.txt 2>/dev/null
+journalctl -n 1000 --no-pager > $OUTPUT_DIR/general/systemd/journal_recent.txt 2>/dev/null
+journalctl -b --no-pager > $OUTPUT_DIR/general/systemd/journal_boot.txt 2>/dev/null
+mkdir -p $OUTPUT_DIR/general/systemd/timers
+find /etc/systemd /usr/lib/systemd /lib/systemd -name "*.timer" -type f 2>/dev/null | while read timer; do
+    cp "$timer" $OUTPUT_DIR/general/systemd/timers/ 2>/dev/null
+done
 
 if [ $PLATFORM = "mac" ]
 then
@@ -703,6 +738,14 @@ then
 	genkex 1> $OUTPUT_DIR/general/kernel-modules.txt 2> /dev/null
 fi
 
+# Systemd journal logs
+if [ -x "$(command -v journalctl)" ]; then
+    echo "  ${COL_ENTRY}>${RESET} Systemd journal logs"
+    journalctl --no-pager -n 10000 > $OUTPUT_DIR/logs/journal_recent.txt 2>/dev/null
+    journalctl --no-pager -b > $OUTPUT_DIR/logs/journal_boot.txt 2>/dev/null
+    journalctl --no-pager -p err > $OUTPUT_DIR/logs/journal_errors.txt 2>/dev/null
+fi
+
 echo "  ${COL_ENTRY}>${RESET} At scheduler"
 if [ $PLATFORM != "solaris" ]
 then
@@ -812,6 +855,16 @@ if [ $PLATFORM = "android" ]
 then
     dmesg 1> $OUTPUT_DIR/hardware/dmesg.txt 2> /dev/null
 fi
+
+# File ACLs and extended attributes
+echo "  ${COL_ENTRY}>${RESET} File ACLs and extended attributes"
+if [ -x "$(command -v getfacl)" ]; then
+    find / -xdev -type f -exec getfacl {} + > $OUTPUT_DIR/general/file_acls_getfacl.txt 2>/dev/null &
+fi
+if [ -x "$(command -v getfattr)" ]; then
+    find / -xdev -type f -exec getfattr -d {} + > $OUTPUT_DIR/general/extended_file_attributes_getfattr.txt 2>/dev/null &
+fi
+
 if [ $PLATFORM = "mac" ]
 then
     dmesg 1> $OUTPUT_DIR/hardware/dmesg.txt 2> /dev/null
