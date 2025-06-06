@@ -2055,14 +2055,15 @@ if [ -x "$(command -v esxcli)" -o -x "$(command -v VBoxManage)" -o -x "$(command
 then
     echo "${COL_SECTION}VIRTUAL SYSTEMS INFORMATION [95% ]:${RESET}"
     mkdir $OUTPUT_DIR/virtual
-    # VMWARE
-	if [ -x "$(command -v esxcli)"  -o -x "$(command -v vm-support)" ]
+	# VMWARE
+	if [ -x "$(command -v esxcli)" -o -x "$(command -v vm-support)" ]
 	then
+		echo "  ${COL_ENTRY}>${RESET} Collecting VMware ESXi information"
 		esxcli system version get 1> $OUTPUT_DIR/virtual/esxi_version.txt 2> /dev/null
 		esxcli system hostname get 1> $OUTPUT_DIR/virtual/esxi_hostname.txt 2> /dev/null
 		esxcli system stats installtime get 1> $OUTPUT_DIR/virtual/esxi_installtime.txt 2> /dev/null
 		esxcli system account list 1> $OUTPUT_DIR/virtual/esxi_account_list.txt 2> /dev/null
-		esxcli network firewall get  1> $OUTPUT_DIR/virtual/esxi_firewall_status.txt 2> /dev/null
+		esxcli network firewall get 1> $OUTPUT_DIR/virtual/esxi_firewall_status.txt 2> /dev/null
 		esxcli software vib list 1> $OUTPUT_DIR/virtual/esxi_software_vib_list.txt 2> /dev/null
 		esxcli network firewall ruleset list 1> $OUTPUT_DIR/virtual/esxi_firewall_ruleset.txt 2> /dev/null
 		esxcli network ip interface ipv4 get 1> $OUTPUT_DIR/virtual/esxi_ip4.txt 2> /dev/null
@@ -2078,14 +2079,81 @@ then
 		esxcli hardware memory get 1> $OUTPUT_DIR/virtual/esxi_hardware_memory_list.txt 2> /dev/null
 		esxcli hardware pci list 1> $OUTPUT_DIR/virtual/esxi_hardware_pci_list.txt 2> /dev/null
 		esxcli hardware platform get 1> $OUTPUT_DIR/virtual/esxi_hardware_platform_details.txt 2> /dev/null
-		esxcli hardware trustedboot get 1> $OUTPUT_DIR/virtual/esxi_hardware_trustedboot_details.txt 2> /dev/null		
+		esxcli hardware trustedboot get 1> $OUTPUT_DIR/virtual/esxi_hardware_trustedboot_details.txt 2> /dev/null
 		vmware -vl 1> $OUTPUT_DIR/virtual/esxi_version2.txt 2> /dev/null
 		vmkchdev -l 1> $OUTPUT_DIR/virtual/esxi_devices.txt 2> /dev/null
 		esxcli system process list 1> $OUTPUT_DIR/virtual/esxi_system_process_list.txt 2> /dev/null
 		vm-support -V 1> $OUTPUT_DIR/virtual/esxi_vm_support.txt 2> /dev/null
 		esxcli storage nfs list 1> $OUTPUT_DIR/virtual/esxi_nfs_storage_list.txt 2> /dev/null
 		esxcli storage nfs41 list 1> $OUTPUT_DIR/virtual/esxi_nfs4.1_storage_list.txt 2> /dev/null
- 
+		esxcli system settings advanced list 1> $OUTPUT_DIR/virtual/esxi_advanced_settings.txt 2> /dev/null
+		esxcli system settings kernel list 1> $OUTPUT_DIR/virtual/esxi_kernel_settings.txt 2> /dev/null
+		esxcli system module list 1> $OUTPUT_DIR/virtual/esxi_kernel_modules.txt 2> /dev/null
+		esxcli system module get -m vmkernel 1> $OUTPUT_DIR/virtual/esxi_vmkernel_info.txt 2> /dev/null
+		esxcli system security certificatestore list 1> $OUTPUT_DIR/virtual/esxi_certificates.txt 2> /dev/null
+		esxcli software acceptance get 1> $OUTPUT_DIR/virtual/esxi_software_acceptance.txt 2> /dev/null
+		esxcli system maintenanceMode get 1> $OUTPUT_DIR/virtual/esxi_maintenance_mode.txt 2> /dev/null
+		esxcli hardware power policy list 1> $OUTPUT_DIR/virtual/esxi_power_policy.txt 2> /dev/null
+		esxcli hardware power policy get 1> $OUTPUT_DIR/virtual/esxi_current_power_policy.txt 2> /dev/null
+		esxcli system time get 1> $OUTPUT_DIR/virtual/esxi_time_config.txt 2> /dev/null
+		esxcli system ntp get 1> $OUTPUT_DIR/virtual/esxi_ntp_config.txt 2> /dev/null
+		esxcli system syslog config get 1> $OUTPUT_DIR/virtual/esxi_syslog_config.txt 2> /dev/null
+		esxcli system syslog config logger list 1> $OUTPUT_DIR/virtual/esxi_syslog_loggers.txt 2> /dev/null
+		esxcli network vswitch standard list 1> $OUTPUT_DIR/virtual/esxi_vswitch_standard_list.txt 2> /dev/null
+		esxcli network vswitch dvs vmware list 1> $OUTPUT_DIR/virtual/esxi_vswitch_dvs_list.txt 2> /dev/null
+		esxcli network vswitch standard portgroup list 1> $OUTPUT_DIR/virtual/esxi_portgroup_list.txt 2> /dev/null
+		for vswitch in $(esxcli network vswitch standard list 2>/dev/null | grep "^   " | awk '{print $1}'); do
+			echo "=== vSwitch: $vswitch ===" >> $OUTPUT_DIR/virtual/esxi_vswitch_policies.txt
+			esxcli network vswitch standard policy security get -v "$vswitch" >> $OUTPUT_DIR/virtual/esxi_vswitch_policies.txt 2> /dev/null
+			esxcli network vswitch standard policy failover get -v "$vswitch" >> $OUTPUT_DIR/virtual/esxi_vswitch_policies.txt 2> /dev/null
+			esxcli network vswitch standard policy shaping get -v "$vswitch" >> $OUTPUT_DIR/virtual/esxi_vswitch_policies.txt 2> /dev/null
+			echo "" >> $OUTPUT_DIR/virtual/esxi_vswitch_policies.txt
+		done
+		esxcli network nic list 1> $OUTPUT_DIR/virtual/esxi_network_nic_list.txt 2> /dev/null
+		esxcli network ip interface list 1> $OUTPUT_DIR/virtual/esxi_ip_interface_list.txt 2> /dev/null
+		esxcli network ip interface ipv6 get 1> $OUTPUT_DIR/virtual/esxi_ipv6.txt 2> /dev/null
+		esxcli storage core adapter list 1> $OUTPUT_DIR/virtual/esxi_storage_adapters.txt 2> /dev/null
+		esxcli storage core device list 1> $OUTPUT_DIR/virtual/esxi_storage_devices.txt 2> /dev/null
+		esxcli storage core path list 1> $OUTPUT_DIR/virtual/esxi_storage_paths.txt 2> /dev/null
+		esxcli storage core plugin list 1> $OUTPUT_DIR/virtual/esxi_storage_plugins.txt 2> /dev/null
+		esxcli iscsi adapter list 1> $OUTPUT_DIR/virtual/esxi_iscsi_adapters.txt 2> /dev/null
+		esxcli iscsi session list 1> $OUTPUT_DIR/virtual/esxi_iscsi_sessions.txt 2> /dev/null
+		esxcli iscsi ibftboot get 1> $OUTPUT_DIR/virtual/esxi_iscsi_boot.txt 2> /dev/null
+		esxcli vsan cluster get 1> $OUTPUT_DIR/virtual/esxi_vsan_cluster.txt 2> /dev/null
+		esxcli vsan network list 1> $OUTPUT_DIR/virtual/esxi_vsan_network.txt 2> /dev/null
+		esxcli vsan storage list 1> $OUTPUT_DIR/virtual/esxi_vsan_storage.txt 2> /dev/null
+		esxcli vsan policy getdefault 1> $OUTPUT_DIR/virtual/esxi_vsan_policy.txt 2> /dev/null
+		if [ -x "$(command -v vim-cmd)" ]; then
+			echo "  ${COL_ENTRY}>${RESET} Collecting detailed VM information"
+			vim-cmd vmsvc/getallvms 1> $OUTPUT_DIR/virtual/esxi_vim_all_vms.txt 2> /dev/null
+			vim-cmd vmsvc/getallvms 2>/dev/null | awk 'NR>1 {print $1}' | while read vmid; do
+				if [ -n "$vmid" ] && [ "$vmid" -eq "$vmid" ] 2>/dev/null; then
+					echo "=== VM ID: $vmid ===" >> $OUTPUT_DIR/virtual/esxi_vm_details.txt
+					vim-cmd vmsvc/get.summary $vmid >> $OUTPUT_DIR/virtual/esxi_vm_details.txt 2> /dev/null
+					vim-cmd vmsvc/get.config $vmid >> $OUTPUT_DIR/virtual/esxi_vm_details.txt 2> /dev/null
+					vim-cmd vmsvc/get.runtime $vmid >> $OUTPUT_DIR/virtual/esxi_vm_details.txt 2> /dev/null
+					vim-cmd vmsvc/get.guest $vmid >> $OUTPUT_DIR/virtual/esxi_vm_details.txt 2> /dev/null
+					vim-cmd vmsvc/get.datastores $vmid >> $OUTPUT_DIR/virtual/esxi_vm_details.txt 2> /dev/null
+					vim-cmd vmsvc/get.networks $vmid >> $OUTPUT_DIR/virtual/esxi_vm_details.txt 2> /dev/null
+					vim-cmd vmsvc/get.snapshot $vmid >> $OUTPUT_DIR/virtual/esxi_vm_details.txt 2> /dev/null
+					vim-cmd vmsvc/device.getdevices $vmid >> $OUTPUT_DIR/virtual/esxi_vm_details.txt 2> /dev/null
+					echo "" >> $OUTPUT_DIR/virtual/esxi_vm_details.txt
+				fi
+			done
+			vim-cmd hostsvc/hosthardware > $OUTPUT_DIR/virtual/esxi_host_hardware.txt 2> /dev/null
+			vim-cmd hostsvc/hostsummary > $OUTPUT_DIR/virtual/esxi_host_summary.txt 2> /dev/null
+			vim-cmd hostsvc/datastore/listsummary > $OUTPUT_DIR/virtual/esxi_datastore_summary.txt 2> /dev/null
+		fi
+		
+		esxtop -b -n 1 > $OUTPUT_DIR/virtual/esxi_esxtop_snapshot.txt 2> /dev/null
+		vmkerrcode -l > $OUTPUT_DIR/virtual/esxi_error_codes.txt 2> /dev/null
+		vmkload_mod -l > $OUTPUT_DIR/virtual/esxi_loaded_modules.txt 2> /dev/null
+		vmkping -I vmk0 -c 1 localhost > $OUTPUT_DIR/virtual/esxi_vmkping_test.txt 2> /dev/null
+		ls -la /var/log/ > $OUTPUT_DIR/virtual/esxi_log_listing.txt 2> /dev/null
+		ls -la /scratch/log/ > $OUTPUT_DIR/virtual/esxi_scratch_log_listing.txt 2> /dev/null
+		cp -R /scratch/log/ $OUTPUT_DIR/virtual/scratch_log/ 2> /dev/null
+		cp -R /var/log/ $OUTPUT_DIR/virtual/esxi_var_log/
+		vim-cmd vimsvc/license --show > $OUTPUT_DIR/virtual/esxi_license.txt 2> /dev/null
 	fi
     #VBox
 	if [ -x "$(command -v VBoxManage)" ]
