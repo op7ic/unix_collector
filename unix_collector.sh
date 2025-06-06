@@ -2656,14 +2656,143 @@ then
 		fi
 	fi
 	
+	# Check for Proxmox environment
+	if [ -x "$(command -v pct)" ] || [ -x "$(command -v qm)" ] || [ -x "$(command -v pvesh)" ]
+	then
+		echo "  ${COL_ENTRY}>${RESET} Collecting Proxmox environment information"
+		mkdir -p $OUTPUT_DIR/containers/proxmox
+		mkdir -p $OUTPUT_DIR/virtual/proxmox
+		
+		if [ -x "$(command -v pveversion)" ]; then
+			pveversion --verbose 1> $OUTPUT_DIR/virtual/proxmox/pve_version.txt 2> /dev/null
+		fi
+		
+		if [ -f /etc/pve/subscription ]; then
+			cp /etc/pve/subscription $OUTPUT_DIR/virtual/proxmox/subscription.txt 2> /dev/null
+		fi
+
+		if [ -x "$(command -v pvecm)" ]; then
+			pvecm status 1> $OUTPUT_DIR/virtual/proxmox/cluster_status.txt 2> /dev/null
+			pvecm nodes 1> $OUTPUT_DIR/virtual/proxmox/cluster_nodes.txt 2> /dev/null
+		fi
+		
+		if [ -x "$(command -v corosync-cfgtool)" ]; then
+			corosync-cfgtool -s 1> $OUTPUT_DIR/virtual/proxmox/corosync_status.txt 2> /dev/null
+		fi
+		
+		if [ -x "$(command -v pvesm)" ]; then
+			echo "  ${COL_ENTRY}>${RESET} Collecting Proxmox storage information"
+			pvesm status 1> $OUTPUT_DIR/virtual/proxmox/storage_status.txt 2> /dev/null
+			pvesm list local 1> $OUTPUT_DIR/virtual/proxmox/storage_list_local.txt 2> /dev/null
+			pvesm status | tail -n +2 | awk '{print $1}' | while read storage; do
+				pvesm list "$storage" 1> $OUTPUT_DIR/virtual/proxmox/storage_content_${storage}.txt 2> /dev/null
+			done
+		fi
+	
+		if [ -x "$(command -v pve-firewall)" ]; then
+			pve-firewall compile 1> $OUTPUT_DIR/virtual/proxmox/firewall_rules.txt 2> /dev/null
+		fi
+
+		if [ -f /etc/pve/vzdump.conf ]; then
+			cp /etc/pve/vzdump.conf $OUTPUT_DIR/virtual/proxmox/vzdump_config.txt 2> /dev/null
+		fi
+
+		if [ -f /etc/pve/nodes/*/network ]; then
+			cp /etc/pve/nodes/*/network $OUTPUT_DIR/virtual/proxmox/ 2> /dev/null
+		fi
+	fi
+
 	if [ -x "$(command -v pct)" ]
 	then
-	    echo "  ${COL_ENTRY}>${RESET} Collecting PROXMOX information"
-		pct list 1> $OUTPUT_DIR/containers/proxmox_container_list.txt 2> /dev/null
-		pct cpusets 1> $OUTPUT_DIR/containers/proxmox_cpuset.txt 2> /dev/null
-		pct list | sed -e '1d' | awk '{print $1}' 1>> $OUTPUT_DIR/containers/proxmox_container_ids.txt 2> /dev/null
-		while read -r containerid; do pct config "$containerid" --current 1>> $OUTPUT_DIR/containers/proxmox_config_details_$containerid.txt 2> /dev/null; done < $OUTPUT_DIR/containers/proxmox_container_ids.txt 2> /dev/null
-		while read -r containerid; do pct listsnapshot "$containerid" 1>> $OUTPUT_DIR/containers/proxmox_listsnapshot_details_$containerid.txt 2> /dev/null; done < $OUTPUT_DIR/containers/proxmox_container_ids.txt 2> /dev/null
+		echo "  ${COL_ENTRY}>${RESET} Collecting Proxmox LXC container information"
+
+		pct list 1> $OUTPUT_DIR/containers/proxmox/container_list.txt 2> /dev/null
+		pct cpusets 1> $OUTPUT_DIR/containers/proxmox/cpusets.txt 2> /dev/null
+		pct list | sed -e '1d' | awk '{print $1}' 1> $OUTPUT_DIR/containers/proxmox/container_ids.txt 2> /dev/null
+		
+		while read -r containerid; do
+			echo "  ${COL_ENTRY}>${RESET} Collecting details for container $containerid"
+			mkdir -p $OUTPUT_DIR/containers/proxmox/$containerid
+			pct config "$containerid" 1> $OUTPUT_DIR/containers/proxmox/$containerid/config.txt 2> /dev/null
+			pct status "$containerid" 1> $OUTPUT_DIR/containers/proxmox/$containerid/status.txt 2> /dev/null
+			pct pending "$containerid" 1> $OUTPUT_DIR/containers/proxmox/$containerid/pending.txt 2> /dev/null
+			pct listsnapshot "$containerid" 1> $OUTPUT_DIR/containers/proxmox/$containerid/snapshots.txt 2> /dev/null
+			pct df "$containerid" 1> $OUTPUT_DIR/containers/proxmox/$containerid/disk_usage.txt 2> /dev/null
+			pct mount "$containerid" 1> $OUTPUT_DIR/containers/proxmox/$containerid/mount_attempt.txt 2> /dev/null
+			pct unmount "$containerid" 2> /dev/null
+			if [ -x "$(command -v pvesh)" ]; then
+				pvesh get /nodes/localhost/lxc/$containerid/rrddata 1> $OUTPUT_DIR/containers/proxmox/$containerid/resource_stats.txt 2> /dev/null
+			fi
+			
+		done < $OUTPUT_DIR/containers/proxmox/container_ids.txt
+	fi
+
+	if [ -x "$(command -v qm)" ]
+	then
+		echo "  ${COL_ENTRY}>${RESET} Collecting Proxmox VM information"
+		qm list 1> $OUTPUT_DIR/virtual/proxmox/vm_list.txt 2> /dev/null
+		qm list | sed -e '1d' | awk '{print $1}' 1> $OUTPUT_DIR/virtual/proxmox/vm_ids.txt 2> /dev/null
+		
+		while read -r vmid; do
+			echo "  ${COL_ENTRY}>${RESET} Collecting details for VM $vmid"
+			mkdir -p $OUTPUT_DIR/virtual/proxmox/$vmid
+			qm config "$vmid" 1> $OUTPUT_DIR/virtual/proxmox/$vmid/config.txt 2> /dev/null
+			qm status "$vmid" --verbose 1> $OUTPUT_DIR/virtual/proxmox/$vmid/status.txt 2> /dev/null
+			qm pending "$vmid" 1> $OUTPUT_DIR/virtual/proxmox/$vmid/pending.txt 2> /dev/null
+			qm listsnapshot "$vmid" 1> $OUTPUT_DIR/virtual/proxmox/$vmid/snapshots.txt 2> /dev/null
+			qm cloudinit dump "$vmid" 1> $OUTPUT_DIR/virtual/proxmox/$vmid/cloudinit.txt 2> /dev/null
+			qm agent "$vmid" ping 1> $OUTPUT_DIR/virtual/proxmox/$vmid/agent_status.txt 2> /dev/null
+			if [ -x "$(command -v pvesh)" ]; then
+				pvesh get /nodes/localhost/qemu/$vmid/rrddata 1> $OUTPUT_DIR/virtual/proxmox/$vmid/resource_stats.txt 2> /dev/null
+			fi
+			
+		done < $OUTPUT_DIR/virtual/proxmox/vm_ids.txt
+	fi
+
+	if [ -x "$(command -v pvesh)" ]
+	then
+		echo "  ${COL_ENTRY}>${RESET} Collecting Proxmox API information"
+		pvesh get /nodes 1> $OUTPUT_DIR/virtual/proxmox/nodes_info.txt 2> /dev/null
+		NODENAME=$(hostname)
+		pvesh get /nodes/$NODENAME/status 1> $OUTPUT_DIR/virtual/proxmox/node_status.txt 2> /dev/null
+		pvesh get /nodes/$NODENAME/services 1> $OUTPUT_DIR/virtual/proxmox/services_status.txt 2> /dev/null
+		pvesh get /nodes/$NODENAME/tasks --limit 100 1> $OUTPUT_DIR/virtual/proxmox/tasks_history.txt 2> /dev/null
+		pvesh get /storage 1> $OUTPUT_DIR/virtual/proxmox/storage_api.txt 2> /dev/null
+		pvesh get /cluster/backup 1> $OUTPUT_DIR/virtual/proxmox/backup_jobs.txt 2> /dev/null 2> /dev/null
+		pvesh get /cluster/replication 1> $OUTPUT_DIR/virtual/proxmox/replication_jobs.txt 2> /dev/null 2> /dev/null
+		pvesh get /cluster/ha/status/current 1> $OUTPUT_DIR/virtual/proxmox/ha_status.txt 2> /dev/null 2> /dev/null
+		pvesh get /access/users 1> $OUTPUT_DIR/virtual/proxmox/users.txt 2> /dev/null
+		pvesh get /access/groups 1> $OUTPUT_DIR/virtual/proxmox/groups.txt 2> /dev/null
+		pvesh get /access/roles 1> $OUTPUT_DIR/virtual/proxmox/roles.txt 2> /dev/null
+		pvesh get /access/domains 1> $OUTPUT_DIR/virtual/proxmox/auth_domains.txt 2> /dev/null
+	fi
+	if [ -d /var/log/pve ]
+	then
+		echo "  ${COL_ENTRY}>${RESET} Collecting Proxmox logs"
+		mkdir -p $OUTPUT_DIR/logs/proxmox
+		cp -R /var/log/pve/* $OUTPUT_DIR/logs/proxmox/ 2> /dev/null
+	fi
+	
+	if [ -d /etc/pve ]
+	then
+		echo "  ${COL_ENTRY}>${RESET} Collecting Proxmox configuration"
+		# Note: /etc/pve is a FUSE mount, be careful with permissions
+		mkdir -p $OUTPUT_DIR/virtual/proxmox/config
+		
+		# Safely copy readable files
+		find /etc/pve -type f -readable 2>/dev/null | while read file; do
+			dest_dir="$OUTPUT_DIR/virtual/proxmox/config/$(dirname "$file" | sed 's|/etc/pve||')"
+			mkdir -p "$dest_dir"
+			cp "$file" "$dest_dir/" 2>/dev/null
+		done
+	fi
+
+	# OpenVZ legacy support (if present)
+	if [ -x "$(command -v vzctl)" ]
+	then
+		echo "  ${COL_ENTRY}>${RESET} Collecting OpenVZ information"
+		vzctl list -a 1> $OUTPUT_DIR/containers/openvz_list.txt 2> /dev/null
+		vzlist -a -o ctid,hostname,status,ip,diskspace,physpages 1> $OUTPUT_DIR/containers/openvz_detailed.txt 2> /dev/null
 	fi
 	
 	if [ -x "$(command -v podman)" ]
