@@ -2090,6 +2090,7 @@ then
     #VBox
 	if [ -x "$(command -v VBoxManage)" ]
 	then
+		echo "  ${COL_ENTRY}>${RESET} Collecting VirtualBox information"
 		VBoxManage list vms 1> $OUTPUT_DIR/virtual/vbox_vm_list.txt 2> /dev/null
 		VBoxManage list runningvms 1> $OUTPUT_DIR/virtual/vbox_running_vm_list.txt 2> /dev/null
 		VBoxManage list ostypes 1> $OUTPUT_DIR/virtual/vbox_ostypes_list.txt 2> /dev/null
@@ -2100,10 +2101,65 @@ then
 		VBoxManage list groups 1> $OUTPUT_DIR/virtual/vbox_groups.txt 2> /dev/null
 		VBoxManage list cloudproviders 1> $OUTPUT_DIR/virtual/vbox_cloudproviders.txt 2> /dev/null
 		VBoxManage list cloudprofiles 1> $OUTPUT_DIR/virtual/vbox_cloudprofiles.txt 2> /dev/null
+		VBoxManage list hostonlyifs 1> $OUTPUT_DIR/virtual/vbox_hostonly_interfaces.txt 2> /dev/null
+		VBoxManage list natnets 1> $OUTPUT_DIR/virtual/vbox_nat_networks.txt 2> /dev/null
+		VBoxManage list dhcpservers 1> $OUTPUT_DIR/virtual/vbox_dhcp_servers.txt 2> /dev/null
+		VBoxManage list bridgedifs 1> $OUTPUT_DIR/virtual/vbox_bridged_interfaces.txt 2> /dev/null
+		VBoxManage list intnets 1> $OUTPUT_DIR/virtual/vbox_internal_networks.txt 2> /dev/null
+		VBoxManage list hostonlynets 1> $OUTPUT_DIR/virtual/vbox_hostonly_networks.txt 2> /dev/null
+		VBoxManage list usbfilters 1> $OUTPUT_DIR/virtual/vbox_usb_filters.txt 2> /dev/null
+		VBoxManage list usbhost 1> $OUTPUT_DIR/virtual/vbox_usb_host_devices.txt 2> /dev/null
+		VBoxManage list hdds 1> $OUTPUT_DIR/virtual/vbox_hdds.txt 2> /dev/null
+		VBoxManage list dvds 1> $OUTPUT_DIR/virtual/vbox_dvds.txt 2> /dev/null
+		VBoxManage list floppies 1> $OUTPUT_DIR/virtual/vbox_floppies.txt 2> /dev/null
+		VBoxManage list hostcpuids 1> $OUTPUT_DIR/virtual/vbox_host_cpuids.txt 2> /dev/null
+		VBoxManage list hostdrives 1> $OUTPUT_DIR/virtual/vbox_host_drives.txt 2> /dev/null
+		VBoxManage list hostdvds 1> $OUTPUT_DIR/virtual/vbox_host_dvds.txt 2> /dev/null
+		VBoxManage list hostfloppies 1> $OUTPUT_DIR/virtual/vbox_host_floppies.txt 2> /dev/null
+		VBoxManage list vms --long 1> $OUTPUT_DIR/virtual/vbox_vms_detailed.txt 2> /dev/null
+		VBoxManage getextradata global enumerate 1> $OUTPUT_DIR/virtual/vbox_global_extradata.txt 2> /dev/null
+		VBoxManage list vms | grep -E '^".*" \{' | sed 's/^"\(.*\)" {.*$/\1/' | while read vmname; do
+			if [ -n "$vmname" ]; then
+				echo "=== VM: $vmname ===" >> $OUTPUT_DIR/virtual/vbox_vm_details.txt
+				VBoxManage showvminfo "$vmname" --details >> $OUTPUT_DIR/virtual/vbox_vm_details.txt 2> /dev/null
+				echo "--- Extra Data ---" >> $OUTPUT_DIR/virtual/vbox_vm_details.txt
+				VBoxManage getextradata "$vmname" enumerate >> $OUTPUT_DIR/virtual/vbox_vm_details.txt 2> /dev/null
+				echo "--- Snapshots ---" >> $OUTPUT_DIR/virtual/vbox_vm_details.txt
+				VBoxManage snapshot "$vmname" list >> $OUTPUT_DIR/virtual/vbox_vm_details.txt 2> /dev/null
+				echo "--- Storage ---" >> $OUTPUT_DIR/virtual/vbox_vm_details.txt
+				VBoxManage showvminfo "$vmname" --machinereadable | grep -E "storagecontroller|hdd|dvd|floppy" >> $OUTPUT_DIR/virtual/vbox_vm_details.txt 2> /dev/null
+				echo "--- Network ---" >> $OUTPUT_DIR/virtual/vbox_vm_details.txt
+				VBoxManage showvminfo "$vmname" --machinereadable | grep -E "nic[0-9]|macaddress|cableconnected|bridgeadapter" >> $OUTPUT_DIR/virtual/vbox_vm_details.txt 2> /dev/null
+				echo "--- USB ---" >> $OUTPUT_DIR/virtual/vbox_vm_details.txt
+				VBoxManage showvminfo "$vmname" --machinereadable | grep -E "usb|usbfilter" >> $OUTPUT_DIR/virtual/vbox_vm_details.txt 2> /dev/null
+				echo "" >> $OUTPUT_DIR/virtual/vbox_vm_details.txt
+				VBoxManage showvminfo "$vmname" --machinereadable > "$OUTPUT_DIR/virtual/vbox_vm_${vmname//[^a-zA-Z0-9]/_}_machinereadable.txt" 2> /dev/null
+			fi
+		done
+		VBoxManage metrics list > $OUTPUT_DIR/virtual/vbox_metrics_list.txt 2> /dev/null
+		echo "  ${COL_ENTRY}>${RESET} Locating VirtualBox logs"
+		VBOX_HOME=$(VBoxManage list systemproperties 2>/dev/null | grep "Default machine folder:" | sed 's/Default machine folder:[ ]*//')
+		if [ -n "$VBOX_HOME" ] && [ -d "$VBOX_HOME" ]; then
+			echo "VirtualBox Home: $VBOX_HOME" > $OUTPUT_DIR/virtual/vbox_log_locations.txt
+			find "$VBOX_HOME" -name "*.log" -type f -mtime -7 2>/dev/null | head -100 >> $OUTPUT_DIR/virtual/vbox_log_locations.txt
+		fi
+		for homedir in /home/* /root; do
+			if [ -d "$homedir/.VirtualBox" ]; then
+				echo "Found VirtualBox config in: $homedir/.VirtualBox" >> $OUTPUT_DIR/virtual/vbox_config_locations.txt
+				find "$homedir/.VirtualBox" -name "*.xml" -type f 2>/dev/null | head -50 >> $OUTPUT_DIR/virtual/vbox_config_locations.txt
+			fi
+			if [ -d "$homedir/VirtualBox VMs" ]; then
+				echo "Found VirtualBox VMs in: $homedir/VirtualBox VMs" >> $OUTPUT_DIR/virtual/vbox_vm_locations.txt
+				ls -la "$homedir/VirtualBox VMs/" >> $OUTPUT_DIR/virtual/vbox_vm_locations.txt 2> /dev/null
+			fi
+		done
+		VBoxManage list vms --long 2>/dev/null | grep -A1 "Shared folders:" | grep -v "Shared folders:" | grep -v "^--$" > $OUTPUT_DIR/virtual/vbox_shared_folders.txt
+		VBoxManage list extpacks | grep -i "guest" > $OUTPUT_DIR/virtual/vbox_guest_additions_info.txt 2> /dev/null
 	fi
     # VIRT 
 	if [ -x "$(command -v virsh)" ]
 	then
+		echo "  ${COL_ENTRY}>${RESET} Collecting KVM/QEMU information"
 		virsh list --all 1> $OUTPUT_DIR/virtual/virt_vm_list.txt 2> /dev/null
 		virsh list --all --name 1> $OUTPUT_DIR/virtual/virt_vm_list_names.txt 2> /dev/null
 		virsh hostname 1> $OUTPUT_DIR/virtual/virt_hostname.txt 2> /dev/null
@@ -2111,7 +2167,84 @@ then
 		virsh net-list --all --name 1> $OUTPUT_DIR/virtual/virt_network_list.txt 2> /dev/null
 		virsh nodeinfo 1> $OUTPUT_DIR/virtual/virt_nodeinfo.txt 2> /dev/null
 		virsh pool-list --all 1> $OUTPUT_DIR/virtual/virt_pool_list.txt 2> /dev/null
+		virsh net-list --all --details 1> $OUTPUT_DIR/virtual/virt_networks_detailed.txt 2> /dev/null
+		virsh net-list --all --name 2>/dev/null | while read net; do
+			if [ -n "$net" ]; then
+				echo "=== Network: $net ===" >> $OUTPUT_DIR/virtual/virt_network_configs.txt
+				virsh net-dumpxml "$net" >> $OUTPUT_DIR/virtual/virt_network_configs.txt 2> /dev/null
+				virsh net-info "$net" >> $OUTPUT_DIR/virtual/virt_network_configs.txt 2> /dev/null
+				virsh net-dhcp-leases "$net" >> $OUTPUT_DIR/virtual/virt_network_configs.txt 2> /dev/null
+				echo "" >> $OUTPUT_DIR/virtual/virt_network_configs.txt
+			fi
+		done
+		virsh pool-list --all --details 1> $OUTPUT_DIR/virtual/virt_storage_pools_detailed.txt 2> /dev/null
+		virsh pool-list --all --name 2>/dev/null | while read pool; do
+			if [ -n "$pool" ]; then
+				echo "=== Storage Pool: $pool ===" >> $OUTPUT_DIR/virtual/virt_storage_pool_configs.txt
+				virsh pool-dumpxml "$pool" >> $OUTPUT_DIR/virtual/virt_storage_pool_configs.txt 2> /dev/null
+				virsh pool-info "$pool" >> $OUTPUT_DIR/virtual/virt_storage_pool_configs.txt 2> /dev/null
+				virsh vol-list "$pool" --details >> $OUTPUT_DIR/virtual/virt_storage_pool_configs.txt 2> /dev/null
+				echo "" >> $OUTPUT_DIR/virtual/virt_storage_pool_configs.txt
+			fi
+		done
+		virsh list --all --name 2>/dev/null | while read vm; do
+			if [ -n "$vm" ]; then
+				echo "=== VM: $vm ===" >> $OUTPUT_DIR/virtual/virt_vm_details.txt
+				virsh dominfo "$vm" >> $OUTPUT_DIR/virtual/virt_vm_details.txt 2> /dev/null
+				virsh dumpxml "$vm" > $OUTPUT_DIR/virtual/virt_vm_${vm}_config.xml 2> /dev/null
+				virsh domblklist "$vm" --details >> $OUTPUT_DIR/virtual/virt_vm_details.txt 2> /dev/null
+				virsh domiflist "$vm" >> $OUTPUT_DIR/virtual/virt_vm_details.txt 2> /dev/null
+				virsh vcpuinfo "$vm" >> $OUTPUT_DIR/virtual/virt_vm_details.txt 2> /dev/null
+				virsh dommemstat "$vm" >> $OUTPUT_DIR/virtual/virt_vm_details.txt 2> /dev/null
+				virsh domblkstat "$vm" --human >> $OUTPUT_DIR/virtual/virt_vm_details.txt 2> /dev/null
+				echo "" >> $OUTPUT_DIR/virtual/virt_vm_details.txt
+				virsh snapshot-list "$vm" --tree > $OUTPUT_DIR/virtual/virt_vm_${vm}_snapshots.txt 2> /dev/null
+				virsh snapshot-list "$vm" --details >> $OUTPUT_DIR/virtual/virt_vm_${vm}_snapshots.txt 2> /dev/null
+			fi
+		done
+		virsh capabilities > $OUTPUT_DIR/virtual/virt_capabilities.xml 2> /dev/null
+		virsh domcapabilities > $OUTPUT_DIR/virtual/virt_domain_capabilities.xml 2> /dev/null
+		virsh nodedev-list > $OUTPUT_DIR/virtual/virt_nodedev_list.txt 2> /dev/null
+		virsh nodedev-list --tree > $OUTPUT_DIR/virtual/virt_nodedev_tree.txt 2> /dev/null
+		virsh iface-list --all > $OUTPUT_DIR/virtual/virt_interfaces.txt 2> /dev/null
+		virsh version > $OUTPUT_DIR/virtual/virt_version.txt 2> /dev/null
+		virsh uri > $OUTPUT_DIR/virtual/virt_uri.txt 2> /dev/null
 	fi
+
+	# QEMU specific artifacts (often used with KVM)
+	if [ -x "$(command -v qemu-img)" ]; then
+		echo "  ${COL_ENTRY}>${RESET} Collecting QEMU disk information"
+		# Common locations for QEMU/KVM images
+		for dir in /var/lib/libvirt/images /var/lib/virt /var/lib/qemu; do
+			if [ -d "$dir" ]; then
+				find "$dir" \( -name "*.qcow2" -o -name "*.img" -o -name "*.raw" \) -type f 2>/dev/null | while read img; do
+					echo "=== Image: $img ===" >> $OUTPUT_DIR/virtual/qemu_disk_info.txt
+					qemu-img info "$img" >> $OUTPUT_DIR/virtual/qemu_disk_info.txt 2> /dev/null
+					echo "" >> $OUTPUT_DIR/virtual/qemu_disk_info.txt
+				done
+			fi
+		done
+	fi
+
+	# libvirt configuration files
+	if [ -d "/etc/libvirt" ]; then
+		echo "  ${COL_ENTRY}>${RESET} Collecting libvirt configurations"
+		# List configuration files without copying sensitive content
+		find /etc/libvirt -name "*.conf" -type f 2>/dev/null | while read conf; do
+			echo "$conf" >> $OUTPUT_DIR/virtual/libvirt_config_files.txt
+			ls -la "$conf" >> $OUTPUT_DIR/virtual/libvirt_config_files.txt
+		done
+		
+		# libvirt logs location
+		if [ -d "/var/log/libvirt" ]; then
+			ls -la /var/log/libvirt/ > $OUTPUT_DIR/virtual/libvirt_log_listing.txt 2> /dev/null
+			# Copy recent QEMU logs (last 7 days)
+			find /var/log/libvirt/qemu -name "*.log" -mtime -7 -type f 2>/dev/null | while read log; do
+				cp "$log" "$OUTPUT_DIR/virtual/" 2> /dev/null
+			done
+		fi
+	fi
+
     # vmctl 
 	if [ -x "$(command -v vmctl)" ]
 	then
@@ -2126,6 +2259,42 @@ then
 	if [ -x "$(command -v qm )" ]
 	then
 		qm list 1> $OUTPUT_DIR/virtual/proxmox_qm_list.txt 2> /dev/null		
+	fi
+
+	if [ -d "/var/lib/hyperv" ] || [ -x "$(command -v hvc)" ]; then
+		echo "  ${COL_ENTRY}>${RESET} Hyper-V artifacts"
+		
+		# Hyper-V services
+		systemctl status hyperv* > $OUTPUT_DIR/virtual/hyperv_services.txt 2> /dev/null
+		
+		# Hyper-V kernel modules
+		lsmod | grep -E "hv_|hyperv" > $OUTPUT_DIR/virtual/hyperv_modules.txt 2> /dev/null
+		
+		# Integration services
+		if [ -d "/sys/bus/vmbus/devices" ]; then
+			ls -la /sys/bus/vmbus/devices/ > $OUTPUT_DIR/virtual/hyperv_vmbus_devices.txt 2> /dev/null
+		fi
+	fi
+	
+	if [ -x "$(command -v xl)" ] || [ -x "$(command -v xm)" ]; then
+		echo "  ${COL_ENTRY}>${RESET} Xen hypervisor collection"
+		
+		# Xen domains
+		xl list -l 1> $OUTPUT_DIR/virtual/xen_domains.txt 2> /dev/null
+		xl info 1> $OUTPUT_DIR/virtual/xen_info.txt 2> /dev/null
+		xl dmesg 1> $OUTPUT_DIR/virtual/xen_dmesg.txt 2> /dev/null
+		
+		# Xen networking
+		xl network-list 1> $OUTPUT_DIR/virtual/xen_networks.txt 2> /dev/null
+		
+		# Xen configuration
+		if [ -d "/etc/xen" ]; then
+			find /etc/xen -name "*.cfg" -type f | while read cfg; do
+				echo "=== Config: $cfg ===" >> $OUTPUT_DIR/virtual/xen_configs.txt
+				cat "$cfg" >> $OUTPUT_DIR/virtual/xen_configs.txt 2> /dev/null
+				echo "" >> $OUTPUT_DIR/virtual/xen_configs.txt
+			done
+		fi
 	fi
 
 fi
