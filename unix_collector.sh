@@ -903,13 +903,13 @@ elif [ $PLATFORM = "aix" ]; then
 fi
 
 if [ -x /sbin/runlevel ]; then
-    echo "Current Runlevel: `runlevel`" >> $OUTPUT_DIR/boot_startup/summary.txt
+    echo "Current Runlevel: `runlevel`" >> $OUTPUT_DIR/boot_startup/summary.txt 2> /dev/null
 elif [ -x /usr/bin/systemctl ]; then
-    echo "Current Target: `systemctl get-default 2>/dev/null`" >> $OUTPUT_DIR/boot_startup/summary.txt
+    echo "Current Target: `systemctl get-default 2>/dev/null`" >> $OUTPUT_DIR/boot_startup/summary.txt 2> /dev/null
 fi
 
 if [ -x /usr/bin/uptime ]; then
-    echo "System Uptime: `uptime`" >> $OUTPUT_DIR/boot_startup/summary.txt
+    echo "System Uptime: `uptime`" >> $OUTPUT_DIR/boot_startup/summary.txt 2> /dev/null
 fi
 if [ -x /usr/bin/who ]; then
     who -b 1>> $OUTPUT_DIR/boot_startup/summary.txt 2> /dev/null
@@ -1247,7 +1247,7 @@ fi
 if [ -d /var/spool/cron/crontabs ]
 then
     mkdir $OUTPUT_DIR/general/crontabs 2> /dev/null
-    ls -la /var/spool/cron/crontabs/ > $OUTPUT_DIR/general/crontabs/user_crontabs_perms.txt 2> /dev/null
+    ls -la /var/spool/cron/crontabs/ 2> /dev/null > $OUTPUT_DIR/general/crontabs/user_crontabs_perms.txt 2> /dev/null
     
     for name in `ls /var/spool/cron/crontabs/`
     do
@@ -2927,7 +2927,6 @@ else
     
     # RPM-based verification
     if [ -x /usr/bin/rpm -o -x /bin/rpm ]; then
-        echo "    Verifying RPM packages (this may take several minutes)..."
         rpm -Va 1> $OUTPUT_DIR/software/verification/rpm-verify-all.txt 2> /dev/null
         rpm -V --nofiles --nodigest -a 1> $OUTPUT_DIR/software/verification/rpm-verify-quick.txt 2> /dev/null
         rpm -Va 2> /dev/null | grep '^..5' 1> $OUTPUT_DIR/software/verification/rpm-modified-configs.txt 2> /dev/null
@@ -2944,7 +2943,6 @@ else
     
     # Debian-based verification
     if [ -x /usr/bin/dpkg ]; then
-        echo "    Verifying DEB packages (this may take several minutes)..."
         dpkg --verify 1> $OUTPUT_DIR/software/verification/dpkg-verify-all.txt 2> /dev/null
         if [ -x /usr/bin/debsums ]; then
             debsums -a 1> $OUTPUT_DIR/software/verification/debsums-all.txt 2> /dev/null
@@ -2960,7 +2958,6 @@ else
     
     # FreeBSD package verification
     if [ -x /usr/sbin/pkg ]; then
-        echo "    Verifying FreeBSD packages..."
         pkg check -sa 1> $OUTPUT_DIR/software/verification/pkg-check-all.txt 2> /dev/null
         pkg check -d 1> $OUTPUT_DIR/software/verification/pkg-check-dependencies.txt 2> /dev/null
         pkg check -s 1> $OUTPUT_DIR/software/verification/pkg-check-checksums.txt 2> /dev/null
@@ -2968,21 +2965,18 @@ else
     
     # OpenBSD package verification
     if [ -x /usr/sbin/pkg_check ]; then
-        echo "    Verifying OpenBSD packages..."
         pkg_check 1> $OUTPUT_DIR/software/verification/pkg_check.txt 2> /dev/null
         pkg_check -F 1> $OUTPUT_DIR/software/verification/pkg_check-files.txt 2> /dev/null
     fi
     
     # Snap package verification
     if [ -x /usr/bin/snap ]; then
-        echo "    Checking snap packages..."
         snap list 1> $OUTPUT_DIR/software/verification/snap-list.txt 2> /dev/null
         snap changes 1> $OUTPUT_DIR/software/verification/snap-changes.txt 2> /dev/null
     fi
     
     # Flatpak verification
     if [ -x /usr/bin/flatpak ]; then
-        echo "    Checking flatpak packages..."
         flatpak list 1> $OUTPUT_DIR/software/verification/flatpak-list.txt 2> /dev/null
         flatpak remotes 1> $OUTPUT_DIR/software/verification/flatpak-remotes.txt 2> /dev/null
     fi
@@ -3220,7 +3214,6 @@ echo "  ${COL_ENTRY}>${RESET} Compiler and development tools detection"
 mkdir $OUTPUT_DIR/software/development_tools 2> /dev/null
 
 # First, check common locations and PATH for known compilers/interpreters
-echo "    Checking PATH for development tools..."
 echo "=== Development Tools Found in PATH ===" > $OUTPUT_DIR/software/development_tools/tools_in_path.txt
 
 # List of common development tools to check
@@ -3266,8 +3259,6 @@ do
     fi
 done
 
-# Check package manager for installed development packages
-echo "    Checking installed development packages..."
 
 if [ $PLATFORM = "linux" -o $PLATFORM = "generic" ]; then
     # RPM-based systems
@@ -3300,8 +3291,6 @@ elif [ $PLATFORM = "solaris" ]; then
     fi
 fi
 
-# Check standard development directories
-echo "    Checking standard development directories..."
 echo "=== Development Tools in Standard Locations ===" > $OUTPUT_DIR/software/development_tools/standard_locations.txt
 
 # Common directories to check (much faster than full filesystem scan)
@@ -3316,8 +3305,6 @@ do
     fi
 done
 
-# Check for development environments and build tools
-echo "    Checking build environments..."
 echo "=== Build Tools and Environments ===" > $OUTPUT_DIR/software/development_tools/build_environments.txt
 
 # Check for build tool configurations
@@ -3337,7 +3324,6 @@ env | grep -E 'JAVA_HOME|PYTHON_HOME|PERL5LIB|RUBY|GCC|GOPATH|GOROOT|CARGO_HOME|
 
 # Platform specific checks
 if [ $PLATFORM = "android" ]; then
-    echo "    Checking Android development tools..."
     echo "=== Android Development Tools ===" > $OUTPUT_DIR/software/development_tools/android_dev_tools.txt
     
     # Check for Android SDK/NDK
@@ -3348,7 +3334,6 @@ if [ $PLATFORM = "android" ]; then
         dalvikvm -version >> $OUTPUT_DIR/software/development_tools/android_dev_tools.txt 2>&1
     fi
 fi
-echo "    Performing targeted filesystem scan..."
 echo "=== Compilers Found in Non-Standard Locations ===" > $OUTPUT_DIR/software/development_tools/nonstandard_compilers.txt
 
 SEARCH_DIRS="/opt /usr/local /home /root"
@@ -3364,7 +3349,6 @@ do
     fi
 done
 
-echo "    Creating development tools summary..."
 echo "=== Development Tools Summary ===" > $OUTPUT_DIR/software/development_tools/summary.txt
 echo "Platform: $PLATFORM" >> $OUTPUT_DIR/software/development_tools/summary.txt
 echo "Collection Date: `date`" >> $OUTPUT_DIR/software/development_tools/summary.txt
