@@ -5507,120 +5507,242 @@ then
 	fi
 	
 	if [ -x "$(command -v docker)" ]
-	then
-		echo "  ${COL_ENTRY}>${RESET} Collecting docker information"
-		docker container ls --all --size 1> $OUTPUT_DIR/containers/docker_all_containers.txt 2> /dev/null
-		docker image ls --all 1> $OUTPUT_DIR/containers/docker_all_images.txt 2> /dev/null
-		docker info 1> $OUTPUT_DIR/containers/docker_info.txt 2> /dev/null
-		docker version 1> $OUTPUT_DIR/containers/docker_version.txt 2> /dev/null
-		docker network ls 1> $OUTPUT_DIR/containers/docker_network.txt 2> /dev/null
-		docker stats --all --no-stream --no-trunc 1> $OUTPUT_DIR/containers/docker_stats.txt 2> /dev/null
-		docker volume ls 1> $OUTPUT_DIR/containers/docker_volume.txt 2> /dev/null
-		docker events --since 24h --until now --format 'json' 2>&1 | head -100 > $OUTPUT_DIR/containers/docker_events_24h.json 2> /dev/null
-		docker system info --format '{{json .}}' 1> $OUTPUT_DIR/containers/docker_info_json.txt 2> /dev/null
-		docker system df 1> $OUTPUT_DIR/containers/docker_system_df.txt 2> /dev/null
-		docker plugin ls 1> $OUTPUT_DIR/containers/docker_plugins.txt 2> /dev/null
-		docker swarm ca 2>&1 | grep -q "This node is not a swarm manager" || {
-			echo "  ${COL_ENTRY}>${RESET} Collecting Docker Swarm information"
-			docker node ls 1> $OUTPUT_DIR/containers/docker_swarm_nodes.txt 2> /dev/null
-			docker service ls 1> $OUTPUT_DIR/containers/docker_swarm_services.txt 2> /dev/null
-			docker stack ls 1> $OUTPUT_DIR/containers/docker_swarm_stacks.txt 2> /dev/null
-			docker secret ls 1> $OUTPUT_DIR/containers/docker_swarm_secrets.txt 2> /dev/null
-			docker config ls 1> $OUTPUT_DIR/containers/docker_swarm_configs.txt 2> /dev/null
-		}
-		docker container ps --all --format "{{.ID}}" 1> $OUTPUT_DIR/containers/docker_ids.txt 2> /dev/null
+		then
+			echo "  ${COL_ENTRY}>${RESET} Collecting docker information"
+			mkdir -p $OUTPUT_DIR/containers/docker 2> /dev/null
+			mkdir -p $OUTPUT_DIR/containers/docker/config 2> /dev/null
+			mkdir -p $OUTPUT_DIR/containers/docker/runtime 2> /dev/null
+			mkdir -p $OUTPUT_DIR/containers/docker/images 2> /dev/null
+			mkdir -p $OUTPUT_DIR/containers/docker/containers 2> /dev/null
+			mkdir -p $OUTPUT_DIR/containers/docker/networks 2> /dev/null
+			mkdir -p $OUTPUT_DIR/containers/docker/volumes 2> /dev/null
+			mkdir -p $OUTPUT_DIR/containers/docker/swarm 2> /dev/null
+			mkdir -p $OUTPUT_DIR/containers/docker/compose 2> /dev/null
+			
+			docker version 1> $OUTPUT_DIR/containers/docker/runtime/version.txt 2> /dev/null
+			docker info 1> $OUTPUT_DIR/containers/docker/runtime/info.txt 2> /dev/null
+			docker system df 1> $OUTPUT_DIR/containers/docker/runtime/system_df.txt 2> /dev/null
+			
+			# Extract key information from docker info
+			docker info 2> /dev/null | grep "Version" > $OUTPUT_DIR/containers/docker/runtime/version_info.txt 2> /dev/null
+			docker info 2> /dev/null | grep "Storage" > $OUTPUT_DIR/containers/docker/runtime/storage_info.txt 2> /dev/null
+			docker info 2> /dev/null | grep "Runtime" > $OUTPUT_DIR/containers/docker/runtime/runtime_info.txt 2> /dev/null
+			docker info 2> /dev/null | grep "Root" > $OUTPUT_DIR/containers/docker/runtime/root_info.txt 2> /dev/null
+			docker info 2> /dev/null | grep "Registry" > $OUTPUT_DIR/containers/docker/runtime/registry_info.txt 2> /dev/null
+			
+			docker events --since 360h --until now 2>&1  > $OUTPUT_DIR/containers/docker/runtime/events_360h.txt 2> /dev/null
 
-		while read -r containerid; do
-			if [ -n "$containerid" ]; then
-				echo "=== Container: $containerid ===" >> $OUTPUT_DIR/containers/docker_container_details.txt
-				echo "--- Logs (last 1000 lines) ---" >> $OUTPUT_DIR/containers/docker_container_details.txt
-				docker container logs "$containerid" --tail 1000 >> $OUTPUT_DIR/containers/docker_container_details.txt 2> /dev/null
-				echo "--- Inspect ---" >> $OUTPUT_DIR/containers/docker_container_details.txt
-				docker inspect "$containerid" >> $OUTPUT_DIR/containers/docker_container_details.txt 2> /dev/null
-				echo "--- Processes ---" >> $OUTPUT_DIR/containers/docker_container_details.txt
-				docker top "$containerid" >> $OUTPUT_DIR/containers/docker_container_details.txt 2> /dev/null
-				echo "--- Filesystem Diff ---" >> $OUTPUT_DIR/containers/docker_container_details.txt
-				docker diff "$containerid" >> $OUTPUT_DIR/containers/docker_container_details.txt 2> /dev/null
-				echo "--- Port Mappings ---" >> $OUTPUT_DIR/containers/docker_container_details.txt
-				docker port "$containerid" >> $OUTPUT_DIR/containers/docker_container_details.txt 2> /dev/null
-				echo "--- Resource Usage ---" >> $OUTPUT_DIR/containers/docker_container_details.txt
-				docker stats "$containerid" --no-stream --format "table {{.Container}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.NetIO}}\t{{.BlockIO}}" >> $OUTPUT_DIR/containers/docker_container_details.txt 2> /dev/null
-				echo "" >> $OUTPUT_DIR/containers/docker_container_details.txt
-				docker logs "$containerid" > "$OUTPUT_DIR/containers/docker_logs_${containerid}.txt" 2> /dev/null
-				docker inspect "$containerid" > "$OUTPUT_DIR/containers/docker_inspect_${containerid}.json" 2> /dev/null
-				docker top "$containerid" > "$OUTPUT_DIR/containers/docker_processes_${containerid}.txt" 2> /dev/null
-				docker diff "$containerid" > "$OUTPUT_DIR/containers/docker_filesystem_diff_${containerid}.txt" 2> /dev/null
+			if [ -f "/etc/docker/daemon.json" ]
+			then
+				cp /etc/docker/daemon.json $OUTPUT_DIR/containers/docker/config/daemon.json 2> /dev/null
 			fi
-		done < $OUTPUT_DIR/containers/docker_ids.txt 2> /dev/null
-		docker network ls --format "{{.ID}}" | while read netid; do
-			if [ -n "$netid" ]; then
-				echo "=== Network: $netid ===" >> $OUTPUT_DIR/containers/docker_network_configs.txt
-				docker network inspect "$netid" >> $OUTPUT_DIR/containers/docker_network_configs.txt 2> /dev/null
-				echo "" >> $OUTPUT_DIR/containers/docker_network_configs.txt
+			
+			if [ -d "/etc/docker" ]
+			then
+				ls -la /etc/docker/ > $OUTPUT_DIR/containers/docker/config/etc_docker_listing.txt 2> /dev/null
+				if [ -d "/etc/docker/certs.d" ]
+				then
+					find /etc/docker/certs.d -type f -name "*.crt" > $OUTPUT_DIR/containers/docker/config/cert_files.txt 2> /dev/null
+					find /etc/docker/certs.d -type f -name "*.cert" >> $OUTPUT_DIR/containers/docker/config/cert_files.txt 2> /dev/null
+					find /etc/docker/certs.d -type f -name "*.key" > $OUTPUT_DIR/containers/docker/config/key_files.txt 2> /dev/null
+				fi
 			fi
-		done
-
-		docker volume ls --format "{{.Name}}" | while read volname; do
-			if [ -n "$volname" ]; then
-				echo "=== Volume: $volname ===" >> $OUTPUT_DIR/containers/docker_volume_configs.txt
-				docker volume inspect "$volname" >> $OUTPUT_DIR/containers/docker_volume_configs.txt 2> /dev/null
-				echo "" >> $OUTPUT_DIR/containers/docker_volume_configs.txt
+			
+			docker info 2> /dev/null | grep "Docker Root Dir" | awk '{print $NF}' > $OUTPUT_DIR/containers/docker/config/docker_root_path.txt
+			
+			if [ -s "$OUTPUT_DIR/containers/docker/config/docker_root_path.txt" ]
+			then
+				DOCKER_ROOT=`cat $OUTPUT_DIR/containers/docker/config/docker_root_path.txt`
+				if [ -n "$DOCKER_ROOT" ]
+				then
+					if [ -d "$DOCKER_ROOT" ]
+					then
+						echo "Docker Root Directory: $DOCKER_ROOT" > $OUTPUT_DIR/containers/docker/config/docker_root_info.txt
+						df -h "$DOCKER_ROOT" >> $OUTPUT_DIR/containers/docker/config/docker_root_info.txt 2> /dev/null
+						du -sh "$DOCKER_ROOT" >> $OUTPUT_DIR/containers/docker/config/docker_root_info.txt 2> /dev/null
+						ls -la "$DOCKER_ROOT" >> $OUTPUT_DIR/containers/docker/config/docker_root_info.txt 2> /dev/null
+					fi
+				fi
 			fi
-		done
-
-		docker image ls --format "{{.ID}}" --no-trunc | while read imageid; do
-			if [ -n "$imageid" ]; then
-				echo "=== Image: $imageid ===" >> $OUTPUT_DIR/containers/docker_image_details.txt
-				docker image inspect "$imageid" >> $OUTPUT_DIR/containers/docker_image_details.txt 2> /dev/null
-				docker image history "$imageid" >> $OUTPUT_DIR/containers/docker_image_details.txt 2> /dev/null
-				echo "" >> $OUTPUT_DIR/containers/docker_image_details.txt
+			
+			if [ -x "$(command -v systemctl)" ]
+			then
+				systemctl status docker > $OUTPUT_DIR/containers/docker/runtime/service_status.txt 2> /dev/null
+				systemctl status docker.socket >> $OUTPUT_DIR/containers/docker/runtime/service_status.txt 2> /dev/null
+				systemctl status containerd >> $OUTPUT_DIR/containers/docker/runtime/service_status.txt 2> /dev/null
+			elif [ -x "$(command -v service)" ]
+			then
+				service docker status > $OUTPUT_DIR/containers/docker/runtime/service_status.txt 2> /dev/null
+			elif [ -f "/etc/init.d/docker" ]
+			then
+				/etc/init.d/docker status > $OUTPUT_DIR/containers/docker/runtime/service_status.txt 2> /dev/null
 			fi
-		done
-		
-		docker image ls --filter "dangling=true" 1> $OUTPUT_DIR/containers/docker_dangling_images.txt 2> /dev/null
-		docker system prune --dry-run 1> $OUTPUT_DIR/containers/docker_prune_dryrun.txt 2> /dev/null
+			
+			docker container ls --all --size 1> $OUTPUT_DIR/containers/docker/containers/all_containers.txt 2> /dev/null
+			docker ps -a --no-trunc 1> $OUTPUT_DIR/containers/docker/containers/ps_all_no_trunc.txt 2> /dev/null
+			docker stats --all --no-stream --no-trunc 1> $OUTPUT_DIR/containers/docker/containers/stats_all.txt 2> /dev/null
+			
+			docker ps -a -q 1> $OUTPUT_DIR/containers/docker/containers/container_ids.txt 2> /dev/null
+			
+			if [ -s "$OUTPUT_DIR/containers/docker/containers/container_ids.txt" ]
+			then
+				while read containerid
+				do
+					if [ -n "$containerid" ]
+					then
+						# Create safe filename from container ID (first 12 chars)
+						safe_id=`echo "$containerid" | cut -c1-12`
+						
+						# Basic container info
+						docker inspect "$containerid" > "$OUTPUT_DIR/containers/docker/containers/inspect_${safe_id}.json" 2> /dev/null
+						docker top "$containerid" > "$OUTPUT_DIR/containers/docker/containers/processes_${safe_id}.txt" 2> /dev/null
+						docker port "$containerid" > "$OUTPUT_DIR/containers/docker/containers/ports_${safe_id}.txt" 2> /dev/null
+						
+						# Container logs (limit size)
+						docker logs "$containerid" 2>&1 | tail -1000 > "$OUTPUT_DIR/containers/docker/containers/logs_${safe_id}_tail1000.txt" 2> /dev/null
+						
+						# Filesystem changes (limit output)
+						docker diff "$containerid" 2> /dev/null | head -5000 > "$OUTPUT_DIR/containers/docker/containers/diff_${safe_id}.txt" 2> /dev/null
+						
+						# Check if container is running before collecting stats
+						docker ps -q 2> /dev/null | grep "^${containerid}" > /dev/null 2>&1
+						if [ $? -eq 0 ]
+						then
+							docker stats "$containerid" --no-stream > "$OUTPUT_DIR/containers/docker/containers/stats_${safe_id}.txt" 2> /dev/null
+						fi
+					fi
+				done < "$OUTPUT_DIR/containers/docker/containers/container_ids.txt"
+			fi
+			
+			docker image ls --all 1> $OUTPUT_DIR/containers/docker/images/all_images.txt 2> /dev/null
+			docker images -a --no-trunc 1> $OUTPUT_DIR/containers/docker/images/images_no_trunc.txt 2> /dev/null
+			docker images --filter "dangling=true" 1> $OUTPUT_DIR/containers/docker/images/dangling_images.txt 2> /dev/null
+			
+			docker images -q 2> /dev/null | sort -u > $OUTPUT_DIR/containers/docker/images/image_ids.txt 2> /dev/null
+			# Process all images
+			if [ -s "$OUTPUT_DIR/containers/docker/images/image_ids.txt" ]
+			then
+				while read imageid
+				do
+					if [ -n "$imageid" ]
+					then
+						safe_id=`echo "$imageid" | cut -c1-12`
+						docker image inspect "$imageid" > "$OUTPUT_DIR/containers/docker/images/inspect_${safe_id}.json" 2> /dev/null
+						docker history "$imageid" --no-trunc > "$OUTPUT_DIR/containers/docker/images/history_${safe_id}.txt" 2> /dev/null
+					fi
+				done < "$OUTPUT_DIR/containers/docker/images/image_ids.txt"
+			fi
+			
+			docker network ls 1> $OUTPUT_DIR/containers/docker/networks/all_networks.txt 2> /dev/null
+			docker network ls -q > $OUTPUT_DIR/containers/docker/networks/network_ids.txt 2> /dev/null
+			
+			# Process each network
+			if [ -s "$OUTPUT_DIR/containers/docker/networks/network_ids.txt" ]
+			then
+				while read netid
+				do
+					if [ -n "$netid" ]
+					then
+						safe_id=`echo "$netid" | cut -c1-12`
+						docker network inspect "$netid" > "$OUTPUT_DIR/containers/docker/networks/inspect_${safe_id}.json" 2> /dev/null
+					fi
+				done < "$OUTPUT_DIR/containers/docker/networks/network_ids.txt"
+			fi
+			
+			docker volume ls 1> $OUTPUT_DIR/containers/docker/volumes/all_volumes.txt 2> /dev/null
+			
+			docker volume ls -q 2> /dev/null > $OUTPUT_DIR/containers/docker/volumes/volume_names.txt 2> /dev/null
+			
+			# Process each volume
+			if [ -s "$OUTPUT_DIR/containers/docker/volumes/volume_names.txt" ]
+			then
+				while read volname
+				do
+					if [ -n "$volname" ]
+					then
+						# Sanitize volume name for filename
+						safe_name=`echo "$volname" | sed 's/[^a-zA-Z0-9._-]/_/g' | cut -c1-50`
+						docker volume inspect "$volname" > "$OUTPUT_DIR/containers/docker/volumes/inspect_${safe_name}.json" 2> /dev/null
+					fi
+				done < "$OUTPUT_DIR/containers/docker/volumes/volume_names.txt"
+			fi
+			
+			docker node ls > /dev/null 2>&1
+			if [ $? -eq 0 ]
+			then
+				docker node ls 1> $OUTPUT_DIR/containers/docker/swarm/nodes.txt 2> /dev/null
+				docker service ls 1> $OUTPUT_DIR/containers/docker/swarm/services.txt 2> /dev/null
+				docker stack ls 1> $OUTPUT_DIR/containers/docker/swarm/stacks.txt 2> /dev/null
+				docker secret ls 1> $OUTPUT_DIR/containers/docker/swarm/secrets_list.txt 2> /dev/null
+				docker config ls 1> $OUTPUT_DIR/containers/docker/swarm/configs_list.txt 2> /dev/null
+			fi
 
-		if [ -x "$(command -v docker-compose)" ]; then
-			echo "  ${COL_ENTRY}>${RESET} Collecting Docker Compose information"
-			docker-compose version 1> $OUTPUT_DIR/containers/docker_compose_version.txt 2> /dev/null
-			# Find compose files in common locations
-			find /home /root /opt -name "docker-compose.yml" -o -name "docker-compose.yaml" -o -name "compose.yml" -o -name "compose.yaml" 2>/dev/null | head -50 > $OUTPUT_DIR/containers/docker_compose_files.txt
+			if [ -x "$(command -v docker-compose)" ]
+			then
+
+				docker-compose version 1> $OUTPUT_DIR/containers/docker/compose/version.txt 2> /dev/null
+				find /home -name "docker-compose.yml" 2>/dev/null > $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
+				find /home -name "docker-compose.yaml" 2>/dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
+				find /home -name "compose.yml" 2>/dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
+				find /home -name "compose.yaml" 2>/dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
+				find /root -name "docker-compose.yml" 2>/dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
+				find /root -name "docker-compose.yaml" 2>/dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
+				find /root -name "compose.yml" 2>/dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
+				find /root -name "compose.yaml" 2>/dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
+				find /opt -name "docker-compose.yml" 2>/dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
+				find /opt -name "docker-compose.yaml" 2>/dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
+				find /opt -name "compose.yml" 2>/dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
+				find /opt -name "compose.yaml" 2>/dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
+				find /srv -name "docker-compose.yml" 2>/dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
+				find /srv -name "docker-compose.yaml" 2>/dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
+				find /srv -name "compose.yml" 2>/dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
+				find /srv -name "compose.yaml" 2>/dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
+				
+				# Copy the actual compose files
+				mkdir -p $OUTPUT_DIR/containers/docker/compose/files 2> /dev/null
+
+				if [ -s "$OUTPUT_DIR/containers/docker/compose/compose_files_found.txt" ]
+				then
+					while read compose_file
+					do
+						if [ -f "$compose_file" ]
+						then
+							# Create safe filename preserving path information
+							safe_path=`echo "$compose_file" | sed 's/\//_/g' | sed 's/^_//'`
+							cp "$compose_file" "$OUTPUT_DIR/containers/docker/compose/files/${safe_path}" 2> /dev/null
+							echo "$compose_file -> ${safe_path}" >> $OUTPUT_DIR/containers/docker/compose/files/path_mapping.txt
+						fi
+					done < "$OUTPUT_DIR/containers/docker/compose/compose_files_found.txt"
+				fi
+				
+				if [ -s "$OUTPUT_DIR/containers/docker/compose/compose_files_found.txt" ]
+				then
+					while read compose_file
+					do
+						if [ -f "$compose_file" ]
+						then
+							compose_dir=`dirname "$compose_file"`
+							if [ -f "$compose_dir/.env" ]
+							then
+								safe_path=`echo "$compose_dir/.env" | sed 's/\//_/g' | sed 's/^_//'`
+								cp "$compose_dir/.env" "$OUTPUT_DIR/containers/docker/compose/files/${safe_path}" 2> /dev/null
+								echo "$compose_dir/.env -> ${safe_path}" >> $OUTPUT_DIR/containers/docker/compose/files/env_files_mapping.txt
+							fi
+						fi
+					done < "$OUTPUT_DIR/containers/docker/compose/compose_files_found.txt"
+				fi
+			fi
+			
+			docker plugin ls > $OUTPUT_DIR/containers/docker/runtime/plugins.txt 2> /dev/null
+			docker buildx version > $OUTPUT_DIR/containers/docker/runtime/buildx_version.txt 2> /dev/null
+			docker buildx ls > $OUTPUT_DIR/containers/docker/runtime/buildx_builders.txt 2> /dev/null
+			docker info 2>/dev/null | grep -A 5 "Registry" > $OUTPUT_DIR/containers/docker/config/registries.txt 2> /dev/null
+			docker info 2>/dev/null | grep "Storage Driver" > $OUTPUT_DIR/containers/docker/runtime/drivers_info.txt 2> /dev/null
+			docker info 2>/dev/null | grep "Logging Driver" >> $OUTPUT_DIR/containers/docker/runtime/drivers_info.txt 2> /dev/null
+			docker info 2>/dev/null | grep "Cgroup" >> $OUTPUT_DIR/containers/docker/runtime/drivers_info.txt 2> /dev/null
+			docker info 2>/dev/null | grep "Runtime" >> $OUTPUT_DIR/containers/docker/runtime/drivers_info.txt 2> /dev/null
 		fi
 
-		echo "  ${COL_ENTRY}>${RESET} Collecting Docker configuration"
-		if [ -f "/etc/docker/daemon.json" ]; then
-			cp /etc/docker/daemon.json $OUTPUT_DIR/containers/docker_daemon.json 2> /dev/null
-		fi
-		
-		if [ -d "/etc/docker" ]; then
-			ls -la /etc/docker/ > $OUTPUT_DIR/containers/docker_etc_listing.txt 2> /dev/null
-		fi
-
-		if [ -x "$(command -v systemctl)" ]; then
-			systemctl status docker > $OUTPUT_DIR/containers/docker_service_status.txt 2> /dev/null
-			systemctl status docker.socket >> $OUTPUT_DIR/containers/docker_service_status.txt 2> /dev/null
-			systemctl status containerd >> $OUTPUT_DIR/containers/docker_service_status.txt 2> /dev/null
-		fi
-		
-		DOCKER_ROOT=$(docker info 2>/dev/null | grep "Docker Root Dir" | awk '{print $NF}')
-		if [ -n "$DOCKER_ROOT" ] && [ -d "$DOCKER_ROOT" ]; then
-			echo "Docker Root: $DOCKER_ROOT" > $OUTPUT_DIR/containers/docker_root_info.txt
-			du -sh "$DOCKER_ROOT" >> $OUTPUT_DIR/containers/docker_root_info.txt 2> /dev/null
-			ls -la "$DOCKER_ROOT" >> $OUTPUT_DIR/containers/docker_root_info.txt 2> /dev/null
-		fi
-		
-		docker info 2>/dev/null | grep -A 10 "Registry" > $OUTPUT_DIR/containers/docker_registries.txt
-		
-		if [ -d "$HOME/.docker/trust" ]; then
-			ls -la "$HOME/.docker/trust/" > $OUTPUT_DIR/containers/docker_trust_listing.txt 2> /dev/null
-		fi
-		
-		docker buildx ls 2>/dev/null 1> $OUTPUT_DIR/containers/docker_buildx_list.txt
-		docker buildx version 2>/dev/null 1> $OUTPUT_DIR/containers/docker_buildx_version.txt
-		docker info 2>/dev/null | grep -E "Runtime|runc|containerd" > $OUTPUT_DIR/containers/docker_runtime_info.txt
-		find /etc/systemd /lib/systemd /usr/lib/systemd -name "*docker*" -o -name "*container*" 2>/dev/null | grep -v "\.wants" | sort -u > $OUTPUT_DIR/containers/docker_systemd_units.txt 2> /dev/null
-	fi
-	
 	if [ -x "$(command -v lxc)" ]
 	then
 		echo "  ${COL_ENTRY}>${RESET} Collecting LXC/LXD information"
