@@ -988,27 +988,45 @@ mkdir -p $OUTPUT_DIR/process_info/cgroup 2> /dev/null
 for pid in /proc/[0-9]*; do
     PID_NUM=$(basename $pid)
     # Memory maps and detailed memory info
-    cat $pid/maps > $OUTPUT_DIR/process_info/maps/maps_${PID_NUM}.txt 2> /dev/null
-    cat $pid/smaps > $OUTPUT_DIR/process_info/maps/smaps_${PID_NUM}.txt 2> /dev/null
+	if [ -r "$pid/maps" ]; then
+		cat $pid/maps > $OUTPUT_DIR/process_info/maps/maps_${PID_NUM}.txt 2> /dev/null
+	fi
+	if [ -r "$pid/smaps" ]; then
+		cat $pid/smaps > $OUTPUT_DIR/process_info/maps/smaps_${PID_NUM}.txt 2> /dev/null
+	fi
     # Resource limits
-    cat $pid/limits > $OUTPUT_DIR/process_info/limits/limits_${PID_NUM}.txt 2> /dev/null
+	if [ -r "$pid/limits" ]; then
+		cat $pid/limits > $OUTPUT_DIR/process_info/limits/limits_${PID_NUM}.txt 2> /dev/null
+	fi
     # Environment variables (make readable)
-    cat $pid/environ | tr '\0' '\n' > $OUTPUT_DIR/process_info/environ/environ_${PID_NUM}.txt 2> /dev/null
+	if [ -r "$pid/environ" ]; then
+		cat $pid/environ | tr '\0' '\n' > $OUTPUT_DIR/process_info/environ/environ_${PID_NUM}.txt 2> /dev/null
+	fi
     # Detailed file descriptors
-    ls -la $pid/fd > $OUTPUT_DIR/process_info/fd_detailed_${PID_NUM}.txt 2> /dev/null
+	if [ -r "$pid/fd" ]; then
+		ls -la $pid/fd > $OUTPUT_DIR/process_info/fd_detailed_${PID_NUM}.txt 2> /dev/null
+	fi
     # Process status with all details
-    cat $pid/status > $OUTPUT_DIR/process_info/status/status_${PID_NUM}.txt 2> /dev/null
+	if [ -r "$pid/status" ]; then
+		cat $pid/status > $OUTPUT_DIR/process_info/status/status_${PID_NUM}.txt 2> /dev/null
+	fi
     # Stack trace (Linux 2.6.29+)
-    cat $pid/stack > $OUTPUT_DIR/process_info/stack/stack_${PID_NUM}.txt 2> /dev/null
+	if [ -r "$pid/stack" ]; then
+		cat $pid/stack > $OUTPUT_DIR/process_info/stack/stack_${PID_NUM}.txt 2> /dev/null
+	fi
     # Command line (readable format)
-    tr '\0' ' ' < $pid/cmdline > $OUTPUT_DIR/process_info/cmdline/cmdline_${PID_NUM}.txt 2> /dev/null
-    echo "" >> $OUTPUT_DIR/process_info/cmdline/cmdline_${PID_NUM}.txt 2> /dev/null
+	if [ -r "$pid/cmdline" ]; then
+		tr '\0' ' ' < $pid/cmdline > $OUTPUT_DIR/process_info/cmdline/cmdline_${PID_NUM}.txt 2> /dev/null
+		echo "" >> $OUTPUT_DIR/process_info/cmdline/cmdline_${PID_NUM}.txt 2> /dev/null
+	fi
     # Namespace information (Linux)
     if [ -d "$pid/ns" ]; then
         ls -la $pid/ns/ > $OUTPUT_DIR/process_info/namespaces/ns_${PID_NUM}.txt 2> /dev/null
     fi
     # Cgroup information
-    cat $pid/cgroup > $OUTPUT_DIR/process_info/cgroup/cgroup_${PID_NUM}.txt 2> /dev/null
+	if [ -r "$pid/cgroup" ]; then
+		cat $pid/cgroup > $OUTPUT_DIR/process_info/cgroup/cgroup_${PID_NUM}.txt 2> /dev/null
+	fi
 done
 
 echo "  ${COL_ENTRY}>${RESET} Process network namespaces"
