@@ -2147,6 +2147,7 @@ then
 		esxcli system welcomemsg get 1> $OUTPUT_DIR/virtual/esxi/system/welcome_message.txt 2> /dev/null
 		esxcli system boot device get 1> $OUTPUT_DIR/virtual/esxi/system/boot_device.txt 2> /dev/null
 		esxcli system visorfs ramdisk list 1> $OUTPUT_DIR/virtual/esxi/system/ramdisk_list.txt 2> /dev/null
+		
 		echo "  ${COL_ENTRY}>${RESET} Collecting ESXi hardware information"
 		esxcli hardware platform get 1> $OUTPUT_DIR/virtual/esxi/hardware/platform.txt 2> /dev/null
 		esxcli hardware cpu list 1> $OUTPUT_DIR/virtual/esxi/hardware/cpu_list.txt 2> /dev/null
@@ -2204,6 +2205,7 @@ then
 		done
 		esxcli network vswitch standard portgroup list 1> $OUTPUT_DIR/virtual/esxi/network/portgroups/all_portgroups.txt 2> /dev/null
 		esxcli network vm list 1> $OUTPUT_DIR/virtual/esxi/network/vm_networks.txt 2> /dev/null
+		
 		echo "  ${COL_ENTRY}>${RESET} Collecting ESXi storage configuration"
 		esxcli storage filesystem list 1> $OUTPUT_DIR/virtual/esxi/storage/filesystems.txt 2> /dev/null
 		esxcli storage vmfs extent list 1> $OUTPUT_DIR/virtual/esxi/storage/vmfs_extents.txt 2> /dev/null
@@ -2288,6 +2290,7 @@ then
 		esxcli system permission list 1> $OUTPUT_DIR/virtual/esxi/security/permissions.txt 2> /dev/null
 		esxcli system security certificatestore list 1> $OUTPUT_DIR/virtual/esxi/security/certificates.txt 2> /dev/null
 		esxcli software acceptance get 1> $OUTPUT_DIR/virtual/esxi/security/software_acceptance.txt 2> /dev/null
+		
 		echo "  ${COL_ENTRY}>${RESET} Collecting ESXi advanced configuration"
 		esxcli system settings advanced list 1> $OUTPUT_DIR/virtual/esxi/config/advanced_settings.txt 2> /dev/null
 		esxcli system settings kernel list 1> $OUTPUT_DIR/virtual/esxi/config/kernel_settings.txt 2> /dev/null
@@ -2297,6 +2300,7 @@ then
 		esxcli system coredump file get 1> $OUTPUT_DIR/virtual/esxi/config/coredump_active.txt 2> /dev/null
 		esxcli system coredump network get 1> $OUTPUT_DIR/virtual/esxi/config/coredump_network.txt 2> /dev/null
 		esxcli system coredump partition list 1> $OUTPUT_DIR/virtual/esxi/config/coredump_partitions.txt 2> /dev/null
+		
 		echo "  ${COL_ENTRY}>${RESET} Collecting ESXi services information"
 		esxcli system process list 1> $OUTPUT_DIR/virtual/esxi/services/process_list.txt 2> /dev/null
 		esxcli system process stats load get 1> $OUTPUT_DIR/virtual/esxi/services/process_load.txt 2> /dev/null
@@ -2304,6 +2308,7 @@ then
 		esxcli system module get -m vmkernel 1> $OUTPUT_DIR/virtual/esxi/services/vmkernel_info.txt 2> /dev/null
 		vmkload_mod -l 1> $OUTPUT_DIR/virtual/esxi/services/loaded_modules.txt 2> /dev/null
 		vmkload_mod -s 1> $OUTPUT_DIR/virtual/esxi/services/module_stats.txt 2> /dev/null
+		
 		echo "  ${COL_ENTRY}>${RESET} Collecting ESXi software information"
 		esxcli software vib list 1> $OUTPUT_DIR/virtual/esxi/software/vib_list.txt 2> /dev/null
 		esxcli software vib get 1> $OUTPUT_DIR/virtual/esxi/software/vib_details.txt 2> /dev/null
@@ -2344,74 +2349,215 @@ then
 		vmkping -I vmk0 -c 1 localhost > $OUTPUT_DIR/virtual/esxi/network/vmkping_test.txt 2> /dev/null
 		vm-support -V 1> $OUTPUT_DIR/virtual/esxi/system/vm_support_version.txt 2> /dev/null
 	fi
-    #VBox
+
+	# VirtualBox
 	if [ -x "$(command -v VBoxManage)" ]
 	then
 		echo "  ${COL_ENTRY}>${RESET} Collecting VirtualBox information"
-		VBoxManage list vms 1> $OUTPUT_DIR/virtual/vbox_vm_list.txt 2> /dev/null
-		VBoxManage list runningvms 1> $OUTPUT_DIR/virtual/vbox_running_vm_list.txt 2> /dev/null
-		VBoxManage list ostypes 1> $OUTPUT_DIR/virtual/vbox_ostypes_list.txt 2> /dev/null
-		VBoxManage list hostinfo 1> $OUTPUT_DIR/virtual/vbox_hostinfo.txt 2> /dev/null
-		VBoxManage list hddbackends 1> $OUTPUT_DIR/virtual/vbox_hddbackends.txt 2> /dev/null
-		VBoxManage list systemproperties 1> $OUTPUT_DIR/virtual/vbox_systemproperties.txt 2> /dev/null
-		VBoxManage list extpacks 1> $OUTPUT_DIR/virtual/vbox_extpacks.txt 2> /dev/null
-		VBoxManage list groups 1> $OUTPUT_DIR/virtual/vbox_groups.txt 2> /dev/null
-		VBoxManage list cloudproviders 1> $OUTPUT_DIR/virtual/vbox_cloudproviders.txt 2> /dev/null
-		VBoxManage list cloudprofiles 1> $OUTPUT_DIR/virtual/vbox_cloudprofiles.txt 2> /dev/null
-		VBoxManage list hostonlyifs 1> $OUTPUT_DIR/virtual/vbox_hostonly_interfaces.txt 2> /dev/null
-		VBoxManage list natnets 1> $OUTPUT_DIR/virtual/vbox_nat_networks.txt 2> /dev/null
-		VBoxManage list dhcpservers 1> $OUTPUT_DIR/virtual/vbox_dhcp_servers.txt 2> /dev/null
-		VBoxManage list bridgedifs 1> $OUTPUT_DIR/virtual/vbox_bridged_interfaces.txt 2> /dev/null
-		VBoxManage list intnets 1> $OUTPUT_DIR/virtual/vbox_internal_networks.txt 2> /dev/null
-		VBoxManage list hostonlynets 1> $OUTPUT_DIR/virtual/vbox_hostonly_networks.txt 2> /dev/null
-		VBoxManage list usbfilters 1> $OUTPUT_DIR/virtual/vbox_usb_filters.txt 2> /dev/null
-		VBoxManage list usbhost 1> $OUTPUT_DIR/virtual/vbox_usb_host_devices.txt 2> /dev/null
-		VBoxManage list hdds 1> $OUTPUT_DIR/virtual/vbox_hdds.txt 2> /dev/null
-		VBoxManage list dvds 1> $OUTPUT_DIR/virtual/vbox_dvds.txt 2> /dev/null
-		VBoxManage list floppies 1> $OUTPUT_DIR/virtual/vbox_floppies.txt 2> /dev/null
-		VBoxManage list hostcpuids 1> $OUTPUT_DIR/virtual/vbox_host_cpuids.txt 2> /dev/null
-		VBoxManage list hostdrives 1> $OUTPUT_DIR/virtual/vbox_host_drives.txt 2> /dev/null
-		VBoxManage list hostdvds 1> $OUTPUT_DIR/virtual/vbox_host_dvds.txt 2> /dev/null
-		VBoxManage list hostfloppies 1> $OUTPUT_DIR/virtual/vbox_host_floppies.txt 2> /dev/null
-		VBoxManage list vms --long 1> $OUTPUT_DIR/virtual/vbox_vms_detailed.txt 2> /dev/null
-		VBoxManage getextradata global enumerate 1> $OUTPUT_DIR/virtual/vbox_global_extradata.txt 2> /dev/null
-		VBoxManage list vms | grep -E '^".*" \{' | sed 's/^"\(.*\)" {.*$/\1/' | while read vmname; do
-			if [ -n "$vmname" ]; then
-				echo "=== VM: $vmname ===" >> $OUTPUT_DIR/virtual/vbox_vm_details.txt
-				VBoxManage showvminfo "$vmname" --details >> $OUTPUT_DIR/virtual/vbox_vm_details.txt 2> /dev/null
-				echo "--- Extra Data ---" >> $OUTPUT_DIR/virtual/vbox_vm_details.txt
-				VBoxManage getextradata "$vmname" enumerate >> $OUTPUT_DIR/virtual/vbox_vm_details.txt 2> /dev/null
-				echo "--- Snapshots ---" >> $OUTPUT_DIR/virtual/vbox_vm_details.txt
-				VBoxManage snapshot "$vmname" list >> $OUTPUT_DIR/virtual/vbox_vm_details.txt 2> /dev/null
-				echo "--- Storage ---" >> $OUTPUT_DIR/virtual/vbox_vm_details.txt
-				VBoxManage showvminfo "$vmname" --machinereadable | grep -E "storagecontroller|hdd|dvd|floppy" >> $OUTPUT_DIR/virtual/vbox_vm_details.txt 2> /dev/null
-				echo "--- Network ---" >> $OUTPUT_DIR/virtual/vbox_vm_details.txt
-				VBoxManage showvminfo "$vmname" --machinereadable | grep -E "nic[0-9]|macaddress|cableconnected|bridgeadapter" >> $OUTPUT_DIR/virtual/vbox_vm_details.txt 2> /dev/null
-				echo "--- USB ---" >> $OUTPUT_DIR/virtual/vbox_vm_details.txt
-				VBoxManage showvminfo "$vmname" --machinereadable | grep -E "usb|usbfilter" >> $OUTPUT_DIR/virtual/vbox_vm_details.txt 2> /dev/null
-				echo "" >> $OUTPUT_DIR/virtual/vbox_vm_details.txt
-				VBoxManage showvminfo "$vmname" --machinereadable > "$OUTPUT_DIR/virtual/vbox_vm_${vmname//[^a-zA-Z0-9]/_}_machinereadable.txt" 2> /dev/null
+		mkdir -p $OUTPUT_DIR/virtual/vbox
+		mkdir -p $OUTPUT_DIR/virtual/vbox/system
+		mkdir -p $OUTPUT_DIR/virtual/vbox/host
+		mkdir -p $OUTPUT_DIR/virtual/vbox/network
+		mkdir -p $OUTPUT_DIR/virtual/vbox/storage
+		mkdir -p $OUTPUT_DIR/virtual/vbox/vms
+		mkdir -p $OUTPUT_DIR/virtual/vbox/vms/running
+		mkdir -p $OUTPUT_DIR/virtual/vbox/extensions
+		mkdir -p $OUTPUT_DIR/virtual/vbox/cloud
+		mkdir -p $OUTPUT_DIR/virtual/vbox/usb
+		mkdir -p $OUTPUT_DIR/virtual/vbox/config
+		mkdir -p $OUTPUT_DIR/virtual/vbox/logs
+		mkdir -p $OUTPUT_DIR/virtual/vbox/metrics
+		
+		# System Information
+		echo "  ${COL_ENTRY}>${RESET} Collecting VirtualBox system information"
+		VBoxManage --version > $OUTPUT_DIR/virtual/vbox/system/version.txt 2> /dev/null
+		VBoxManage list systemproperties > $OUTPUT_DIR/virtual/vbox/system/properties.txt 2> /dev/null
+		VBoxManage list ostypes > $OUTPUT_DIR/virtual/vbox/system/supported_os_types.txt 2> /dev/null
+		VBoxManage list hddbackends > $OUTPUT_DIR/virtual/vbox/system/hdd_backends.txt 2> /dev/null
+		VBoxManage getextradata global enumerate > $OUTPUT_DIR/virtual/vbox/system/global_extradata.txt 2> /dev/null
+		
+		# Extract key paths from system properties
+		VBOX_HOME=$(VBoxManage list systemproperties 2>/dev/null | grep "Default machine folder:" | sed 's/Default machine folder:[ ]*//')
+		VBOX_LOG_FOLDER=$(VBoxManage list systemproperties 2>/dev/null | grep "Log folder:" | sed 's/Log folder:[ ]*//')
+		VBOX_VRDP_AUTH=$(VBoxManage list systemproperties 2>/dev/null | grep "VRDE auth library:" | sed 's/VRDE auth library:[ ]*//')
+
+		# Host Information
+		echo "  ${COL_ENTRY}>${RESET} Collecting host system information"
+		VBoxManage list hostinfo > $OUTPUT_DIR/virtual/vbox/host/info.txt 2> /dev/null
+		VBoxManage list hostcpuids > $OUTPUT_DIR/virtual/vbox/host/cpuids.txt 2> /dev/null
+		VBoxManage list hostdrives > $OUTPUT_DIR/virtual/vbox/host/drives.txt 2> /dev/null
+		VBoxManage list hostdvds > $OUTPUT_DIR/virtual/vbox/host/dvds.txt 2> /dev/null
+		VBoxManage list hostfloppies > $OUTPUT_DIR/virtual/vbox/host/floppies.txt 2> /dev/null
+		
+		# Network Configuration
+		echo "  ${COL_ENTRY}>${RESET} Collecting VirtualBox network configuration"
+		VBoxManage list hostonlyifs > $OUTPUT_DIR/virtual/vbox/network/hostonly_interfaces.txt 2> /dev/null
+		VBoxManage list hostonlynets > $OUTPUT_DIR/virtual/vbox/network/hostonly_networks.txt 2> /dev/null
+		VBoxManage list bridgedifs > $OUTPUT_DIR/virtual/vbox/network/bridged_interfaces.txt 2> /dev/null
+		VBoxManage list natnets > $OUTPUT_DIR/virtual/vbox/network/nat_networks.txt 2> /dev/null
+		VBoxManage list intnets > $OUTPUT_DIR/virtual/vbox/network/internal_networks.txt 2> /dev/null
+		VBoxManage list dhcpservers > $OUTPUT_DIR/virtual/vbox/network/dhcp_servers.txt 2> /dev/null
+		VBoxManage natnetwork list > $OUTPUT_DIR/virtual/vbox/network/natnetwork_list.txt 2> /dev/null
+		
+		# Detailed network configuration for each NAT network
+		VBoxManage list natnets 2>/dev/null | grep "NetworkName:" | awk '{print $2}' | while read natnet; do
+			[ -n "$natnet" ] && VBoxManage natnetwork showconfig "$natnet" > "$OUTPUT_DIR/virtual/vbox/network/natnet_${natnet}_config.txt" 2> /dev/null
+		done
+		
+		# Storage Information
+		echo "  ${COL_ENTRY}>${RESET} Collecting VirtualBox storage information"
+		VBoxManage list hdds > $OUTPUT_DIR/virtual/vbox/storage/hdds.txt 2> /dev/null
+		VBoxManage list dvds > $OUTPUT_DIR/virtual/vbox/storage/dvds.txt 2> /dev/null
+		VBoxManage list floppies > $OUTPUT_DIR/virtual/vbox/storage/floppies.txt 2> /dev/null
+		
+		# Storage bandwidth groups
+		VBoxManage bandwidthctl list > $OUTPUT_DIR/virtual/vbox/storage/bandwidth_groups.txt 2> /dev/null
+		
+		# USB Configuration
+		echo "  ${COL_ENTRY}>${RESET} Collecting USB configuration"
+		VBoxManage list usbhost > $OUTPUT_DIR/virtual/vbox/usb/host_devices.txt 2> /dev/null
+		VBoxManage list usbfilters > $OUTPUT_DIR/virtual/vbox/usb/filters.txt 2> /dev/null
+		
+		# Extensions and Cloud
+		echo "  ${COL_ENTRY}>${RESET} Collecting extensions and cloud information"
+		VBoxManage list extpacks > $OUTPUT_DIR/virtual/vbox/extensions/extpacks.txt 2> /dev/null
+		VBoxManage list cloudproviders > $OUTPUT_DIR/virtual/vbox/cloud/providers.txt 2> /dev/null
+		VBoxManage list cloudprofiles > $OUTPUT_DIR/virtual/vbox/cloud/profiles.txt 2> /dev/null
+		VBoxManage list cloudnetworks > $OUTPUT_DIR/virtual/vbox/cloud/networks.txt 2> /dev/null
+		
+		# Check for Guest Additions
+		VBoxManage list extpacks | grep -i "guest" > $OUTPUT_DIR/virtual/vbox/extensions/guest_additions_info.txt 2> /dev/null
+		
+		# Virtual Machine Lists
+		echo "  ${COL_ENTRY}>${RESET} Collecting virtual machine lists"
+		VBoxManage list vms > $OUTPUT_DIR/virtual/vbox/vms/all_vms.txt 2> /dev/null
+		VBoxManage list runningvms > $OUTPUT_DIR/virtual/vbox/vms/running_vms.txt 2> /dev/null
+		VBoxManage list groups > $OUTPUT_DIR/virtual/vbox/vms/groups.txt 2> /dev/null
+		
+		# Detailed VM listing
+		VBoxManage list vms --long > $OUTPUT_DIR/virtual/vbox/vms/all_vms_detailed.txt 2> /dev/null
+		
+		# Get VM names and UUIDs for detailed collection
+		VBoxManage list vms | grep -E '^".*" \{' | while IFS='{' read name uuid; do
+			VM_NAME=$(echo "$name" | sed 's/^"\(.*\)".*$/\1/')
+			VM_UUID=$(echo "$uuid" | sed 's/}.*$//')
+			
+			if [ -n "$VM_NAME" ]; then
+				echo "  ${COL_ENTRY}>${RESET} Processing VM: $VM_NAME"
+				
+				# Sanitize VM name for directory
+				SAFE_NAME=$(echo "$VM_NAME" | sed 's/[^a-zA-Z0-9._-]/_/g')
+				VM_DIR="$OUTPUT_DIR/virtual/vbox/vms/$SAFE_NAME"
+				mkdir -p "$VM_DIR"
+				
+				# Detailed VM information
+				VBoxManage showvminfo "$VM_NAME" --details > "$VM_DIR/showvminfo_detailed.txt" 2> /dev/null
+				VBoxManage showvminfo "$VM_NAME" --machinereadable > "$VM_DIR/showvminfo_machinereadable.txt" 2> /dev/null
+				
+				# Extra data
+				VBoxManage getextradata "$VM_NAME" enumerate > "$VM_DIR/extradata.txt" 2> /dev/null
+				
+				# Snapshots
+				VBoxManage snapshot "$VM_NAME" list --machinereadable > "$VM_DIR/snapshots_machinereadable.txt" 2> /dev/null
+				VBoxManage snapshot "$VM_NAME" list > "$VM_DIR/snapshots.txt" 2> /dev/null
+				
+				# Guest properties (if VM is running)
+				VBoxManage guestproperty enumerate "$VM_NAME" > "$VM_DIR/guest_properties.txt" 2> /dev/null
+				
+				# Storage configuration
+				VBoxManage showvminfo "$VM_NAME" --machinereadable | grep -E "storagecontroller|IDE|SATA|SCSI|SAS|USB|NVMe|hdd|dvd|floppy" > "$VM_DIR/storage_config.txt" 2> /dev/null
+				
+				# Network configuration
+				VBoxManage showvminfo "$VM_NAME" --machinereadable | grep -E "nic[0-9]|macaddress|cableconnected|bridgeadapter|hostonlyadapter|intnet|natnet|genericdrv" > "$VM_DIR/network_config.txt" 2> /dev/null
+				
+				# USB configuration
+				VBoxManage showvminfo "$VM_NAME" --machinereadable | grep -E "usb|usbfilter" > "$VM_DIR/usb_config.txt" 2> /dev/null
+				
+				# Shared folders
+				VBoxManage showvminfo "$VM_NAME" --machinereadable | grep -E "SharedFolder" > "$VM_DIR/shared_folders.txt" 2> /dev/null
+				
+				# VM state
+				VBoxManage showvminfo "$VM_NAME" --machinereadable | grep -E "VMState|VMStateChangeTime" > "$VM_DIR/state.txt" 2> /dev/null
+				
+				# Video configuration
+				VBoxManage showvminfo "$VM_NAME" --machinereadable | grep -E "vram|monitor|video|3d|2d" > "$VM_DIR/video_config.txt" 2> /dev/null
+				
+				# Audio configuration
+				VBoxManage showvminfo "$VM_NAME" --machinereadable | grep -E "audio" > "$VM_DIR/audio_config.txt" 2> /dev/null
+				
+				# Boot order
+				VBoxManage showvminfo "$VM_NAME" --machinereadable | grep -E "boot[0-9]|firmware" > "$VM_DIR/boot_config.txt" 2> /dev/null
+				
+				# CPU and memory
+				VBoxManage showvminfo "$VM_NAME" --machinereadable | grep -E "cpus|memory|pagefusion|hpet|hwvirtex|nestedpaging|largepages|vtxvpid|vtxux" > "$VM_DIR/cpu_memory_config.txt" 2> /dev/null
+				
+				# Teleportation and fault tolerance
+				VBoxManage showvminfo "$VM_NAME" --machinereadable | grep -E "teleporter|fault" > "$VM_DIR/ha_config.txt" 2> /dev/null
+				
+				# Recording/capture settings
+				VBoxManage showvminfo "$VM_NAME" --machinereadable | grep -E "videocap|recording" > "$VM_DIR/recording_config.txt" 2> /dev/null
+				
+				# Debug settings
+				VBoxManage debugvm "$VM_NAME" info > "$VM_DIR/debug_info.txt" 2> /dev/null
+				
+				# Bandwidth groups for this VM
+				VBoxManage bandwidthctl "$VM_NAME" list > "$VM_DIR/bandwidth_groups.txt" 2> /dev/null
+				
+				# If VM is running, get additional runtime info
+				if VBoxManage list runningvms | grep -q "\"$VM_NAME\""; then
+					echo "Running" > "$VM_DIR/running_state.txt"
+					VBoxManage debugvm "$VM_NAME" statistics > "$VM_DIR/runtime_statistics.txt" 2> /dev/null
+					VBoxManage metrics query "$VM_NAME" > "$VM_DIR/metrics.txt" 2> /dev/null
+					VBoxManage guestcontrol "$VM_NAME" list all > "$VM_DIR/guest_control.txt" 2> /dev/null
+				fi
+				# VM logs location
+				VBoxManage showvminfo "$VM_NAME" --machinereadable | grep "LogFldr" | sed 's/LogFldr="\(.*\)"/\1/' > "$VM_DIR/log_location.txt" 2> /dev/null
 			fi
 		done
-		VBoxManage metrics list > $OUTPUT_DIR/virtual/vbox_metrics_list.txt 2> /dev/null
-		echo "  ${COL_ENTRY}>${RESET} Locating VirtualBox logs"
-		VBOX_HOME=$(VBoxManage list systemproperties 2>/dev/null | grep "Default machine folder:" | sed 's/Default machine folder:[ ]*//')
-		if [ -n "$VBOX_HOME" ] && [ -d "$VBOX_HOME" ]; then
-			echo "VirtualBox Home: $VBOX_HOME" > $OUTPUT_DIR/virtual/vbox_log_locations.txt
-			find "$VBOX_HOME" -name "*.log" -type f -mtime -7 2>/dev/null | head -100 >> $OUTPUT_DIR/virtual/vbox_log_locations.txt
-		fi
+		
+		# Metrics
+		echo "  ${COL_ENTRY}>${RESET} Collecting VirtualBox metrics"
+		VBoxManage metrics list > $OUTPUT_DIR/virtual/vbox/metrics/available_metrics.txt 2> /dev/null
+		VBoxManage metrics query > $OUTPUT_DIR/virtual/vbox/metrics/current_metrics.txt 2> /dev/null
+		
+		# Configuration and log locations
+		echo "  ${COL_ENTRY}>${RESET} Locating VirtualBox configuration and logs"
+		
+		# Find VirtualBox configuration in user directories
 		for homedir in /home/* /root; do
 			if [ -d "$homedir/.VirtualBox" ]; then
-				echo "Found VirtualBox config in: $homedir/.VirtualBox" >> $OUTPUT_DIR/virtual/vbox_config_locations.txt
-				find "$homedir/.VirtualBox" -name "*.xml" -type f 2>/dev/null | head -50 >> $OUTPUT_DIR/virtual/vbox_config_locations.txt
+				echo "Found VirtualBox config in: $homedir/.VirtualBox" >> $OUTPUT_DIR/virtual/vbox/config/locations.txt
+				ls -la "$homedir/.VirtualBox/" >> $OUTPUT_DIR/virtual/vbox/config/locations.txt 2> /dev/null
+				# Copy main config files
+				[ -f "$homedir/.VirtualBox/VirtualBox.xml" ] && cp "$homedir/.VirtualBox/VirtualBox.xml" "$OUTPUT_DIR/virtual/vbox/config/VirtualBox_$(basename $homedir).xml" 2> /dev/null
+				# List extension packs
+				[ -d "$homedir/.VirtualBox/ExtensionPacks" ] && ls -la "$homedir/.VirtualBox/ExtensionPacks/" >> $OUTPUT_DIR/virtual/vbox/extensions/installed_packs.txt 2> /dev/null
 			fi
+			
+			# Find VM directories
 			if [ -d "$homedir/VirtualBox VMs" ]; then
-				echo "Found VirtualBox VMs in: $homedir/VirtualBox VMs" >> $OUTPUT_DIR/virtual/vbox_vm_locations.txt
-				ls -la "$homedir/VirtualBox VMs/" >> $OUTPUT_DIR/virtual/vbox_vm_locations.txt 2> /dev/null
+				echo "Found VirtualBox VMs in: $homedir/VirtualBox VMs" >> $OUTPUT_DIR/virtual/vbox/vms/vm_locations.txt
+				find "$homedir/VirtualBox VMs" -name "*.vbox" -o -name "*.vbox-prev" 2>/dev/null | head -100 >> $OUTPUT_DIR/virtual/vbox/vms/vm_files.txt
 			fi
 		done
-		VBoxManage list vms --long 2>/dev/null | grep -A1 "Shared folders:" | grep -v "Shared folders:" | grep -v "^--$" > $OUTPUT_DIR/virtual/vbox_shared_folders.txt
-		VBoxManage list extpacks | grep -i "guest" > $OUTPUT_DIR/virtual/vbox_guest_additions_info.txt 2> /dev/null
+		
+		# Find recent log files
+		if [ -n "$VBOX_HOME" ] && [ -d "$VBOX_HOME" ]; then
+			echo "VirtualBox Home: $VBOX_HOME" > $OUTPUT_DIR/virtual/vbox/logs/log_locations.txt
+			find "$VBOX_HOME" -name "*.log" -type f -mtime -7 2>/dev/null | head -100 >> $OUTPUT_DIR/virtual/vbox/logs/recent_logs.txt
+			find "$VBOX_HOME" -name "VBox.log*" -type f 2>/dev/null | head -50 >> $OUTPUT_DIR/virtual/vbox/logs/vbox_logs.txt
+		fi
+		
+		# Check common VirtualBox service locations
+		for svc_file in /etc/init.d/vboxdrv /etc/systemd/system/vbox*.service /lib/systemd/system/vbox*.service; do
+			[ -f "$svc_file" ] && {
+				echo "Found service file: $svc_file" >> $OUTPUT_DIR/virtual/vbox/system/service_files.txt
+				ls -la "$svc_file" >> $OUTPUT_DIR/virtual/vbox/system/service_files.txt 2> /dev/null
+			}
+		done
+		
+		# Check kernel modules
+		lsmod | grep -i vbox > $OUTPUT_DIR/virtual/vbox/system/kernel_modules.txt 2> /dev/null
 	fi
     # VIRT 
 	if [ -x "$(command -v virsh)" ]
