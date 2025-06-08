@@ -2449,81 +2449,41 @@ then
 				SAFE_NAME=$(echo "$VM_NAME" | sed 's/[^a-zA-Z0-9._-]/_/g')
 				VM_DIR="$OUTPUT_DIR/virtual/vbox/vms/$SAFE_NAME"
 				mkdir -p "$VM_DIR"
-				
-				# Detailed VM information
 				VBoxManage showvminfo "$VM_NAME" --details > "$VM_DIR/showvminfo_detailed.txt" 2> /dev/null
 				VBoxManage showvminfo "$VM_NAME" --machinereadable > "$VM_DIR/showvminfo_machinereadable.txt" 2> /dev/null
-				
-				# Extra data
 				VBoxManage getextradata "$VM_NAME" enumerate > "$VM_DIR/extradata.txt" 2> /dev/null
-				
-				# Snapshots
 				VBoxManage snapshot "$VM_NAME" list --machinereadable > "$VM_DIR/snapshots_machinereadable.txt" 2> /dev/null
 				VBoxManage snapshot "$VM_NAME" list > "$VM_DIR/snapshots.txt" 2> /dev/null
-				
-				# Guest properties (if VM is running)
 				VBoxManage guestproperty enumerate "$VM_NAME" > "$VM_DIR/guest_properties.txt" 2> /dev/null
-				
-				# Storage configuration
 				VBoxManage showvminfo "$VM_NAME" --machinereadable | grep -E "storagecontroller|IDE|SATA|SCSI|SAS|USB|NVMe|hdd|dvd|floppy" > "$VM_DIR/storage_config.txt" 2> /dev/null
-				
-				# Network configuration
 				VBoxManage showvminfo "$VM_NAME" --machinereadable | grep -E "nic[0-9]|macaddress|cableconnected|bridgeadapter|hostonlyadapter|intnet|natnet|genericdrv" > "$VM_DIR/network_config.txt" 2> /dev/null
-				
-				# USB configuration
 				VBoxManage showvminfo "$VM_NAME" --machinereadable | grep -E "usb|usbfilter" > "$VM_DIR/usb_config.txt" 2> /dev/null
-				
-				# Shared folders
 				VBoxManage showvminfo "$VM_NAME" --machinereadable | grep -E "SharedFolder" > "$VM_DIR/shared_folders.txt" 2> /dev/null
-				
-				# VM state
 				VBoxManage showvminfo "$VM_NAME" --machinereadable | grep -E "VMState|VMStateChangeTime" > "$VM_DIR/state.txt" 2> /dev/null
-				
-				# Video configuration
 				VBoxManage showvminfo "$VM_NAME" --machinereadable | grep -E "vram|monitor|video|3d|2d" > "$VM_DIR/video_config.txt" 2> /dev/null
-				
-				# Audio configuration
 				VBoxManage showvminfo "$VM_NAME" --machinereadable | grep -E "audio" > "$VM_DIR/audio_config.txt" 2> /dev/null
-				
-				# Boot order
 				VBoxManage showvminfo "$VM_NAME" --machinereadable | grep -E "boot[0-9]|firmware" > "$VM_DIR/boot_config.txt" 2> /dev/null
-				
-				# CPU and memory
 				VBoxManage showvminfo "$VM_NAME" --machinereadable | grep -E "cpus|memory|pagefusion|hpet|hwvirtex|nestedpaging|largepages|vtxvpid|vtxux" > "$VM_DIR/cpu_memory_config.txt" 2> /dev/null
-				
-				# Teleportation and fault tolerance
 				VBoxManage showvminfo "$VM_NAME" --machinereadable | grep -E "teleporter|fault" > "$VM_DIR/ha_config.txt" 2> /dev/null
-				
-				# Recording/capture settings
 				VBoxManage showvminfo "$VM_NAME" --machinereadable | grep -E "videocap|recording" > "$VM_DIR/recording_config.txt" 2> /dev/null
-				
-				# Debug settings
 				VBoxManage debugvm "$VM_NAME" info > "$VM_DIR/debug_info.txt" 2> /dev/null
-				
-				# Bandwidth groups for this VM
 				VBoxManage bandwidthctl "$VM_NAME" list > "$VM_DIR/bandwidth_groups.txt" 2> /dev/null
-				
-				# If VM is running, get additional runtime info
 				if VBoxManage list runningvms | grep -q "\"$VM_NAME\""; then
 					echo "Running" > "$VM_DIR/running_state.txt"
 					VBoxManage debugvm "$VM_NAME" statistics > "$VM_DIR/runtime_statistics.txt" 2> /dev/null
 					VBoxManage metrics query "$VM_NAME" > "$VM_DIR/metrics.txt" 2> /dev/null
 					VBoxManage guestcontrol "$VM_NAME" list all > "$VM_DIR/guest_control.txt" 2> /dev/null
 				fi
-				# VM logs location
 				VBoxManage showvminfo "$VM_NAME" --machinereadable | grep "LogFldr" | sed 's/LogFldr="\(.*\)"/\1/' > "$VM_DIR/log_location.txt" 2> /dev/null
 			fi
 		done
 		
-		# Metrics
 		echo "  ${COL_ENTRY}>${RESET} Collecting VirtualBox metrics"
 		VBoxManage metrics list > $OUTPUT_DIR/virtual/vbox/metrics/available_metrics.txt 2> /dev/null
 		VBoxManage metrics query > $OUTPUT_DIR/virtual/vbox/metrics/current_metrics.txt 2> /dev/null
-		
-		# Configuration and log locations
+	
 		echo "  ${COL_ENTRY}>${RESET} Locating VirtualBox configuration and logs"
 		
-		# Find VirtualBox configuration in user directories
 		for homedir in /home/* /root; do
 			if [ -d "$homedir/.VirtualBox" ]; then
 				echo "Found VirtualBox config in: $homedir/.VirtualBox" >> $OUTPUT_DIR/virtual/vbox/config/locations.txt
@@ -2534,21 +2494,18 @@ then
 				[ -d "$homedir/.VirtualBox/ExtensionPacks" ] && ls -la "$homedir/.VirtualBox/ExtensionPacks/" >> $OUTPUT_DIR/virtual/vbox/extensions/installed_packs.txt 2> /dev/null
 			fi
 			
-			# Find VM directories
 			if [ -d "$homedir/VirtualBox VMs" ]; then
 				echo "Found VirtualBox VMs in: $homedir/VirtualBox VMs" >> $OUTPUT_DIR/virtual/vbox/vms/vm_locations.txt
 				find "$homedir/VirtualBox VMs" -name "*.vbox" -o -name "*.vbox-prev" 2>/dev/null | head -100 >> $OUTPUT_DIR/virtual/vbox/vms/vm_files.txt
 			fi
 		done
-		
-		# Find recent log files
+
 		if [ -n "$VBOX_HOME" ] && [ -d "$VBOX_HOME" ]; then
 			echo "VirtualBox Home: $VBOX_HOME" > $OUTPUT_DIR/virtual/vbox/logs/log_locations.txt
 			find "$VBOX_HOME" -name "*.log" -type f -mtime -7 2>/dev/null | head -100 >> $OUTPUT_DIR/virtual/vbox/logs/recent_logs.txt
 			find "$VBOX_HOME" -name "VBox.log*" -type f 2>/dev/null | head -50 >> $OUTPUT_DIR/virtual/vbox/logs/vbox_logs.txt
 		fi
 		
-		# Check common VirtualBox service locations
 		for svc_file in /etc/init.d/vboxdrv /etc/systemd/system/vbox*.service /lib/systemd/system/vbox*.service; do
 			[ -f "$svc_file" ] && {
 				echo "Found service file: $svc_file" >> $OUTPUT_DIR/virtual/vbox/system/service_files.txt
@@ -2556,7 +2513,6 @@ then
 			}
 		done
 		
-		# Check kernel modules
 		lsmod | grep -i vbox > $OUTPUT_DIR/virtual/vbox/system/kernel_modules.txt 2> /dev/null
 	fi
 	# VIRT (KVM/QEMU with libvirt)
