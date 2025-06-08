@@ -1042,8 +1042,8 @@ done
 
 echo "  ${COL_ENTRY}>${RESET} Hidden process detection"
 # Compare ps output with /proc entries
-ps -e -o pid 2> /dev/null | grep -v PID | sed 's/^[ ]*//' | sort -n > $OUTPUT_DIR/process_info/ps_pids.txt
-ls -1 /proc 2> /dev/null | grep '^[0-9]*$' | sort -n > $OUTPUT_DIR/process_info/proc_pids.txt
+ps -e -o pid 2> /dev/null | grep -v PID | sed 's/^[ ]*//' | sort -n > $OUTPUT_DIR/process_info/ps_pids.txt 2> /dev/null
+ls -1 /proc 2> /dev/null | grep '^[0-9]*$' | sort -n > $OUTPUT_DIR/process_info/proc_pids.txt 2> /dev/null
 comm -13 $OUTPUT_DIR/process_info/ps_pids.txt $OUTPUT_DIR/process_info/proc_pids.txt > $OUTPUT_DIR/process_info/hidden_pids_in_proc.txt 2> /dev/null
 comm -23 $OUTPUT_DIR/process_info/ps_pids.txt $OUTPUT_DIR/process_info/proc_pids.txt > $OUTPUT_DIR/process_info/hidden_pids_in_ps.txt 2> /dev/null
 
