@@ -1906,32 +1906,45 @@ fi
 
 echo "  ${COL_ENTRY}>${RESET} User Activity and Authentication Logs"
 mkdir $OUTPUT_DIR/user_activity 2> /dev/null
-
-# Collect login/logout records
-echo "    Collecting login records..."
 if [ $PLATFORM = "linux" -o $PLATFORM = "generic" ]
 then
-    # Copy raw wtmp/btmp/utmp files
     if [ -f /var/log/wtmp ]; then
         cp /var/log/wtmp $OUTPUT_DIR/user_activity/wtmp.raw 2> /dev/null
         last -f /var/log/wtmp 1> $OUTPUT_DIR/user_activity/last-wtmp.txt 2> /dev/null
         last -f /var/log/wtmp -x 1> $OUTPUT_DIR/user_activity/last-wtmp-extended.txt 2> /dev/null
+        last -f /var/log/wtmp -i 1> $OUTPUT_DIR/user_activity/last-wtmp-with-ip.txt 2> /dev/null
+        last -f /var/log/wtmp -F 1> $OUTPUT_DIR/user_activity/last-wtmp-fulltime.txt 2> /dev/null
+        echo "=== Login Statistics ===" > $OUTPUT_DIR/user_activity/login_stats.txt
+        echo "Total logins by user:" >> $OUTPUT_DIR/user_activity/login_stats.txt
+        last -f /var/log/wtmp 2>/dev/null | awk '{print $1}' | grep -v "^$\|^wtmp\|^reboot" | sort | uniq -c | sort -rn >> $OUTPUT_DIR/user_activity/login_stats.txt
+        echo "" >> $OUTPUT_DIR/user_activity/login_stats.txt
+        echo "Logins by IP:" >> $OUTPUT_DIR/user_activity/login_stats.txt
+        last -f /var/log/wtmp -i 2>/dev/null | awk '{print $3}' | grep -E "^[0-9]" | sort | uniq -c | sort -rn | head -50 >> $OUTPUT_DIR/user_activity/login_stats.txt
     fi
     if [ -f /var/log/btmp ]; then
         cp /var/log/btmp $OUTPUT_DIR/user_activity/btmp.raw 2> /dev/null
         lastb -f /var/log/btmp 1> $OUTPUT_DIR/user_activity/lastb-failed-logins.txt 2> /dev/null
         last -f /var/log/btmp 1> $OUTPUT_DIR/user_activity/last-btmp.txt 2> /dev/null
+        echo "=== Failed Login Statistics ===" > $OUTPUT_DIR/user_activity/failed_login_stats.txt
+        echo "Failed attempts by user:" >> $OUTPUT_DIR/user_activity/failed_login_stats.txt
+        lastb -f /var/log/btmp 2>/dev/null | awk '{print $1}' | grep -v "^$\|^btmp" | sort | uniq -c | sort -rn | head -50 >> $OUTPUT_DIR/user_activity/failed_login_stats.txt
+        echo "" >> $OUTPUT_DIR/user_activity/failed_login_stats.txt
+        echo "Failed attempts by IP:" >> $OUTPUT_DIR/user_activity/failed_login_stats.txt
+        lastb -f /var/log/btmp 2>/dev/null | awk '{print $3}' | grep -E "^[0-9]" | sort | uniq -c | sort -rn | head -50 >> $OUTPUT_DIR/user_activity/failed_login_stats.txt
     fi
     if [ -f /var/run/utmp ]; then
         cp /var/run/utmp $OUTPUT_DIR/user_activity/utmp.raw 2> /dev/null
         who -a /var/run/utmp 1> $OUTPUT_DIR/user_activity/who-utmp.txt 2> /dev/null
+        who -H 1> $OUTPUT_DIR/user_activity/who-header.txt 2> /dev/null
+        who -q 1> $OUTPUT_DIR/user_activity/who-count.txt 2> /dev/null
     fi
     if [ -f /var/log/lastlog ]; then
         cp /var/log/lastlog $OUTPUT_DIR/user_activity/lastlog.raw 2> /dev/null
         lastlog 1> $OUTPUT_DIR/user_activity/lastlog.txt 2> /dev/null
         lastlog -u 0-99999 1> $OUTPUT_DIR/user_activity/lastlog-all-users.txt 2> /dev/null
+        lastlog -t 30 1> $OUTPUT_DIR/user_activity/lastlog-last-30-days.txt 2> /dev/null
     fi
-    # Collect rotated wtmp files
+	
     for wtmp_file in /var/log/wtmp.*
     do
         if [ -f "$wtmp_file" ]; then
@@ -1948,7 +1961,6 @@ then
     ac -d 1> $OUTPUT_DIR/user_activity/ac-daily-connect-time.txt 2> /dev/null
 elif [ $PLATFORM = "solaris" ]
 then
-    # Solaris login records
     if [ -f /var/adm/wtmpx ]; then
         cp /var/adm/wtmpx $OUTPUT_DIR/user_activity/wtmpx.raw 2> /dev/null
         last -f /var/adm/wtmpx 1> $OUTPUT_DIR/user_activity/last-wtmpx.txt 2> /dev/null
@@ -1961,11 +1973,15 @@ then
         cp /var/adm/utmpx $OUTPUT_DIR/user_activity/utmpx.raw 2> /dev/null
         who -a /var/adm/utmpx 1> $OUTPUT_DIR/user_activity/who-utmpx.txt 2> /dev/null
     fi
+    if [ -f /var/adm/loginlog ]; then
+        cp /var/adm/loginlog $OUTPUT_DIR/user_activity/loginlog.raw 2> /dev/null
+    fi
+    logins -x 1> $OUTPUT_DIR/user_activity/logins-extended.txt 2> /dev/null
+    logins -p 1> $OUTPUT_DIR/user_activity/logins-passwordless.txt 2> /dev/null
     w 1> $OUTPUT_DIR/user_activity/w-current-users.txt 2> /dev/null
     who -a 1> $OUTPUT_DIR/user_activity/who-all.txt 2> /dev/null
 elif [ $PLATFORM = "aix" ]
 then
-    # AIX login records
     if [ -f /var/adm/wtmp ]; then
         cp /var/adm/wtmp $OUTPUT_DIR/user_activity/wtmp.raw 2> /dev/null
         last -f /var/adm/wtmp 1> $OUTPUT_DIR/user_activity/last-wtmp.txt 2> /dev/null
@@ -1974,11 +1990,15 @@ then
         cp /etc/security/lastlog $OUTPUT_DIR/user_activity/lastlog.raw 2> /dev/null
         lsuser -f ALL 1> $OUTPUT_DIR/user_activity/lsuser-all.txt 2> /dev/null
     fi
+    if [ -f /etc/security/failedlogin ]; then
+        cp /etc/security/failedlogin $OUTPUT_DIR/user_activity/failedlogin.raw 2> /dev/null
+        who /etc/security/failedlogin 1> $OUTPUT_DIR/user_activity/who-failedlogin.txt 2> /dev/null
+    fi
+    lsuser -a time_last_login unsuccessful_login_count ALL 1> $OUTPUT_DIR/user_activity/user_login_attrs.txt 2> /dev/null
     w 1> $OUTPUT_DIR/user_activity/w-current-users.txt 2> /dev/null
     who -a 1> $OUTPUT_DIR/user_activity/who-all.txt 2> /dev/null
 elif [ $PLATFORM = "mac" ]
 then
-    # macOS login records
     if [ -f /var/log/wtmp ]; then
         cp /var/log/wtmp $OUTPUT_DIR/user_activity/wtmp.raw 2> /dev/null
         last 1> $OUTPUT_DIR/user_activity/last.txt 2> /dev/null
@@ -1987,68 +2007,115 @@ then
         cp /var/log/lastlog $OUTPUT_DIR/user_activity/lastlog.raw 2> /dev/null
         lastlog 1> $OUTPUT_DIR/user_activity/lastlog.txt 2> /dev/null
     fi
-    # macOS specific logs
     log show --predicate 'process == "loginwindow"' --last 7d 1> $OUTPUT_DIR/user_activity/loginwindow-7days.txt 2> /dev/null
     log show --predicate 'eventMessage contains "Authentication"' --last 7d 1> $OUTPUT_DIR/user_activity/authentication-7days.txt 2> /dev/null
+    log show --predicate 'subsystem == "com.apple.securityd"' --last 7d 1> $OUTPUT_DIR/user_activity/securityd-7days.txt 2> /dev/null
+    log show --predicate 'process == "sudo"' --last 7d 1> $OUTPUT_DIR/user_activity/sudo-7days.txt 2> /dev/null
     w 1> $OUTPUT_DIR/user_activity/w-current-users.txt 2> /dev/null
     who -a 1> $OUTPUT_DIR/user_activity/who-all.txt 2> /dev/null
     ac -p 1> $OUTPUT_DIR/user_activity/ac-user-connect-time.txt 2> /dev/null
 elif [ $PLATFORM = "android" ]
 then
-    # Android doesn't have traditional login records
     dumpsys user 1> $OUTPUT_DIR/user_activity/android-user-state.txt 2> /dev/null
     dumpsys account 1> $OUTPUT_DIR/user_activity/android-accounts.txt 2> /dev/null
 fi
 
-# Collect SSH authentication logs
-echo "    Collecting SSH authentication logs..."
 mkdir $OUTPUT_DIR/user_activity/ssh_logs 2> /dev/null
+mkdir $OUTPUT_DIR/user_activity/ssh_keys 2> /dev/null
+
 if [ -f /var/log/auth.log ]; then
     grep -i ssh /var/log/auth.log 1> $OUTPUT_DIR/user_activity/ssh_logs/auth-ssh.txt 2> /dev/null
     grep -i "Accepted\|Failed\|Invalid" /var/log/auth.log 1> $OUTPUT_DIR/user_activity/ssh_logs/auth-login-attempts.txt 2> /dev/null
+    grep "Accepted publickey\|Accepted password" /var/log/auth.log 1> $OUTPUT_DIR/user_activity/ssh_logs/auth-successful-ssh.txt 2> /dev/null
 fi
 if [ -f /var/log/secure ]; then
     grep -i ssh /var/log/secure 1> $OUTPUT_DIR/user_activity/ssh_logs/secure-ssh.txt 2> /dev/null
     grep -i "Accepted\|Failed\|Invalid" /var/log/secure 1> $OUTPUT_DIR/user_activity/ssh_logs/secure-login-attempts.txt 2> /dev/null
+    grep "Accepted publickey\|Accepted password" /var/log/secure 1> $OUTPUT_DIR/user_activity/ssh_logs/secure-successful-ssh.txt 2> /dev/null
 fi
 if [ -f /var/log/messages ]; then
     grep -i "sshd\|authentication" /var/log/messages 1> $OUTPUT_DIR/user_activity/ssh_logs/messages-ssh.txt 2> /dev/null
 fi
-# Copy SSH host keys info
+
 ls -la /etc/ssh/ssh_host_* 1> $OUTPUT_DIR/user_activity/ssh_logs/ssh_host_keys_list.txt 2> /dev/null
 
-# Collect user shell history files
-echo "    Collecting user shell history files..."
-mkdir $OUTPUT_DIR/user_activity/shell_history 2> /dev/null
-# Get list of users with valid shells
+for keyfile in /etc/ssh/ssh_host_*.pub
+do
+    if [ -f "$keyfile" ]; then
+        keyname=`basename $keyfile`
+        ssh-keygen -lf "$keyfile" 1>> $OUTPUT_DIR/user_activity/ssh_logs/ssh_host_key_fingerprints.txt 2> /dev/null
+    fi
+done
+
 if [ -f /etc/passwd ]; then
-    # Process each user
     cat /etc/passwd | while IFS=: read username x uid gid gecos homedir shell
     do
-        # Skip system users and users without home directories
+        if [ $uid -ge 500 -o $uid -eq 0 ] && [ -d "$homedir" ]; then
+            if [ -d "$homedir/.ssh" ]; then
+                user_ssh_dir="$OUTPUT_DIR/user_activity/ssh_keys/$username"
+                mkdir -p $user_ssh_dir 2> /dev/null
+                
+                ls -la "$homedir/.ssh/" 1> "$user_ssh_dir/ssh_directory_listing.txt" 2> /dev/null
+                
+                if [ -f "$homedir/.ssh/authorized_keys" ]; then
+                    cp "$homedir/.ssh/authorized_keys" "$user_ssh_dir/authorized_keys" 2> /dev/null
+                    ssh-keygen -lf "$homedir/.ssh/authorized_keys" 1> "$user_ssh_dir/authorized_keys_fingerprints.txt" 2> /dev/null
+                fi
+                if [ -f "$homedir/.ssh/authorized_keys2" ]; then
+                    cp "$homedir/.ssh/authorized_keys2" "$user_ssh_dir/authorized_keys2" 2> /dev/null
+                    ssh-keygen -lf "$homedir/.ssh/authorized_keys2" 1> "$user_ssh_dir/authorized_keys2_fingerprints.txt" 2> /dev/null
+                fi
+                
+                if [ -f "$homedir/.ssh/known_hosts" ]; then
+                    cp "$homedir/.ssh/known_hosts" "$user_ssh_dir/known_hosts" 2> /dev/null
+                    wc -l "$homedir/.ssh/known_hosts" 1> "$user_ssh_dir/known_hosts_count.txt" 2> /dev/null
+                fi
+                
+                for pubkey in "$homedir/.ssh/"*.pub
+                do
+                    if [ -f "$pubkey" ]; then
+                        pubkeyname=`basename "$pubkey"`
+                        cp "$pubkey" "$user_ssh_dir/$pubkeyname" 2> /dev/null
+                        ssh-keygen -lf "$pubkey" 1> "$user_ssh_dir/${pubkeyname}_fingerprint.txt" 2> /dev/null
+                    fi
+                done
+                
+                if [ -f "$homedir/.ssh/config" ]; then
+                    cp "$homedir/.ssh/config" "$user_ssh_dir/ssh_config" 2> /dev/null
+                fi
+            fi
+        fi
+    done
+fi
+
+mkdir $OUTPUT_DIR/user_activity/shell_history 2> /dev/null
+
+if [ -f /etc/passwd ]; then
+    cat /etc/passwd | while IFS=: read username x uid gid gecos homedir shell
+    do
         if [ $uid -ge 500 -o $uid -eq 0 ] && [ -d "$homedir" ]; then
             user_history_dir="$OUTPUT_DIR/user_activity/shell_history/$username"
             mkdir $user_history_dir 2> /dev/null
             
-            # Collect various shell history files
             for history_file in .bash_history .sh_history .zsh_history .ksh_history .history .ash_history .dash_history
             do
                 if [ -f "$homedir/$history_file" ]; then
                     cp "$homedir/$history_file" "$user_history_dir/$history_file" 2> /dev/null
-                    # Also create readable version
                     cat "$homedir/$history_file" 1> "$user_history_dir/${history_file}.txt" 2> /dev/null
+                    ls -la "$homedir/$history_file" 1> "$user_history_dir/${history_file}.stats" 2> /dev/null
+                    echo "=== Command Frequency ===" > "$user_history_dir/${history_file}.frequency"
+                    cat "$homedir/$history_file" 2>/dev/null | sed 's/^[ \t]*//' | cut -d' ' -f1 | sort | uniq -c | sort -rn | head -50 >> "$user_history_dir/${history_file}.frequency" 2> /dev/null
                 fi
             done
             
-            # Collect shell configuration files that might contain history settings
-            for config_file in .bashrc .bash_profile .profile .zshrc .kshrc
+            for config_file in .bashrc .bash_profile .profile .zshrc .kshrc .bash_logout .zprofile .zshenv
             do
                 if [ -f "$homedir/$config_file" ]; then
                     grep -i "history\|HIST" "$homedir/$config_file" 1> "$user_history_dir/${config_file}_history_settings.txt" 2> /dev/null
+                    grep -i "alias\|function" "$homedir/$config_file" 1> "$user_history_dir/${config_file}_aliases_functions.txt" 2> /dev/null
                 fi
             done
             
-            # Collect recently used files
             if [ -d "$homedir/.local/share" ]; then
                 find "$homedir/.local/share" -name "*recent*" -o -name "*history*" 2> /dev/null | head -20 | while read recent_file
                 do
@@ -2058,15 +2125,32 @@ if [ -f /etc/passwd ]; then
                 done
             fi
             
-            # Get last modified times for history files
+            if [ -f "$homedir/.python_history" ]; then
+                cp "$homedir/.python_history" "$user_history_dir/python_history" 2> /dev/null
+            fi
+            if [ -d "$homedir/.ipython" ]; then
+                find "$homedir/.ipython" -name "*history*" -type f 2>/dev/null | head -10 | while read pyhistory
+                do
+                    pyname=`basename "$pyhistory"`
+                    cp "$pyhistory" "$user_history_dir/ipython_$pyname" 2> /dev/null
+                done
+            fi
+            
+            if [ -f "$homedir/.mysql_history" ]; then
+                cp "$homedir/.mysql_history" "$user_history_dir/mysql_history" 2> /dev/null
+            fi
+            
+            if [ -f "$homedir/.lesshst" ]; then
+                cp "$homedir/.lesshst" "$user_history_dir/less_history" 2> /dev/null
+            fi
+            
             ls -la $homedir/.*history* 1> "$user_history_dir/history_files_list.txt" 2> /dev/null
         fi
     done
 fi
 
-# Collect sudo logs
-echo "    Collecting sudo activity logs..."
 mkdir $OUTPUT_DIR/user_activity/sudo_logs 2> /dev/null
+
 if [ -f /var/log/sudo.log ]; then
     cp /var/log/sudo.log $OUTPUT_DIR/user_activity/sudo_logs/ 2> /dev/null
 fi
@@ -2076,55 +2160,118 @@ fi
 if [ -f /var/log/secure ]; then
     grep -i sudo /var/log/secure 1> $OUTPUT_DIR/user_activity/sudo_logs/secure-sudo.txt 2> /dev/null
 fi
-# Sudo timestamp files
+
 if [ -d /var/run/sudo ]; then
     ls -la /var/run/sudo/ 1> $OUTPUT_DIR/user_activity/sudo_logs/sudo_timestamps.txt 2> /dev/null
+    find /var/run/sudo -type f 2>/dev/null | while read tsfile
+    do
+        ls -la "$tsfile" 1>> $OUTPUT_DIR/user_activity/sudo_logs/sudo_timestamp_details.txt 2> /dev/null
+    done
 fi
 if [ -d /var/db/sudo ]; then
     ls -la /var/db/sudo/ 1> $OUTPUT_DIR/user_activity/sudo_logs/sudo_db_timestamps.txt 2> /dev/null
 fi
 
-# Collect su logs
-echo "    Collecting su activity logs..."
+if [ -f /etc/sudoers ]; then
+    ls -la /etc/sudoers 1> $OUTPUT_DIR/user_activity/sudo_logs/sudoers_stats.txt 2> /dev/null
+    visudo -c 1>> $OUTPUT_DIR/user_activity/sudo_logs/sudoers_syntax_check.txt 2>&1
+fi
+
+sudo -l 1> $OUTPUT_DIR/user_activity/sudo_logs/current_user_sudo_list.txt 2> /dev/null
+sudo -ll 1> $OUTPUT_DIR/user_activity/sudo_logs/current_user_sudo_list_long.txt 2> /dev/null
+
 if [ -f /var/log/sulog ]; then
     cp /var/log/sulog $OUTPUT_DIR/user_activity/sulog 2> /dev/null
 fi
 if [ -f /var/adm/sulog ]; then
     cp /var/adm/sulog $OUTPUT_DIR/user_activity/sulog 2> /dev/null
 fi
+for log in /var/log/auth.log /var/log/secure /var/log/messages
+do
+    if [ -f "$log" ]; then
+        logname=`basename "$log"`
+        grep -i "su\[" "$log" 1> $OUTPUT_DIR/user_activity/su_events_${logname}.txt 2> /dev/null
+        grep "su: " "$log" 1>> $OUTPUT_DIR/user_activity/su_events_${logname}.txt 2> /dev/null
+    fi
+done
 
-# Platform specific user activity
+mkdir $OUTPUT_DIR/user_activity/pam_config 2> /dev/null
+
+for pamfile in system-auth common-auth login sshd sudo su
+do
+    if [ -f "/etc/pam.d/$pamfile" ]; then
+        cp "/etc/pam.d/$pamfile" "$OUTPUT_DIR/user_activity/pam_config/pam_${pamfile}" 2> /dev/null
+    fi
+done
+
+if [ -f "/etc/security/pwquality.conf" ]; then
+    cp "/etc/security/pwquality.conf" "$OUTPUT_DIR/user_activity/pam_config/" 2> /dev/null
+fi
+
+if [ -f "/etc/login.defs" ]; then
+    grep -E "PASS_|LOGIN_|FAIL_|SU_" /etc/login.defs 1> $OUTPUT_DIR/user_activity/pam_config/login_defs_extract.txt 2> /dev/null
+fi
+
+if [ -f "/etc/krb5.conf" -o -f "/etc/ldap.conf" ]; then
+    echo "    Collecting Kerberos/LDAP configuration..."
+    mkdir $OUTPUT_DIR/user_activity/auth_config 2> /dev/null
+    
+    if [ -f "/etc/krb5.conf" ]; then
+        cp /etc/krb5.conf $OUTPUT_DIR/user_activity/auth_config/ 2> /dev/null
+        # Current tickets
+        klist 1> $OUTPUT_DIR/user_activity/auth_config/klist_current.txt 2> /dev/null
+    fi
+    
+    if [ -f "/etc/ldap.conf" ]; then
+        cp /etc/ldap.conf $OUTPUT_DIR/user_activity/auth_config/ 2> /dev/null 2> /dev/null
+    fi
+fi
+
 if [ $PLATFORM = "linux" ]; then
-    # SystemD journal logs for user sessions
     if [ -x /usr/bin/journalctl ]; then
-        journalctl _COMM=sshd --since "90 days ago" 1> $OUTPUT_DIR/user_activity/journalctl-sshd-90.txt 2> /dev/null
+        journalctl _COMM=sshd --since "90 days ago" 1> $OUTPUT_DIR/user_activity/journalctl-sshd-90days.txt 2> /dev/null
         journalctl _COMM=sudo --since "90 days ago" 1> $OUTPUT_DIR/user_activity/journalctl-sudo-90days.txt 2> /dev/null
         journalctl _COMM=su --since "90 days ago" 1> $OUTPUT_DIR/user_activity/journalctl-su-90days.txt 2> /dev/null
+        journalctl _COMM=login --since "90 days ago" 1> $OUTPUT_DIR/user_activity/journalctl-login-90days.txt 2> /dev/null
         loginctl list-sessions 1> $OUTPUT_DIR/user_activity/loginctl-sessions.txt 2> /dev/null
         loginctl list-users 1> $OUTPUT_DIR/user_activity/loginctl-users.txt 2> /dev/null
+        loginctl list-sessions --no-legend 2>/dev/null | awk '{print $1}' | while read session
+        do
+            echo "=== Session $session ===" >> $OUTPUT_DIR/user_activity/loginctl-session-details.txt
+            loginctl show-session $session >> $OUTPUT_DIR/user_activity/loginctl-session-details.txt 2> /dev/null
+        done
     fi
-    # PAM logs
     if [ -d /var/log/pam ]; then
         cp -R /var/log/pam $OUTPUT_DIR/user_activity/ 2> /dev/null
     fi
+    if [ -x "$(command -v faillock)" ]; then
+        faillock 1> $OUTPUT_DIR/user_activity/faillock-status.txt 2> /dev/null
+    fi
+    if [ -x "$(command -v pam_tally2)" ]; then
+        pam_tally2 1> $OUTPUT_DIR/user_activity/pam_tally2-status.txt 2> /dev/null
+    fi
 elif [ $PLATFORM = "mac" ]; then
-    # macOS specific user activity
     dscl . -list /Users | grep -v '^_' | while read username
     do
         echo "User: $username" 1>> $OUTPUT_DIR/user_activity/macos_user_info.txt 2> /dev/null
         dscl . -read /Users/$username LastLoginTime 1>> $OUTPUT_DIR/user_activity/macos_user_info.txt 2> /dev/null
         dscl . -read /Users/$username accountPolicyData 1>> $OUTPUT_DIR/user_activity/macos_user_info.txt 2> /dev/null
+        dscl . -read /Users/$username PasswordPolicyOptions 1>> $OUTPUT_DIR/user_activity/macos_user_info.txt 2> /dev/null
         echo "---" 1>> $OUTPUT_DIR/user_activity/macos_user_info.txt 2> /dev/null
     done
+    # FileVault users
+    fdesetup list 1> $OUTPUT_DIR/user_activity/filevault_users.txt 2> /dev/null
 elif [ $PLATFORM = "solaris" ]; then
     # Solaris specific
     if [ -f /var/log/authlog ]; then
         cp /var/log/authlog $OUTPUT_DIR/user_activity/ 2> /dev/null
     fi
     logins -x 1> $OUTPUT_DIR/user_activity/logins-extended.txt 2> /dev/null
+    # Role-based access
+    roles 1> $OUTPUT_DIR/user_activity/roles.txt 2> /dev/null
+    auths 1> $OUTPUT_DIR/user_activity/auths.txt 2> /dev/null
 fi
 
-# Create user activity summary
 echo "=== User Activity Collection Summary ===" 1> $OUTPUT_DIR/user_activity/summary.txt 2> /dev/null
 echo "Platform: $PLATFORM" 1>> $OUTPUT_DIR/user_activity/summary.txt 2> /dev/null
 echo "Collection Date: `date`" 1>> $OUTPUT_DIR/user_activity/summary.txt 2> /dev/null
@@ -2134,6 +2281,17 @@ who | wc -l 1>> $OUTPUT_DIR/user_activity/summary.txt 2> /dev/null
 echo "" 1>> $OUTPUT_DIR/user_activity/summary.txt 2> /dev/null
 echo "User accounts with UID >= 500 or UID 0:" 1>> $OUTPUT_DIR/user_activity/summary.txt 2> /dev/null
 awk -F: '$3 >= 500 || $3 == 0 {print $1}' /etc/passwd 2> /dev/null | sort 1>> $OUTPUT_DIR/user_activity/summary.txt 2> /dev/null
+echo "" 1>> $OUTPUT_DIR/user_activity/summary.txt 2> /dev/null
+echo "SSH Keys Found:" 1>> $OUTPUT_DIR/user_activity/summary.txt 2> /dev/null
+find $OUTPUT_DIR/user_activity/ssh_keys -name "*.pub" -o -name "authorized_keys*" 2>/dev/null | wc -l 1>> $OUTPUT_DIR/user_activity/summary.txt 2> /dev/null
+echo "" 1>> $OUTPUT_DIR/user_activity/summary.txt 2> /dev/null
+echo "Shell History Files Found:" 1>> $OUTPUT_DIR/user_activity/summary.txt 2> /dev/null
+find $OUTPUT_DIR/user_activity/shell_history -name "*history*" -type f 2>/dev/null | wc -l 1>> $OUTPUT_DIR/user_activity/summary.txt 2> /dev/null
+echo "" 1>> $OUTPUT_DIR/user_activity/summary.txt 2> /dev/null
+if [ -f /var/log/btmp ]; then
+    echo "Recent Failed Login Attempts:" 1>> $OUTPUT_DIR/user_activity/summary.txt 2> /dev/null
+    lastb -n 5 2>/dev/null | head -6 1>> $OUTPUT_DIR/user_activity/summary.txt 2> /dev/null
+fi
 
 echo "  ${COL_ENTRY}>${RESET} At scheduler"
 if [ $PLATFORM != "solaris" ]
