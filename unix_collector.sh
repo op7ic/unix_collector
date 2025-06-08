@@ -722,29 +722,6 @@ zpool history 1> $OUTPUT_DIR/general/storage_zpool_history.txt 2> /dev/null
 zpool list -v 1> $OUTPUT_DIR/general/storage_zpool_list.txt 2> /dev/null
 zpool status -v 1> $OUTPUT_DIR/general/storage_zpool_status.txt 2> /dev/null
 
-echo "  ${COL_ENTRY}>${RESET} Enhanced process information"
-mkdir -p $OUTPUT_DIR/process_info/maps
-mkdir -p $OUTPUT_DIR/process_info/limits
-mkdir -p $OUTPUT_DIR/process_info/environ
-
-for pid in /proc/[0-9]*; do
-    PID_NUM=$(basename $pid)
-    cat $pid/maps > $OUTPUT_DIR/process_info/maps/maps_${PID_NUM}.txt 2>/dev/null
-    cat $pid/limits > $OUTPUT_DIR/process_info/limits/limits_${PID_NUM}.txt 2>/dev/null
-    cat $pid/environ | tr '\0' '\n' > $OUTPUT_DIR/process_info/environ/environ_${PID_NUM}.txt 2>/dev/null
-    cat $pid/smaps > $OUTPUT_DIR/process_info/maps/smaps_${PID_NUM}.txt 2>/dev/null
-    ls -la $pid/fd > $OUTPUT_DIR/process_info/fd_detailed_${PID_NUM}.txt 2>/dev/null
-done
-
-echo "  ${COL_ENTRY}>${RESET} Process network namespaces"
-for pid in /proc/[0-9]*; do
-    PID_NUM=$(basename $pid)
-    if [ -d "$pid/net" ]; then
-        cat $pid/net/tcp > $OUTPUT_DIR/process_info/net_tcp_${PID_NUM}.txt 2>/dev/null
-        cat $pid/net/udp > $OUTPUT_DIR/process_info/net_udp_${PID_NUM}.txt 2>/dev/null
-    fi
-done
-
 echo "  ${COL_ENTRY}>${RESET} Process list and information" 
 ps -efl 1> $OUTPUT_DIR/general/ps.txt 2> /dev/null
 ps -auxww 1> $OUTPUT_DIR/general/ps-auxww.txt 2> /dev/null
@@ -763,7 +740,85 @@ ls -l /proc/[0-9]*/exe 2> /dev/null | grep -E "\(deleted\)" | awk -F"/proc/|/exe
 ls -l /proc/[0-9]*/exe 2> /dev/null | grep -E "\(deleted\)" 1> $OUTPUT_DIR/process_info/deleted_processes.txt 2> /dev/null
 for pid in $(find /proc -maxdepth 1 -type d -name '[0-9]*'); do echo $(basename $pid); done 1> $OUTPUT_DIR/process_info/all_process_ids.txt 2> /dev/null
 
+# Enhanced process information collection
+echo "  ${COL_ENTRY}>${RESET} Enhanced process information"
+mkdir -p $OUTPUT_DIR/process_info/maps 2> /dev/null
+mkdir -p $OUTPUT_DIR/process_info/limits 2> /dev/null
+mkdir -p $OUTPUT_DIR/process_info/environ 2> /dev/null
+mkdir -p $OUTPUT_DIR/process_info/status 2> /dev/null
+mkdir -p $OUTPUT_DIR/process_info/stack 2> /dev/null
+mkdir -p $OUTPUT_DIR/process_info/cmdline 2> /dev/null
+mkdir -p $OUTPUT_DIR/process_info/namespaces 2> /dev/null
+mkdir -p $OUTPUT_DIR/process_info/cgroup 2> /dev/null
 
+# Collect enhanced process data for each PID
+for pid in /proc/[0-9]*; do
+    PID_NUM=$(basename $pid)
+    # Memory maps and detailed memory info
+    cat $pid/maps > $OUTPUT_DIR/process_info/maps/maps_${PID_NUM}.txt 2>/dev/null
+    cat $pid/smaps > $OUTPUT_DIR/process_info/maps/smaps_${PID_NUM}.txt 2>/dev/null
+    # Resource limits
+    cat $pid/limits > $OUTPUT_DIR/process_info/limits/limits_${PID_NUM}.txt 2>/dev/null
+    # Environment variables (make readable)
+    cat $pid/environ | tr '\0' '\n' > $OUTPUT_DIR/process_info/environ/environ_${PID_NUM}.txt 2>/dev/null
+    # Detailed file descriptors
+    ls -la $pid/fd > $OUTPUT_DIR/process_info/fd_detailed_${PID_NUM}.txt 2>/dev/null
+    # Process status with all details
+    cat $pid/status > $OUTPUT_DIR/process_info/status/status_${PID_NUM}.txt 2>/dev/null
+    # Stack trace (Linux 2.6.29+)
+    cat $pid/stack > $OUTPUT_DIR/process_info/stack/stack_${PID_NUM}.txt 2>/dev/null
+    # Command line (readable format)
+    tr '\0' ' ' < $pid/cmdline > $OUTPUT_DIR/process_info/cmdline/cmdline_${PID_NUM}.txt 2>/dev/null
+    echo "" >> $OUTPUT_DIR/process_info/cmdline/cmdline_${PID_NUM}.txt 2>/dev/null
+    # Namespace information (Linux)
+    if [ -d "$pid/ns" ]; then
+        ls -la $pid/ns/ > $OUTPUT_DIR/process_info/namespaces/ns_${PID_NUM}.txt 2>/dev/null
+    fi
+    # Cgroup information
+    cat $pid/cgroup > $OUTPUT_DIR/process_info/cgroup/cgroup_${PID_NUM}.txt 2>/dev/null
+done
+
+echo "  ${COL_ENTRY}>${RESET} Process network namespaces"
+for pid in /proc/[0-9]*; do
+    PID_NUM=$(basename $pid)
+    if [ -d "$pid/net" ]; then
+        cat $pid/net/tcp > $OUTPUT_DIR/process_info/net_tcp_${PID_NUM}.txt 2>/dev/null
+        cat $pid/net/udp > $OUTPUT_DIR/process_info/net_udp_${PID_NUM}.txt 2>/dev/null
+        cat $pid/net/tcp6 > $OUTPUT_DIR/process_info/net_tcp6_${PID_NUM}.txt 2>/dev/null
+        cat $pid/net/udp6 > $OUTPUT_DIR/process_info/net_udp6_${PID_NUM}.txt 2>/dev/null
+    fi
+done
+
+echo "  ${COL_ENTRY}>${RESET} Hidden process detection"
+# Compare ps output with /proc entries
+ps -e -o pid 2>/dev/null | grep -v PID | sed 's/^[ ]*//' | sort -n > $OUTPUT_DIR/process_info/ps_pids.txt
+ls -1 /proc 2>/dev/null | grep '^[0-9]*$' | sort -n > $OUTPUT_DIR/process_info/proc_pids.txt
+comm -13 $OUTPUT_DIR/process_info/ps_pids.txt $OUTPUT_DIR/process_info/proc_pids.txt > $OUTPUT_DIR/process_info/hidden_pids_in_proc.txt 2>/dev/null
+comm -23 $OUTPUT_DIR/process_info/ps_pids.txt $OUTPUT_DIR/process_info/proc_pids.txt > $OUTPUT_DIR/process_info/hidden_pids_in_ps.txt 2>/dev/null
+
+# Check for process hiding via bind mounts
+mount 2>/dev/null | grep "/proc/[0-9]" > $OUTPUT_DIR/process_info/proc_bind_mounts.txt 2>/dev/null
+
+if [ -f "/etc/ld.so.preload" ]; then
+    cat /etc/ld.so.preload > $OUTPUT_DIR/process_info/ld_so_preload.txt 2>/dev/null
+    ls -la /etc/ld.so.preload >> $OUTPUT_DIR/process_info/ld_so_preload.txt 2>/dev/null
+fi
+
+# Extract key process information for analysis
+echo "  ${COL_ENTRY}>${RESET} Process analysis summaries"
+# Find processes with deleted executables
+grep -l "(deleted)" $OUTPUT_DIR/process_info/fd_detailed_*.txt 2>/dev/null | sed 's/.*fd_detailed_//' | sed 's/.txt$//' > $OUTPUT_DIR/process_info/pids_with_deleted_files.txt 2>/dev/null
+
+# Find processes running from temporary locations
+grep -E "(/tmp/|/var/tmp/|/dev/shm/)" $OUTPUT_DIR/process_info/cmdline/cmdline_*.txt 2>/dev/null | cut -d: -f1 | sed 's/.*cmdline_//' | sed 's/.txt$//' | sort -u > $OUTPUT_DIR/process_info/pids_from_tmp_locations.txt 2>/dev/null
+
+# Extract unique loaded libraries
+cat $OUTPUT_DIR/process_info/maps/maps_*.txt 2>/dev/null | grep -E "\.(so|dylib|dll)" | awk '{print $6}' | sort -u > $OUTPUT_DIR/process_info/all_loaded_libraries.txt 2>/dev/null
+
+# Find suspicious library injections
+grep -l -E "(/tmp/|/var/tmp/|/dev/shm/)" $OUTPUT_DIR/process_info/maps/maps_*.txt 2>/dev/null | sed 's/.*maps_//' | sed 's/.txt$//' > $OUTPUT_DIR/process_info/pids_with_tmp_libraries.txt 2>/dev/null
+
+# Platform-specific process hashing (existing code, no changes)
 if [ $PLATFORM = "generic" ]
 then
 	find /proc/[0-9]*/exe -type l -exec sha256sum {} \; >> $OUTPUT_DIR/process_info/sha256sum_running_processes_proc_exe 2> /dev/null
@@ -786,6 +841,18 @@ then
 	find /proc/[0-9]*/exe -type l -exec sha1sum {} \; >> $OUTPUT_DIR/process_info/sha1sum_running_processes 2> /dev/null
 	find /proc/[0-9]*/exe -type l -exec md5sum {} \; >> $OUTPUT_DIR/process_info/md5sum_running_processes 2> /dev/null
 	find /proc/[0-9]*/exe -type l -exec openssl dgst -sha256 {} \; >> $OUTPUT_DIR/process_info/openssl_sha256_running_processes 2> /dev/null
+	
+	# Collect capability information
+	for pid in /proc/[0-9]*; do
+	    PID_NUM=$(basename $pid)
+	    grep -E "^Cap" $pid/status > $OUTPUT_DIR/process_info/status/capabilities_${PID_NUM}.txt 2>/dev/null
+	done
+	
+	# Collect NUMA information
+	for pid in /proc/[0-9]*; do
+	    PID_NUM=$(basename $pid)
+	    cat $pid/numa_maps > $OUTPUT_DIR/process_info/maps/numa_maps_${PID_NUM}.txt 2>/dev/null
+	done
 fi
 
 if [ $PLATFORM = "aix" ]
@@ -794,6 +861,14 @@ then
 	find /proc/[0-9]*/object/a.out -type l -exec sha1sum {} \; >> $OUTPUT_DIR/process_info/sha1sum_running_processes 2> /dev/null
 	find /proc/[0-9]*/object/a.out -type l -exec md5sum {} \; >> $OUTPUT_DIR/process_info/md5sum_running_processes 2> /dev/null
 	find /proc/[0-9]*/object/a.out -type l -exec openssl dgst -sha256 {} \; >> $OUTPUT_DIR/process_info/openssl_sha256_running_processes 2> /dev/null
+	
+	for pid in /proc/[0-9]*; do
+	    PID_NUM=$(basename $pid)
+	    # AIX specific proc files
+	    cat $pid/psinfo > $OUTPUT_DIR/process_info/psinfo_${PID_NUM}.dat 2>/dev/null
+	    cat $pid/map > $OUTPUT_DIR/process_info/maps/aix_map_${PID_NUM}.txt 2>/dev/null
+	    cat $pid/sigact > $OUTPUT_DIR/process_info/sigact_${PID_NUM}.txt 2>/dev/null
+	done
 fi
 
 if [ $PLATFORM = "solaris" ]
@@ -802,6 +877,16 @@ then
 	find /proc/[0-9]*/path/a.out -type l -exec sha1sum {} \; >> $OUTPUT_DIR/process_info/sha1sum_running_processes 2> /dev/null
 	find /proc/[0-9]*/path/a.out -type l -exec md5sum {} \; >> $OUTPUT_DIR/process_info/md5sum_running_processes 2> /dev/null
 	find /proc/[0-9]*/path/a.out -type l -exec openssl dgst -sha256 {} \; >> $OUTPUT_DIR/process_info/openssl_sha256_running_processes 2> /dev/null
+	
+	for pid in /proc/[0-9]*; do
+	    PID_NUM=$(basename $pid)
+	    # Solaris binary psinfo
+	    strings $pid/psinfo > $OUTPUT_DIR/process_info/psinfo_strings_${PID_NUM}.txt 2>/dev/null
+	    # Process credentials
+	    cat $pid/cred > $OUTPUT_DIR/process_info/cred_${PID_NUM}.dat 2>/dev/null
+	    # LWP (lightweight process) info
+	    ls -la $pid/lwp > $OUTPUT_DIR/process_info/lwp_${PID_NUM}.txt 2>/dev/null
+	done
 fi
 
 if [ $PLATFORM = "hpux" ]
@@ -814,16 +899,28 @@ fi
 
 if [ $PLATFORM = "mac" ]
 then
-
 	ps -axo comm | grep "^/" | sort -u | xargs -I {} shasum -a 256 {} >> $OUTPUT_DIR/process_info/sha256sum_running_processes 2> /dev/null
 	ps -axo comm | grep "^/" | sort -u | xargs -I {} shasum -a 1 {} >> $OUTPUT_DIR/process_info/sha1sum_running_processes 2> /dev/null
 	ps -axo comm | grep "^/" | sort -u | xargs -I {} md5 -q {} >> $OUTPUT_DIR/process_info/md5sum_running_processes 2> /dev/null
+	
+	# Since macOS doesn't have /proc, collect what we can
+	ps -A -o pid,ppid,user,nice,pri,vsz,rss,stat,start,time,command > $OUTPUT_DIR/process_info/ps_detailed_mac.txt 2>/dev/null
+	# Use lsof for process file handles
+	lsof -n -P > $OUTPUT_DIR/process_info/lsof_all_mac.txt 2>/dev/null
 fi
 
-
+# Platform-specific process tree tools (existing code, no changes)
 if [ $PLATFORM = "solaris" ]
 then
 	ptree 1> $OUTPUT_DIR/general/ptree.txt 2> /dev/null
+	# pfiles for detailed file info
+	ps -e -o pid | grep -v PID | while read pid; do
+	    pfiles $pid > $OUTPUT_DIR/process_info/pfiles_$pid.txt 2>/dev/null
+	done
+	# pmap for memory mappings
+	ps -e -o pid | grep -v PID | while read pid; do
+	    pmap -x $pid > $OUTPUT_DIR/process_info/pmap_$pid.txt 2>/dev/null
+	done
 fi
 
 if [ $PLATFORM = "aix" ]
@@ -833,6 +930,12 @@ then
 	pstat -f 1> $OUTPUT_DIR/general/pstat_f.txt 2> /dev/null
 	pstat -A 1> $OUTPUT_DIR/general/pstat_A.txt 2> /dev/null
 	pstat -p 1> $OUTPUT_DIR/general/pstat_p.txt 2> /dev/null
+	# procfiles for file info
+	ps -e -o pid | grep -v PID | while read pid; do
+	    procfiles $pid > $OUTPUT_DIR/process_info/procfiles_$pid.txt 2>/dev/null
+	done
+	# svmon for memory
+	svmon -P ALL > $OUTPUT_DIR/process_info/svmon_all.txt 2>/dev/null
 fi
 
 if [ $PLATFORM = "android" ]
@@ -840,6 +943,36 @@ then
 	ps -A 1> $OUTPUT_DIR/general/android_ps-all 2> /dev/null
 	ps -A -f -l 1> $OUTPUT_DIR/general/android_ps-all-F-l 2> /dev/null
 fi
+
+# Create process analysis summary
+echo "  ${COL_ENTRY}>${RESET} Creating process analysis summary"
+echo "Process Analysis Summary" > $OUTPUT_DIR/process_info/ANALYSIS_SUMMARY.txt
+echo "========================" >> $OUTPUT_DIR/process_info/ANALYSIS_SUMMARY.txt
+echo "Platform: $PLATFORM" >> $OUTPUT_DIR/process_info/ANALYSIS_SUMMARY.txt
+echo "Collection Date: $(date)" >> $OUTPUT_DIR/process_info/ANALYSIS_SUMMARY.txt
+echo "" >> $OUTPUT_DIR/process_info/ANALYSIS_SUMMARY.txt
+
+# Count various findings
+TOTAL_PROCS=$(ls -1 $OUTPUT_DIR/process_info/cmdline/cmdline_*.txt 2>/dev/null | wc -l)
+echo "Total processes analyzed: $TOTAL_PROCS" >> $OUTPUT_DIR/process_info/ANALYSIS_SUMMARY.txt
+if [ -f "$OUTPUT_DIR/process_info/deleted_processes_ids.txt" ]; then
+    DELETED_COUNT=$(wc -l < $OUTPUT_DIR/process_info/deleted_processes_ids.txt)
+    echo "Processes with deleted executables: $DELETED_COUNT" >> $OUTPUT_DIR/process_info/ANALYSIS_SUMMARY.txt
+fi
+if [ -f "$OUTPUT_DIR/process_info/pids_from_tmp_locations.txt" ]; then
+    TMP_COUNT=$(wc -l < $OUTPUT_DIR/process_info/pids_from_tmp_locations.txt)
+    echo "Processes running from /tmp locations: $TMP_COUNT" >> $OUTPUT_DIR/process_info/ANALYSIS_SUMMARY.txt
+fi
+if [ -f "$OUTPUT_DIR/process_info/hidden_pids_in_proc.txt" ]; then
+    HIDDEN_COUNT=$(wc -l < $OUTPUT_DIR/process_info/hidden_pids_in_proc.txt)
+    echo "Potentially hidden PIDs (in /proc but not ps): $HIDDEN_COUNT" >> $OUTPUT_DIR/process_info/ANALYSIS_SUMMARY.txt
+fi
+if [ -f "$OUTPUT_DIR/process_info/proc_bind_mounts.txt" ]; then
+    BIND_COUNT=$(wc -l < $OUTPUT_DIR/process_info/proc_bind_mounts.txt)
+    echo "Bind mounts in /proc: $BIND_COUNT" >> $OUTPUT_DIR/process_info/ANALYSIS_SUMMARY.txt
+fi
+echo "" >> $OUTPUT_DIR/process_info/ANALYSIS_SUMMARY.txt
+echo "Check individual files for detailed information." >> $OUTPUT_DIR/process_info/ANALYSIS_SUMMARY.txt
 
 echo "  ${COL_ENTRY}>${RESET} Cron and other scheduler files"
 if [ -f "/etc/crontab" ] && [ -r "/etc/crontab" ]; then
