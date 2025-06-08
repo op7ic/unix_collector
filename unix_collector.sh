@@ -3014,6 +3014,262 @@ then
     cat -s /etc/opt/ipf/ipf.conf 1> $OUTPUT_DIR/network/ipf.conf 2> /dev/null
 fi
 
+echo "  ${COL_ENTRY}>${RESET} Network services configuration"
+mkdir $OUTPUT_DIR/network/services 2> /dev/null
+
+# Collect xinetd configuration
+echo "    Collecting xinetd configuration..."
+if [ -f /etc/xinetd.conf ]; then
+    cp /etc/xinetd.conf $OUTPUT_DIR/network/services/ 2> /dev/null
+    # Get xinetd status
+    if command -v xinetd > /dev/null 2>&1; then
+        xinetd -version 1> $OUTPUT_DIR/network/services/xinetd-version.txt 2>&1
+    fi
+fi
+if [ -d /etc/xinetd.d ]; then
+    mkdir $OUTPUT_DIR/network/services/xinetd.d 2> /dev/null
+    cp -R /etc/xinetd.d/* $OUTPUT_DIR/network/services/xinetd.d/ 2> /dev/null
+    # List enabled services
+    echo "=== Enabled xinetd Services ===" > $OUTPUT_DIR/network/services/xinetd-enabled-services.txt
+    grep -l "disable.*=.*no" /etc/xinetd.d/* 2>/dev/null | while read service_file
+    do
+        echo "Service: `basename $service_file`" >> $OUTPUT_DIR/network/services/xinetd-enabled-services.txt
+        grep -E "server|port|socket_type|protocol" $service_file >> $OUTPUT_DIR/network/services/xinetd-enabled-services.txt 2>/dev/null
+        echo "" >> $OUTPUT_DIR/network/services/xinetd-enabled-services.txt
+    done
+fi
+
+# Collect inetd configuration
+echo "    Collecting inetd configuration..."
+if [ -f /etc/inetd.conf ]; then
+    cp /etc/inetd.conf $OUTPUT_DIR/network/services/ 2> /dev/null
+    # Extract active services (non-commented lines)
+    grep -v "^#" /etc/inetd.conf | grep -v "^$" > $OUTPUT_DIR/network/services/inetd-active-services.txt 2> /dev/null
+fi
+# Some systems use inetd.d directory
+if [ -d /etc/inetd.d ]; then
+    mkdir $OUTPUT_DIR/network/services/inetd.d 2> /dev/null
+    cp -R /etc/inetd.d/* $OUTPUT_DIR/network/services/inetd.d/ 2> /dev/null
+fi
+
+# Platform-specific network services
+if [ $PLATFORM = "solaris" ]
+then
+    echo "    Collecting Solaris network services..."
+    # SMF services (Service Management Facility)
+    svcs -a 1> $OUTPUT_DIR/network/services/svcs-all.txt 2> /dev/null
+    svcs -p 1> $OUTPUT_DIR/network/services/svcs-processes.txt 2> /dev/null
+    # List network-related services
+    svcs | grep -E "network|rpc|nfs|ssh|telnet|ftp|http" > $OUTPUT_DIR/network/services/svcs-network.txt 2> /dev/null
+    # Get detailed info for network services
+    svcs -l network/ssh > $OUTPUT_DIR/network/services/svcs-ssh-detail.txt 2> /dev/null
+    svcs -l network/telnet > $OUTPUT_DIR/network/services/svcs-telnet-detail.txt 2> /dev/null
+    # Legacy services
+    if [ -f /etc/inet/inetd.conf ]; then
+        cp /etc/inet/inetd.conf $OUTPUT_DIR/network/services/inetd.conf.solaris 2> /dev/null
+    fi
+    # RPC services
+    if [ -f /etc/rpc ]; then
+        cp /etc/rpc $OUTPUT_DIR/network/services/ 2> /dev/null
+    fi
+    
+elif [ $PLATFORM = "aix" ]
+then
+    echo "    Collecting AIX network services..."
+    # AIX uses SRC (System Resource Controller)
+    lssrc -a 1> $OUTPUT_DIR/network/services/lssrc-all.txt 2> /dev/null
+    # List inetd subservices
+    lssrc -ls inetd 1> $OUTPUT_DIR/network/services/lssrc-inetd.txt 2> /dev/null
+    # Get inetd configuration
+    if [ -f /etc/inetd.conf ]; then
+        cp /etc/inetd.conf $OUTPUT_DIR/network/services/ 2> /dev/null
+    fi
+    # tcpip configuration
+    if [ -f /etc/rc.tcpip ]; then
+        cp /etc/rc.tcpip $OUTPUT_DIR/network/services/ 2> /dev/null
+    fi
+    # List active ports
+    lssrc -a | grep active > $OUTPUT_DIR/network/services/active-services.txt 2> /dev/null
+    
+elif [ $PLATFORM = "hpux" ]
+then
+    echo "    Collecting HP-UX network services..."
+    # HP-UX inetd
+    if [ -f /etc/inetd.conf ]; then
+        cp /etc/inetd.conf $OUTPUT_DIR/network/services/ 2> /dev/null
+    fi
+    if [ -f /etc/inetd.sec ]; then
+        cp /etc/inetd.sec $OUTPUT_DIR/network/services/ 2> /dev/null
+    fi
+    # Check service status
+    ps -ef | grep -E "inetd|xinetd" | grep -v grep > $OUTPUT_DIR/network/services/inetd-processes.txt 2> /dev/null
+    
+elif [ $PLATFORM = "mac" ]
+then
+    echo "    Collecting macOS network services..."
+    # launchd services (modern macOS)
+    launchctl list 1> $OUTPUT_DIR/network/services/launchctl-list.txt 2> /dev/null
+    # Network-specific launch daemons
+    ls -la /System/Library/LaunchDaemons/ | grep -E "ssh|ftp|telnet|vnc|afp|smb" > $OUTPUT_DIR/network/services/network-daemons.txt 2> /dev/null
+    # Copy network-related plist files
+    mkdir $OUTPUT_DIR/network/services/launch_daemons 2> /dev/null
+    for plist in ssh ftp telnet vnc afp smb
+    do
+        if [ -f /System/Library/LaunchDaemons/com.apple.*${plist}*.plist ]; then
+            cp /System/Library/LaunchDaemons/com.apple.*${plist}*.plist $OUTPUT_DIR/network/services/launch_daemons/ 2> /dev/null
+        fi
+    done
+    # Legacy xinetd if present
+    if [ -f /etc/xinetd.conf ]; then
+        cp /etc/xinetd.conf $OUTPUT_DIR/network/services/ 2> /dev/null
+    fi
+    # Sharing preferences
+    if [ -f /Library/Preferences/SystemConfiguration/com.apple.nat.plist ]; then
+        cp /Library/Preferences/SystemConfiguration/com.apple.nat.plist $OUTPUT_DIR/network/services/ 2> /dev/null
+    fi
+    
+elif [ $PLATFORM = "android" ]
+then
+    echo "    Collecting Android network services..."
+    # Android doesn't use traditional inetd/xinetd
+    # List running services
+    dumpsys connectivity 1> $OUTPUT_DIR/network/services/android-connectivity.txt 2> /dev/null
+    # Get network service properties
+    getprop | grep -E "net\.|dhcp\.|wifi\." > $OUTPUT_DIR/network/services/android-network-props.txt 2> /dev/null
+    # List network-related services
+    service list | grep -E "network|wifi|connectivity|netd" > $OUTPUT_DIR/network/services/android-network-services.txt 2> /dev/null
+    
+else
+    # Linux and generic Unix systems
+    echo "    Collecting Linux/Unix network services..."
+    
+    # SystemD socket activation (modern replacement for inetd)
+    if command -v systemctl > /dev/null 2>&1; then
+        echo "    Collecting systemd socket units..."
+        systemctl list-unit-files --type=socket 1> $OUTPUT_DIR/network/services/systemd-sockets.txt 2> /dev/null
+        systemctl list-units --type=socket --all 1> $OUTPUT_DIR/network/services/systemd-sockets-status.txt 2> /dev/null
+        # Get details for active sockets
+        mkdir $OUTPUT_DIR/network/services/systemd_socket_details 2> /dev/null
+        systemctl list-units --type=socket --state=active --no-legend | awk '{print $1}' | while read socket_unit
+        do
+            systemctl show "$socket_unit" > $OUTPUT_DIR/network/services/systemd_socket_details/${socket_unit}.txt 2> /dev/null
+        done
+    fi
+    
+    # Traditional SysV init scripts
+    if [ -d /etc/init.d ]; then
+        ls -la /etc/init.d/ | grep -E "xinetd|inetd|portmap|rpc" > $OUTPUT_DIR/network/services/init.d-network-services.txt 2> /dev/null
+    fi
+    
+    # Check for standalone network services
+    for service in vsftpd proftpd sshd telnetd rpcbind nfs-server smbd nmbd httpd nginx
+    do
+        if [ -f /etc/init.d/$service ]; then
+            cp /etc/init.d/$service $OUTPUT_DIR/network/services/init.d-$service 2> /dev/null
+        fi
+        if [ -f /etc/default/$service ]; then
+            cp /etc/default/$service $OUTPUT_DIR/network/services/default-$service 2> /dev/null
+        fi
+        if [ -f /etc/sysconfig/$service ]; then
+            cp /etc/sysconfig/$service $OUTPUT_DIR/network/services/sysconfig-$service 2> /dev/null
+        fi
+    done
+fi
+
+# Common network service configurations across platforms
+echo "    Collecting common network service configurations..."
+
+# RPC services
+if [ -f /etc/rpc ]; then
+    cp /etc/rpc $OUTPUT_DIR/network/services/ 2> /dev/null
+fi
+
+# Services database
+if [ -f /etc/services ]; then
+    cp /etc/services $OUTPUT_DIR/network/services/ 2> /dev/null
+fi
+
+# Portmap/rpcbind configuration
+if [ -f /etc/default/portmap ]; then
+    cp /etc/default/portmap $OUTPUT_DIR/network/services/ 2> /dev/null
+fi
+if [ -f /etc/default/rpcbind ]; then
+    cp /etc/default/rpcbind $OUTPUT_DIR/network/services/ 2> /dev/null
+fi
+
+# NFS exports
+if [ -f /etc/exports ]; then
+    cp /etc/exports $OUTPUT_DIR/network/services/ 2> /dev/null
+fi
+
+# Check for active network listeners
+echo "    Identifying active network services..."
+echo "=== Active Network Services ===" > $OUTPUT_DIR/network/services/active-listeners.txt
+
+# Get listening services with process information
+if command -v ss > /dev/null 2>&1; then
+    ss -tlnp 2>/dev/null | grep LISTEN >> $OUTPUT_DIR/network/services/active-listeners.txt
+    ss -ulnp 2>/dev/null >> $OUTPUT_DIR/network/services/active-listeners.txt
+elif command -v netstat > /dev/null 2>&1; then
+    netstat -tlnp 2>/dev/null | grep LISTEN >> $OUTPUT_DIR/network/services/active-listeners.txt
+    netstat -ulnp 2>/dev/null >> $OUTPUT_DIR/network/services/active-listeners.txt
+fi
+
+# Check xinetd/inetd process status
+echo "" >> $OUTPUT_DIR/network/services/active-listeners.txt
+echo "=== Super-server Status ===" >> $OUTPUT_DIR/network/services/active-listeners.txt
+ps aux | grep -E "[x]inetd|[i]netd" >> $OUTPUT_DIR/network/services/active-listeners.txt 2> /dev/null
+
+# tcpwrappers configuration
+echo "    Collecting TCP wrappers configuration..."
+if [ -f /etc/hosts.allow ]; then
+    cp /etc/hosts.allow $OUTPUT_DIR/network/services/ 2> /dev/null
+fi
+if [ -f /etc/hosts.deny ]; then
+    cp /etc/hosts.deny $OUTPUT_DIR/network/services/ 2> /dev/null
+fi
+
+# Create services summary
+echo "    Creating network services summary..."
+echo "=== Network Services Configuration Summary ===" > $OUTPUT_DIR/network/services/summary.txt
+echo "Platform: $PLATFORM" >> $OUTPUT_DIR/network/services/summary.txt
+echo "Collection Date: `date`" >> $OUTPUT_DIR/network/services/summary.txt
+echo "" >> $OUTPUT_DIR/network/services/summary.txt
+
+# Check for xinetd
+if [ -f /etc/xinetd.conf ] || [ -d /etc/xinetd.d ]; then
+    echo "xinetd: Configured" >> $OUTPUT_DIR/network/services/summary.txt
+    if [ -f $OUTPUT_DIR/network/services/xinetd-enabled-services.txt ]; then
+        XINETD_COUNT=`grep "^Service:" $OUTPUT_DIR/network/services/xinetd-enabled-services.txt | wc -l`
+        echo "xinetd enabled services: $XINETD_COUNT" >> $OUTPUT_DIR/network/services/summary.txt
+    fi
+else
+    echo "xinetd: Not found" >> $OUTPUT_DIR/network/services/summary.txt
+fi
+
+# Check for inetd
+if [ -f /etc/inetd.conf ]; then
+    echo "inetd: Configured" >> $OUTPUT_DIR/network/services/summary.txt
+    if [ -f $OUTPUT_DIR/network/services/inetd-active-services.txt ]; then
+        INETD_COUNT=`wc -l < $OUTPUT_DIR/network/services/inetd-active-services.txt`
+        echo "inetd active services: $INETD_COUNT" >> $OUTPUT_DIR/network/services/summary.txt
+    fi
+else
+    echo "inetd: Not found" >> $OUTPUT_DIR/network/services/summary.txt
+fi
+
+# SystemD sockets
+if [ -f $OUTPUT_DIR/network/services/systemd-sockets-status.txt ]; then
+    SOCKET_COUNT=`grep -c "\.socket" $OUTPUT_DIR/network/services/systemd-sockets-status.txt 2>/dev/null || echo 0`
+    echo "SystemD socket units: $SOCKET_COUNT" >> $OUTPUT_DIR/network/services/summary.txt
+fi
+
+# TCP Wrappers
+if [ -f /etc/hosts.allow ] || [ -f /etc/hosts.deny ]; then
+    echo "TCP Wrappers: Configured" >> $OUTPUT_DIR/network/services/summary.txt
+else
+    echo "TCP Wrappers: Not configured" >> $OUTPUT_DIR/network/services/summary.txt
+fi
 
 # ---------------------------
 # PART 9: VIRTUAL SYSTEMS INFORMATION
