@@ -368,7 +368,7 @@ TIMELINE_START=$(date)
 echo "Timeline generation started: $TIMELINE_START" > $OUTPUT_DIR/general/timeline/timeline_info.txt
 STAT_TYPE="unknown"
 STAT_CMD=""
-if stat --version 2>/dev/null | grep -q "GNU coreutils"
+if stat --version 2> /dev/null | grep -q "GNU coreutils"
 then
     STAT_TYPE="gnu"
     STAT_CMD="stat"
@@ -395,7 +395,7 @@ echo "Inode,Hard Link Count,Full Path,Last Access,Last Modification,Last Status 
 case $PLATFORM in
     "linux"|"android"|"generic")
         # Generate bodyfile format
-        find / -xdev -type f -o -type d -o -type l 2>/dev/null | while read filepath
+        find / -xdev -type f -o -type d -o -type l 2> /dev/null | while read filepath
         do
             # Skip if file doesn't exist (race condition)
             [ -e "$filepath" ] || continue
@@ -403,65 +403,65 @@ case $PLATFORM in
             if [ "$STAT_TYPE" = "gnu" ]
             then
                 # GNU stat with all needed fields
-                stat -c "0|%n|%i|%A|%u|%g|%s|%X|%Y|%Z|%W" "$filepath" 2>/dev/null >> $OUTPUT_DIR/general/timeline/bodyfile.txt
+                stat -c "0|%n|%i|%A|%u|%g|%s|%X|%Y|%Z|%W" "$filepath" 2> /dev/null >> $OUTPUT_DIR/general/timeline/bodyfile.txt
                 # CSV format with human-readable times
-                stat -c "%i,%h,%n,%x,%y,%z,%w,%U,%G,%A,%s,%F" "$filepath" 2>/dev/null | sed 's/|/,/g' >> $OUTPUT_DIR/general/timeline/timeline.csv
+                stat -c "%i,%h,%n,%x,%y,%z,%w,%U,%G,%A,%s,%F" "$filepath" 2> /dev/null | sed 's/|/,/g' >> $OUTPUT_DIR/general/timeline/timeline.csv
             fi
         done
         
         # Alternative method using find -printf if stat fails
         if [ ! -s "$OUTPUT_DIR/general/timeline/bodyfile.txt" ] || [ $(wc -l < $OUTPUT_DIR/general/timeline/bodyfile.txt) -lt 10 ]
         then
-            find / -xdev \( -type f -o -type d -o -type l \) -printf "0|%p|%i|%M|%u|%g|%s|%A@|%T@|%C@|0\n" 2>/dev/null >> $OUTPUT_DIR/general/timeline/bodyfile_find.txt
+            find / -xdev \( -type f -o -type d -o -type l \) -printf "0|%p|%i|%M|%u|%g|%s|%A@|%T@|%C@|0\n" 2> /dev/null >> $OUTPUT_DIR/general/timeline/bodyfile_find.txt
         fi
         ;;
         
     "mac")
         # macOS uses BSD stat with different format
-        find / -xdev -type f -o -type d -o -type l 2>/dev/null | while read filepath
+        find / -xdev -type f -o -type d -o -type l 2> /dev/null | while read filepath
         do
             [ -e "$filepath" ] || continue  
             # BSD stat format for bodyfile
             # Get numeric permissions, times as epoch
-            INODE=$(stat -f "%i" "$filepath" 2>/dev/null)
-            MODE=$(stat -f "%Mp%Lp" "$filepath" 2>/dev/null)
-            UID=$(stat -f "%u" "$filepath" 2>/dev/null)
-            GID=$(stat -f "%g" "$filepath" 2>/dev/null)
-            SIZE=$(stat -f "%z" "$filepath" 2>/dev/null)
-            ATIME=$(stat -f "%a" "$filepath" 2>/dev/null)
-            MTIME=$(stat -f "%m" "$filepath" 2>/dev/null)
-            CTIME=$(stat -f "%c" "$filepath" 2>/dev/null)
-            BTIME=$(stat -f "%B" "$filepath" 2>/dev/null)  # Birth time on macOS
+            INODE=$(stat -f "%i" "$filepath" 2> /dev/null)
+            MODE=$(stat -f "%Mp%Lp" "$filepath" 2> /dev/null)
+            UID=$(stat -f "%u" "$filepath" 2> /dev/null)
+            GID=$(stat -f "%g" "$filepath" 2> /dev/null)
+            SIZE=$(stat -f "%z" "$filepath" 2> /dev/null)
+            ATIME=$(stat -f "%a" "$filepath" 2> /dev/null)
+            MTIME=$(stat -f "%m" "$filepath" 2> /dev/null)
+            CTIME=$(stat -f "%c" "$filepath" 2> /dev/null)
+            BTIME=$(stat -f "%B" "$filepath" 2> /dev/null)  # Birth time on macOS
             echo "0|$filepath|$INODE|$MODE|$UID|$GID|$SIZE|$ATIME|$MTIME|$CTIME|$BTIME" >> $OUTPUT_DIR/general/timeline/bodyfile.txt
             # Human readable format
-            stat -f "%i,%l,%N,%Sa,%Sm,%Sc,%SB,%Su,%Sg,%Sp,%z,%HT" "$filepath" 2>/dev/null >> $OUTPUT_DIR/general/timeline/timeline.csv
+            stat -f "%i,%l,%N,%Sa,%Sm,%Sc,%SB,%Su,%Sg,%Sp,%z,%HT" "$filepath" 2> /dev/null >> $OUTPUT_DIR/general/timeline/timeline.csv
         done
-        find / -xdev -print0 2>/dev/null | xargs -0 stat -L > $OUTPUT_DIR/general/timeline/timeline_mac_native.txt 2>/dev/null
+        find / -xdev -print0 2> /dev/null | xargs -0 stat -L > $OUTPUT_DIR/general/timeline/timeline_mac_native.txt 2> /dev/null
         ;;
     "solaris")
         if [ "$STAT_TYPE" = "gnu" ]
         then
-            find / -xdev -type f -o -type d -o -type l 2>/dev/null | while read filepath
+            find / -xdev -type f -o -type d -o -type l 2> /dev/null | while read filepath
             do
                 [ -e "$filepath" ] || continue
-                stat -c "0|%n|%i|%A|%u|%g|%s|%X|%Y|%Z|%W" "$filepath" 2>/dev/null >> $OUTPUT_DIR/general/timeline/bodyfile.txt
-                stat -c "%i,%h,%n,%x,%y,%z,%w,%U,%G,%A,%s,%F" "$filepath" 2>/dev/null >> $OUTPUT_DIR/general/timeline/timeline.csv
+                stat -c "0|%n|%i|%A|%u|%g|%s|%X|%Y|%Z|%W" "$filepath" 2> /dev/null >> $OUTPUT_DIR/general/timeline/bodyfile.txt
+                stat -c "%i,%h,%n,%x,%y,%z,%w,%U,%G,%A,%s,%F" "$filepath" 2> /dev/null >> $OUTPUT_DIR/general/timeline/timeline.csv
             done
         else
             # Fallback to ls and perl for Solaris
             echo "  ${COL_ENTRY}>${RESET} Using perl method for Solaris"
-            find / -xdev 2>/dev/null | perl -ne 'chomp; 
+            find / -xdev 2> /dev/null | perl -ne 'chomp; 
                 @s=stat($_); 
                 next unless @s; 
                 ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,$mtime,$ctime,$blksize,$blocks)=@s;
                 $mode_str = sprintf("%04o", $mode & 07777);
                 print "0|$_|$ino|$mode_str|$uid|$gid|$size|$atime|$mtime|$ctime|0\n";
-            ' >> $OUTPUT_DIR/general/timeline/bodyfile.txt 2>/dev/null
+            ' >> $OUTPUT_DIR/general/timeline/bodyfile.txt 2> /dev/null
         fi
         ;;
     "aix")
         # AIX using perl method (most reliable)
-        find / -xdev 2>/dev/null | perl -ne 'chomp;
+        find / -xdev 2> /dev/null | perl -ne 'chomp;
             $_ =~ s/\x0a//g; $_ =~ s/\x0d//g;
             @s = stat($_);
             next unless @s;
@@ -469,18 +469,18 @@ case $PLATFORM in
             # Bodyfile format
             $mode_str = sprintf("%04o", $mode & 07777);
             print "0|$_|$ino|$mode_str|$uid|$gid|$size|$atime|$mtime|$ctime|0\n";
-        ' > $OUTPUT_DIR/general/timeline/bodyfile.txt 2>/dev/null
+        ' > $OUTPUT_DIR/general/timeline/bodyfile.txt 2> /dev/null
         echo "device number,inode,file name,nlink,uid,gid,rdev,size,access time,modified time,inode change time,io size,block size" > $OUTPUT_DIR/general/timeline/timeline.csv
-        find / -xdev 2>/dev/null | perl -n -e '$_ =~ s/\x0a//g; $_ =~ s/\x0d//g;print $_ . "," . join(",", stat($_)) . "\n";' >> $OUTPUT_DIR/general/timeline/timeline.csv 2>/dev/null
+        find / -xdev 2> /dev/null | perl -n -e '$_ =~ s/\x0a//g; $_ =~ s/\x0d//g;print $_ . "," . join(",", stat($_)) . "\n";' >> $OUTPUT_DIR/general/timeline/timeline.csv 2> /dev/null
         ;;
     *)
         if command -v stat >/dev/null 2>&1
         then
-            find / -xdev -type f -o -type d -o -type l 2>/dev/null | while read filepath
+            find / -xdev -type f -o -type d -o -type l 2> /dev/null | while read filepath
             do
                 [ -e "$filepath" ] || continue
-                stat -c "0|%n|%i|%A|%u|%g|%s|%X|%Y|%Z|%W" "$filepath" 2>/dev/null >> $OUTPUT_DIR/general/timeline/bodyfile.txt || \
-                stat "$filepath" >> $OUTPUT_DIR/general/timeline/timeline_native.txt 2>/dev/null
+                stat -c "0|%n|%i|%A|%u|%g|%s|%X|%Y|%Z|%W" "$filepath" 2> /dev/null >> $OUTPUT_DIR/general/timeline/bodyfile.txt || \
+                stat "$filepath" >> $OUTPUT_DIR/general/timeline/timeline_native.txt 2> /dev/null
             done
         fi
         ;;
@@ -490,13 +490,13 @@ esac
 echo "  ${COL_ENTRY}>${RESET} Generating focused timelines"
 # Recently modified files (last 14 days)
 echo "# Recently modified files (last 14 days)" > $OUTPUT_DIR/general/timeline/recent_files.txt
-find / -xdev -type f -mtime -14 -ls 2>/dev/null >> $OUTPUT_DIR/general/timeline/recent_files.txt
+find / -xdev -type f -mtime -14 -ls 2> /dev/null >> $OUTPUT_DIR/general/timeline/recent_files.txt
 # Recently accessed files (last 14 days)  
 echo "# Recently accessed files (last 14 days)" > $OUTPUT_DIR/general/timeline/recent_accessed.txt
-find / -xdev -type f -atime -14 -ls 2>/dev/null >> $OUTPUT_DIR/general/timeline/recent_accessed.txt
+find / -xdev -type f -atime -14 -ls 2> /dev/null >> $OUTPUT_DIR/general/timeline/recent_accessed.txt
 # SUID/SGID files timeline
 echo "# SUID/SGID files" > $OUTPUT_DIR/general/timeline/suid_sgid_timeline.txt
-find / -xdev \( -perm -4000 -o -perm -2000 \) -type f -ls 2>/dev/null >> $OUTPUT_DIR/general/timeline/suid_sgid_timeline.txt
+find / -xdev \( -perm -4000 -o -perm -2000 \) -type f -ls 2> /dev/null >> $OUTPUT_DIR/general/timeline/suid_sgid_timeline.txt
 # Timeline for critical directories
 for dir in /etc /var/log /root /tmp /var/tmp /home /opt
 do
@@ -505,18 +505,18 @@ do
         echo "  ${COL_ENTRY}>${RESET} Timeline for $dir"
         DIR_NAME=$(echo $dir | tr '/' '_' | sed 's/^_//')
         # Quick timeline for critical directories
-        find "$dir" -xdev -type f -ls 2>/dev/null | \
+        find "$dir" -xdev -type f -ls 2> /dev/null | \
             awk '{print $3" "$11" "$7" "$8" "$9" "$10" "$NF}' | \
-            sort -k4,5 > "$OUTPUT_DIR/general/timeline/timeline_${DIR_NAME}.txt" 2>/dev/null
+            sort -k4,5 > "$OUTPUT_DIR/general/timeline/timeline_${DIR_NAME}.txt" 2> /dev/null
     fi
 done
 
 # Count total files
-TOTAL_FILES=$(wc -l < $OUTPUT_DIR/general/timeline/bodyfile.txt 2>/dev/null || echo 0)
+TOTAL_FILES=$(wc -l < $OUTPUT_DIR/general/timeline/bodyfile.txt 2> /dev/null || echo 0)
 # Find files modified in last 24 hours
 if [ "$PLATFORM" != "aix" ]
 then
-    RECENT_24H=$(find / -xdev -type f -mtime -1 2>/dev/null | wc -l)
+    RECENT_24H=$(find / -xdev -type f -mtime -1 2> /dev/null | wc -l)
 else
     RECENT_24H="N/A"
 fi
@@ -551,7 +551,7 @@ then
         ($md5,$name,$inode,$mode,$uid,$gid,$size,$atime,$mtime,$ctime,$crtime) = @f;
         print "NOTE: This is a simplified mactime format\n" if $. == 1;
         print scalar(localtime($mtime)) . " | m | $mode | $uid | $gid | $size | $name\n" if $mtime > 0;
-    ' < $OUTPUT_DIR/general/timeline/bodyfile.txt > $OUTPUT_DIR/general/timeline/mactime_mtime.txt 2>/dev/null
+    ' < $OUTPUT_DIR/general/timeline/bodyfile.txt > $OUTPUT_DIR/general/timeline/mactime_mtime.txt 2> /dev/null
 fi
 
 echo "  ${COL_ENTRY}>${RESET} Release"
@@ -905,7 +905,7 @@ fi
 if [ -x /sbin/runlevel ]; then
     echo "Current Runlevel: `runlevel`" >> $OUTPUT_DIR/boot_startup/summary.txt 2> /dev/null
 elif [ -x /usr/bin/systemctl ]; then
-    echo "Current Target: `systemctl get-default 2>/dev/null`" >> $OUTPUT_DIR/boot_startup/summary.txt 2> /dev/null
+    echo "Current Target: `systemctl get-default 2> /dev/null`" >> $OUTPUT_DIR/boot_startup/summary.txt 2> /dev/null
 fi
 
 if [ -x /usr/bin/uptime ]; then
@@ -988,68 +988,68 @@ mkdir -p $OUTPUT_DIR/process_info/cgroup 2> /dev/null
 for pid in /proc/[0-9]*; do
     PID_NUM=$(basename $pid)
     # Memory maps and detailed memory info
-    cat $pid/maps > $OUTPUT_DIR/process_info/maps/maps_${PID_NUM}.txt 2>/dev/null
-    cat $pid/smaps > $OUTPUT_DIR/process_info/maps/smaps_${PID_NUM}.txt 2>/dev/null
+    cat $pid/maps > $OUTPUT_DIR/process_info/maps/maps_${PID_NUM}.txt 2> /dev/null
+    cat $pid/smaps > $OUTPUT_DIR/process_info/maps/smaps_${PID_NUM}.txt 2> /dev/null
     # Resource limits
-    cat $pid/limits > $OUTPUT_DIR/process_info/limits/limits_${PID_NUM}.txt 2>/dev/null
+    cat $pid/limits > $OUTPUT_DIR/process_info/limits/limits_${PID_NUM}.txt 2> /dev/null
     # Environment variables (make readable)
-    cat $pid/environ | tr '\0' '\n' > $OUTPUT_DIR/process_info/environ/environ_${PID_NUM}.txt 2>/dev/null
+    cat $pid/environ | tr '\0' '\n' > $OUTPUT_DIR/process_info/environ/environ_${PID_NUM}.txt 2> /dev/null
     # Detailed file descriptors
-    ls -la $pid/fd > $OUTPUT_DIR/process_info/fd_detailed_${PID_NUM}.txt 2>/dev/null
+    ls -la $pid/fd > $OUTPUT_DIR/process_info/fd_detailed_${PID_NUM}.txt 2> /dev/null
     # Process status with all details
-    cat $pid/status > $OUTPUT_DIR/process_info/status/status_${PID_NUM}.txt 2>/dev/null
+    cat $pid/status > $OUTPUT_DIR/process_info/status/status_${PID_NUM}.txt 2> /dev/null
     # Stack trace (Linux 2.6.29+)
-    cat $pid/stack > $OUTPUT_DIR/process_info/stack/stack_${PID_NUM}.txt 2>/dev/null
+    cat $pid/stack > $OUTPUT_DIR/process_info/stack/stack_${PID_NUM}.txt 2> /dev/null
     # Command line (readable format)
-    tr '\0' ' ' < $pid/cmdline > $OUTPUT_DIR/process_info/cmdline/cmdline_${PID_NUM}.txt 2>/dev/null
-    echo "" >> $OUTPUT_DIR/process_info/cmdline/cmdline_${PID_NUM}.txt 2>/dev/null
+    tr '\0' ' ' < $pid/cmdline > $OUTPUT_DIR/process_info/cmdline/cmdline_${PID_NUM}.txt 2> /dev/null
+    echo "" >> $OUTPUT_DIR/process_info/cmdline/cmdline_${PID_NUM}.txt 2> /dev/null
     # Namespace information (Linux)
     if [ -d "$pid/ns" ]; then
-        ls -la $pid/ns/ > $OUTPUT_DIR/process_info/namespaces/ns_${PID_NUM}.txt 2>/dev/null
+        ls -la $pid/ns/ > $OUTPUT_DIR/process_info/namespaces/ns_${PID_NUM}.txt 2> /dev/null
     fi
     # Cgroup information
-    cat $pid/cgroup > $OUTPUT_DIR/process_info/cgroup/cgroup_${PID_NUM}.txt 2>/dev/null
+    cat $pid/cgroup > $OUTPUT_DIR/process_info/cgroup/cgroup_${PID_NUM}.txt 2> /dev/null
 done
 
 echo "  ${COL_ENTRY}>${RESET} Process network namespaces"
 for pid in /proc/[0-9]*; do
     PID_NUM=$(basename $pid)
     if [ -d "$pid/net" ]; then
-        cat $pid/net/tcp > $OUTPUT_DIR/process_info/net_tcp_${PID_NUM}.txt 2>/dev/null
-        cat $pid/net/udp > $OUTPUT_DIR/process_info/net_udp_${PID_NUM}.txt 2>/dev/null
-        cat $pid/net/tcp6 > $OUTPUT_DIR/process_info/net_tcp6_${PID_NUM}.txt 2>/dev/null
-        cat $pid/net/udp6 > $OUTPUT_DIR/process_info/net_udp6_${PID_NUM}.txt 2>/dev/null
+        cat $pid/net/tcp > $OUTPUT_DIR/process_info/net_tcp_${PID_NUM}.txt 2> /dev/null
+        cat $pid/net/udp > $OUTPUT_DIR/process_info/net_udp_${PID_NUM}.txt 2> /dev/null
+        cat $pid/net/tcp6 > $OUTPUT_DIR/process_info/net_tcp6_${PID_NUM}.txt 2> /dev/null
+        cat $pid/net/udp6 > $OUTPUT_DIR/process_info/net_udp6_${PID_NUM}.txt 2> /dev/null
     fi
 done
 
 echo "  ${COL_ENTRY}>${RESET} Hidden process detection"
 # Compare ps output with /proc entries
-ps -e -o pid 2>/dev/null | grep -v PID | sed 's/^[ ]*//' | sort -n > $OUTPUT_DIR/process_info/ps_pids.txt
-ls -1 /proc 2>/dev/null | grep '^[0-9]*$' | sort -n > $OUTPUT_DIR/process_info/proc_pids.txt
-comm -13 $OUTPUT_DIR/process_info/ps_pids.txt $OUTPUT_DIR/process_info/proc_pids.txt > $OUTPUT_DIR/process_info/hidden_pids_in_proc.txt 2>/dev/null
-comm -23 $OUTPUT_DIR/process_info/ps_pids.txt $OUTPUT_DIR/process_info/proc_pids.txt > $OUTPUT_DIR/process_info/hidden_pids_in_ps.txt 2>/dev/null
+ps -e -o pid 2> /dev/null | grep -v PID | sed 's/^[ ]*//' | sort -n > $OUTPUT_DIR/process_info/ps_pids.txt
+ls -1 /proc 2> /dev/null | grep '^[0-9]*$' | sort -n > $OUTPUT_DIR/process_info/proc_pids.txt
+comm -13 $OUTPUT_DIR/process_info/ps_pids.txt $OUTPUT_DIR/process_info/proc_pids.txt > $OUTPUT_DIR/process_info/hidden_pids_in_proc.txt 2> /dev/null
+comm -23 $OUTPUT_DIR/process_info/ps_pids.txt $OUTPUT_DIR/process_info/proc_pids.txt > $OUTPUT_DIR/process_info/hidden_pids_in_ps.txt 2> /dev/null
 
 # Check for process hiding via bind mounts
-mount 2>/dev/null | grep "/proc/[0-9]" > $OUTPUT_DIR/process_info/proc_bind_mounts.txt 2>/dev/null
+mount 2> /dev/null | grep "/proc/[0-9]" > $OUTPUT_DIR/process_info/proc_bind_mounts.txt 2> /dev/null
 
 if [ -f "/etc/ld.so.preload" ]; then
-    cat /etc/ld.so.preload > $OUTPUT_DIR/process_info/ld_so_preload.txt 2>/dev/null
-    ls -la /etc/ld.so.preload >> $OUTPUT_DIR/process_info/ld_so_preload.txt 2>/dev/null
+    cat /etc/ld.so.preload > $OUTPUT_DIR/process_info/ld_so_preload.txt 2> /dev/null
+    ls -la /etc/ld.so.preload >> $OUTPUT_DIR/process_info/ld_so_preload.txt 2> /dev/null
 fi
 
 # Extract key process information for analysis
 echo "  ${COL_ENTRY}>${RESET} Process analysis summaries"
 # Find processes with deleted executables
-grep -l "(deleted)" $OUTPUT_DIR/process_info/fd_detailed_*.txt 2>/dev/null | sed 's/.*fd_detailed_//' | sed 's/.txt$//' > $OUTPUT_DIR/process_info/pids_with_deleted_files.txt 2>/dev/null
+grep -l "(deleted)" $OUTPUT_DIR/process_info/fd_detailed_*.txt 2> /dev/null | sed 's/.*fd_detailed_//' | sed 's/.txt$//' > $OUTPUT_DIR/process_info/pids_with_deleted_files.txt 2> /dev/null
 
 # Find processes running from temporary locations
-grep -E "(/tmp/|/var/tmp/|/dev/shm/)" $OUTPUT_DIR/process_info/cmdline/cmdline_*.txt 2>/dev/null | cut -d: -f1 | sed 's/.*cmdline_//' | sed 's/.txt$//' | sort -u > $OUTPUT_DIR/process_info/pids_from_tmp_locations.txt 2>/dev/null
+grep -E "(/tmp/|/var/tmp/|/dev/shm/)" $OUTPUT_DIR/process_info/cmdline/cmdline_*.txt 2> /dev/null | cut -d: -f1 | sed 's/.*cmdline_//' | sed 's/.txt$//' | sort -u > $OUTPUT_DIR/process_info/pids_from_tmp_locations.txt 2> /dev/null
 
 # Extract unique loaded libraries
-cat $OUTPUT_DIR/process_info/maps/maps_*.txt 2>/dev/null | grep -E "\.(so|dylib|dll)" | awk '{print $6}' | sort -u > $OUTPUT_DIR/process_info/all_loaded_libraries.txt 2>/dev/null
+cat $OUTPUT_DIR/process_info/maps/maps_*.txt 2> /dev/null | grep -E "\.(so|dylib|dll)" | awk '{print $6}' | sort -u > $OUTPUT_DIR/process_info/all_loaded_libraries.txt 2> /dev/null
 
 # Find suspicious library injections
-grep -l -E "(/tmp/|/var/tmp/|/dev/shm/)" $OUTPUT_DIR/process_info/maps/maps_*.txt 2>/dev/null | sed 's/.*maps_//' | sed 's/.txt$//' > $OUTPUT_DIR/process_info/pids_with_tmp_libraries.txt 2>/dev/null
+grep -l -E "(/tmp/|/var/tmp/|/dev/shm/)" $OUTPUT_DIR/process_info/maps/maps_*.txt 2> /dev/null | sed 's/.*maps_//' | sed 's/.txt$//' > $OUTPUT_DIR/process_info/pids_with_tmp_libraries.txt 2> /dev/null
 
 # Platform-specific process hashing (existing code, no changes)
 if [ $PLATFORM = "generic" ]
@@ -1078,13 +1078,13 @@ then
 	# Collect capability information
 	for pid in /proc/[0-9]*; do
 	    PID_NUM=$(basename $pid)
-	    grep -E "^Cap" $pid/status > $OUTPUT_DIR/process_info/status/capabilities_${PID_NUM}.txt 2>/dev/null
+	    grep -E "^Cap" $pid/status > $OUTPUT_DIR/process_info/status/capabilities_${PID_NUM}.txt 2> /dev/null
 	done
 	
 	# Collect NUMA information
 	for pid in /proc/[0-9]*; do
 	    PID_NUM=$(basename $pid)
-	    cat $pid/numa_maps > $OUTPUT_DIR/process_info/maps/numa_maps_${PID_NUM}.txt 2>/dev/null
+	    cat $pid/numa_maps > $OUTPUT_DIR/process_info/maps/numa_maps_${PID_NUM}.txt 2> /dev/null
 	done
 fi
 
@@ -1098,9 +1098,9 @@ then
 	for pid in /proc/[0-9]*; do
 	    PID_NUM=$(basename $pid)
 	    # AIX specific proc files
-	    cat $pid/psinfo > $OUTPUT_DIR/process_info/psinfo_${PID_NUM}.dat 2>/dev/null
-	    cat $pid/map > $OUTPUT_DIR/process_info/maps/aix_map_${PID_NUM}.txt 2>/dev/null
-	    cat $pid/sigact > $OUTPUT_DIR/process_info/sigact_${PID_NUM}.txt 2>/dev/null
+	    cat $pid/psinfo > $OUTPUT_DIR/process_info/psinfo_${PID_NUM}.dat 2> /dev/null
+	    cat $pid/map > $OUTPUT_DIR/process_info/maps/aix_map_${PID_NUM}.txt 2> /dev/null
+	    cat $pid/sigact > $OUTPUT_DIR/process_info/sigact_${PID_NUM}.txt 2> /dev/null
 	done
 fi
 
@@ -1114,11 +1114,11 @@ then
 	for pid in /proc/[0-9]*; do
 	    PID_NUM=$(basename $pid)
 	    # Solaris binary psinfo
-	    strings $pid/psinfo > $OUTPUT_DIR/process_info/psinfo_strings_${PID_NUM}.txt 2>/dev/null
+	    strings $pid/psinfo > $OUTPUT_DIR/process_info/psinfo_strings_${PID_NUM}.txt 2> /dev/null
 	    # Process credentials
-	    cat $pid/cred > $OUTPUT_DIR/process_info/cred_${PID_NUM}.dat 2>/dev/null
+	    cat $pid/cred > $OUTPUT_DIR/process_info/cred_${PID_NUM}.dat 2> /dev/null
 	    # LWP (lightweight process) info
-	    ls -la $pid/lwp > $OUTPUT_DIR/process_info/lwp_${PID_NUM}.txt 2>/dev/null
+	    ls -la $pid/lwp > $OUTPUT_DIR/process_info/lwp_${PID_NUM}.txt 2> /dev/null
 	done
 fi
 
@@ -1137,9 +1137,9 @@ then
 	ps -axo comm | grep "^/" | sort -u | xargs -I {} md5 -q {} >> $OUTPUT_DIR/process_info/md5sum_running_processes 2> /dev/null
 	
 	# Since macOS doesn't have /proc, collect what we can
-	ps -A -o pid,ppid,user,nice,pri,vsz,rss,stat,start,time,command > $OUTPUT_DIR/process_info/ps_detailed_mac.txt 2>/dev/null
+	ps -A -o pid,ppid,user,nice,pri,vsz,rss,stat,start,time,command > $OUTPUT_DIR/process_info/ps_detailed_mac.txt 2> /dev/null
 	# Use lsof for process file handles
-	lsof -n -P > $OUTPUT_DIR/process_info/lsof_all_mac.txt 2>/dev/null
+	lsof -n -P > $OUTPUT_DIR/process_info/lsof_all_mac.txt 2> /dev/null
 fi
 
 # Platform-specific process tree tools (existing code, no changes)
@@ -1148,11 +1148,11 @@ then
 	ptree 1> $OUTPUT_DIR/general/ptree.txt 2> /dev/null
 	# pfiles for detailed file info
 	ps -e -o pid | grep -v PID | while read pid; do
-	    pfiles $pid > $OUTPUT_DIR/process_info/pfiles_$pid.txt 2>/dev/null
+	    pfiles $pid > $OUTPUT_DIR/process_info/pfiles_$pid.txt 2> /dev/null
 	done
 	# pmap for memory mappings
 	ps -e -o pid | grep -v PID | while read pid; do
-	    pmap -x $pid > $OUTPUT_DIR/process_info/pmap_$pid.txt 2>/dev/null
+	    pmap -x $pid > $OUTPUT_DIR/process_info/pmap_$pid.txt 2> /dev/null
 	done
 fi
 
@@ -1165,10 +1165,10 @@ then
 	pstat -p 1> $OUTPUT_DIR/general/pstat_p.txt 2> /dev/null
 	# procfiles for file info
 	ps -e -o pid | grep -v PID | while read pid; do
-	    procfiles $pid > $OUTPUT_DIR/process_info/procfiles_$pid.txt 2>/dev/null
+	    procfiles $pid > $OUTPUT_DIR/process_info/procfiles_$pid.txt 2> /dev/null
 	done
 	# svmon for memory
-	svmon -P ALL > $OUTPUT_DIR/process_info/svmon_all.txt 2>/dev/null
+	svmon -P ALL > $OUTPUT_DIR/process_info/svmon_all.txt 2> /dev/null
 fi
 
 if [ $PLATFORM = "android" ]
@@ -1186,7 +1186,7 @@ echo "Collection Date: $(date)" >> $OUTPUT_DIR/process_info/ANALYSIS_SUMMARY.txt
 echo "" >> $OUTPUT_DIR/process_info/ANALYSIS_SUMMARY.txt
 
 # Count various findings
-TOTAL_PROCS=$(ls -1 $OUTPUT_DIR/process_info/cmdline/cmdline_*.txt 2>/dev/null | wc -l)
+TOTAL_PROCS=$(ls -1 $OUTPUT_DIR/process_info/cmdline/cmdline_*.txt 2> /dev/null | wc -l)
 echo "Total processes analyzed: $TOTAL_PROCS" >> $OUTPUT_DIR/process_info/ANALYSIS_SUMMARY.txt
 if [ -f "$OUTPUT_DIR/process_info/deleted_processes_ids.txt" ]; then
     DELETED_COUNT=$(wc -l < $OUTPUT_DIR/process_info/deleted_processes_ids.txt)
@@ -1212,8 +1212,8 @@ mkdir $OUTPUT_DIR/general/crontabs/ 2> /dev/null
 
 # System-wide crontab
 if [ -f "/etc/crontab" ] && [ -r "/etc/crontab" ]; then
-	cp /etc/crontab $OUTPUT_DIR/general/crontabs/etc-crontab.txt 2>/dev/null
-	ls -la /etc/crontab > $OUTPUT_DIR/general/crontabs/etc-crontab-perms.txt 2>/dev/null
+	cp /etc/crontab $OUTPUT_DIR/general/crontabs/etc-crontab.txt 2> /dev/null
+	ls -la /etc/crontab > $OUTPUT_DIR/general/crontabs/etc-crontab-perms.txt 2> /dev/null
 fi
 
 # Current user's crontab - handle different platforms
@@ -1365,9 +1365,9 @@ fi
 atq > $OUTPUT_DIR/general/crontabs/atq_list.txt 2> /dev/null
 
 # Detailed at jobs if running as root
-if [ $(id -u 2>/dev/null) -eq 0 ] 2>/dev/null || [ "$USER" = "root" ]
+if [ $(id -u 2> /dev/null) -eq 0 ] 2> /dev/null || [ "$USER" = "root" ]
 then
-    for job in $(atq 2>/dev/null | awk '{print $1}')
+    for job in $(atq 2> /dev/null | awk '{print $1}')
     do
         echo "=== At job $job ===" >> $OUTPUT_DIR/general/crontabs/at_jobs_details.txt
         at -c $job >> $OUTPUT_DIR/general/crontabs/at_jobs_details.txt 2> /dev/null
@@ -1522,31 +1522,31 @@ fi
 # Analyze collected cron files for suspicious patterns
 echo "  ${COL_ENTRY}>${RESET} Analyzing cron entries"
 
-find $OUTPUT_DIR/general/crontabs/ -type f 2>/dev/null | while read cronfile
+find $OUTPUT_DIR/general/crontabs/ -type f 2> /dev/null | while read cronfile
 do
     # Skip binary files
-    if file "$cronfile" 2>/dev/null | grep -q "text"
+    if file "$cronfile" 2> /dev/null | grep -q "text"
     then
         # Look for suspicious patterns
-        grep -H -E "(wget|curl|nc|netcat|/tmp/|/dev/shm/|base64|bash -i|sh -i|exec|eval)" "$cronfile" >> $OUTPUT_DIR/general/crontabs/suspicious_cron_entries.txt 2>/dev/null
+        grep -H -E "(wget|curl|nc|netcat|/tmp/|/dev/shm/|base64|bash -i|sh -i|exec|eval)" "$cronfile" >> $OUTPUT_DIR/general/crontabs/suspicious_cron_entries.txt 2> /dev/null
         
         # Look for hidden files being executed
-        grep -H -E "/\.[^/][^/]*" "$cronfile" | grep -v "^#" >> $OUTPUT_DIR/general/crontabs/hidden_file_cron_entries.txt 2>/dev/null
+        grep -H -E "/\.[^/][^/]*" "$cronfile" | grep -v "^#" >> $OUTPUT_DIR/general/crontabs/hidden_file_cron_entries.txt 2> /dev/null
         
         # Look for cron entries running as root
-        grep -H -E "^[^#]*root" "$cronfile" >> $OUTPUT_DIR/general/crontabs/root_cron_entries.txt 2>/dev/null
+        grep -H -E "^[^#]*root" "$cronfile" >> $OUTPUT_DIR/general/crontabs/root_cron_entries.txt 2> /dev/null
         
         # Look for unusual paths
-        grep -H -E "(/var/tmp/|/usr/tmp/|/home/[^/]+/\.|/opt/\.|/usr/local/\.)" "$cronfile" >> $OUTPUT_DIR/general/crontabs/unusual_path_entries.txt 2>/dev/null
+        grep -H -E "(/var/tmp/|/usr/tmp/|/home/[^/]+/\.|/opt/\.|/usr/local/\.)" "$cronfile" >> $OUTPUT_DIR/general/crontabs/unusual_path_entries.txt 2> /dev/null
     fi
 done
 
 # Also check systemd timers for suspicious content
 if [ -d $OUTPUT_DIR/general/systemd/timers ]
 then
-    find $OUTPUT_DIR/general/systemd/timers -name "*.timer" -type f 2>/dev/null | while read timer
+    find $OUTPUT_DIR/general/systemd/timers -name "*.timer" -type f 2> /dev/null | while read timer
     do
-        grep -H -E "(ExecStart=.*(/tmp/|/dev/shm/|wget|curl|nc|bash -i))" "$timer" >> $OUTPUT_DIR/general/systemd/suspicious_timers.txt 2>/dev/null
+        grep -H -E "(ExecStart=.*(/tmp/|/dev/shm/|wget|curl|nc|bash -i))" "$timer" >> $OUTPUT_DIR/general/systemd/suspicious_timers.txt 2> /dev/null
     done
 fi
 
@@ -1560,7 +1560,7 @@ echo "" >> $OUTPUT_DIR/general/crontabs/CRON_SUMMARY.txt
 # Count findings
 if [ -f "$OUTPUT_DIR/general/crontabs/all_user_crontabs.txt" ] || [ -f "$OUTPUT_DIR/general/crontabs/all_user_crontabs_alt.txt" ]
 then
-    USER_COUNT=$(grep -c "=== Crontab for user:" $OUTPUT_DIR/general/crontabs/all_user_crontabs*.txt 2>/dev/null | awk -F: '{sum+=$2} END {print sum}')
+    USER_COUNT=$(grep -c "=== Crontab for user:" $OUTPUT_DIR/general/crontabs/all_user_crontabs*.txt 2> /dev/null | awk -F: '{sum+=$2} END {print sum}')
     echo "User crontabs found: ${USER_COUNT:-0}" >> $OUTPUT_DIR/general/crontabs/CRON_SUMMARY.txt
 fi
 
@@ -1568,20 +1568,20 @@ for check in suspicious_cron_entries hidden_file_cron_entries root_cron_entries 
 do
     if [ -f "$OUTPUT_DIR/general/crontabs/${check}.txt" ]
     then
-        COUNT=$(wc -l < $OUTPUT_DIR/general/crontabs/${check}.txt 2>/dev/null || echo 0)
+        COUNT=$(wc -l < $OUTPUT_DIR/general/crontabs/${check}.txt 2> /dev/null || echo 0)
         echo "$(echo $check | tr '_' ' '): $COUNT" >> $OUTPUT_DIR/general/crontabs/CRON_SUMMARY.txt
     fi
 done
 
 if [ -f "$OUTPUT_DIR/general/systemd/timers_all.txt" ]
 then
-    TIMER_COUNT=$(grep -c "\.timer" $OUTPUT_DIR/general/systemd/timers_all.txt 2>/dev/null || echo 0)
+    TIMER_COUNT=$(grep -c "\.timer" $OUTPUT_DIR/general/systemd/timers_all.txt 2> /dev/null || echo 0)
     echo "Systemd timers: $TIMER_COUNT" >> $OUTPUT_DIR/general/crontabs/CRON_SUMMARY.txt
 fi
 
 if [ -f "$OUTPUT_DIR/general/crontabs/launchctl_list.txt" ]
 then
-    LAUNCH_COUNT=$(wc -l < $OUTPUT_DIR/general/crontabs/launchctl_list.txt 2>/dev/null || echo 0)
+    LAUNCH_COUNT=$(wc -l < $OUTPUT_DIR/general/crontabs/launchctl_list.txt 2> /dev/null || echo 0)
     echo "macOS Launch items: $LAUNCH_COUNT" >> $OUTPUT_DIR/general/crontabs/CRON_SUMMARY.txt
 fi
 
@@ -1603,7 +1603,7 @@ do
         # List contents
         ls -la $shm_dir/ > $OUTPUT_DIR/general/shared_memory/${DIR_NAME}_listing.txt 2> /dev/null
         # Copy small files only to avoid filling disk
-        find $shm_dir -type f -size -10M 2>/dev/null | while read file
+        find $shm_dir -type f -size -10M 2> /dev/null | while read file
         do
             FILENAME=$(basename "$file")
             cp "$file" $OUTPUT_DIR/general/shared_memory/${DIR_NAME}_${FILENAME} 2> /dev/null
@@ -1631,31 +1631,31 @@ then
 fi
 
 # Find executables
-find /dev/shm /run/shm /var/shm /tmp/.ram 2>/dev/null -type f -executable | while read file
+find /dev/shm /run/shm /var/shm /tmp/.ram 2> /dev/null -type f -executable | while read file
 do
     echo "$file" >> $OUTPUT_DIR/general/shared_memory/executable_files.txt
-    ls -la "$file" >> $OUTPUT_DIR/general/shared_memory/executable_files_details.txt 2>/dev/null
-    file "$file" >> $OUTPUT_DIR/general/shared_memory/executable_files_types.txt 2>/dev/null
+    ls -la "$file" >> $OUTPUT_DIR/general/shared_memory/executable_files_details.txt 2> /dev/null
+    file "$file" >> $OUTPUT_DIR/general/shared_memory/executable_files_types.txt 2> /dev/null
     
     # Try to identify what process is using it
-    lsof "$file" >> $OUTPUT_DIR/general/shared_memory/executable_files_lsof.txt 2>/dev/null
+    lsof "$file" >> $OUTPUT_DIR/general/shared_memory/executable_files_lsof.txt 2> /dev/null
 done
 
 # Look for suspicious patterns in filenames
-find /dev/shm /run/shm /var/shm /tmp/.ram 2>/dev/null -type f \( -name ".*" -o -name "* *" -o -name "*sh" -o -name "*.elf" \) -ls >> $OUTPUT_DIR/general/shared_memory/suspicious_filenames.txt 2>/dev/null
+find /dev/shm /run/shm /var/shm /tmp/.ram 2> /dev/null -type f \( -name ".*" -o -name "* *" -o -name "*sh" -o -name "*.elf" \) -ls >> $OUTPUT_DIR/general/shared_memory/suspicious_filenames.txt 2> /dev/null
 
 # Check for common malware patterns
-find /dev/shm /run/shm /var/shm /tmp/.ram 2>/dev/null -type f -size -1M | while read file
+find /dev/shm /run/shm /var/shm /tmp/.ram 2> /dev/null -type f -size -1M | while read file
 do
     # Check if it's a script
-    if file "$file" 2>/dev/null | grep -qE "(shell script|text)"
+    if file "$file" 2> /dev/null | grep -qE "(shell script|text)"
     then
         # Look for suspicious content
-        if grep -qE "(wget|curl|nc|/bin/sh|/bin/bash|python -c|perl -e|base64)" "$file" 2>/dev/null
+        if grep -qE "(wget|curl|nc|/bin/sh|/bin/bash|python -c|perl -e|base64)" "$file" 2> /dev/null
         then
             echo "=== Suspicious file: $file ===" >> $OUTPUT_DIR/general/shared_memory/suspicious_scripts.txt
-            ls -la "$file" >> $OUTPUT_DIR/general/shared_memory/suspicious_scripts.txt 2>/dev/null
-            head -50 "$file" >> $OUTPUT_DIR/general/shared_memory/suspicious_scripts.txt 2>/dev/null
+            ls -la "$file" >> $OUTPUT_DIR/general/shared_memory/suspicious_scripts.txt 2> /dev/null
+            head -50 "$file" >> $OUTPUT_DIR/general/shared_memory/suspicious_scripts.txt 2> /dev/null
             echo "" >> $OUTPUT_DIR/general/shared_memory/suspicious_scripts.txt
         fi
     fi
@@ -1670,18 +1670,18 @@ for shm_dir in $SHMEM_DIRS
 do
     if [ -d "$shm_dir" ]
     then
-        FILE_COUNT=$(find $shm_dir -type f 2>/dev/null | wc -l)
+        FILE_COUNT=$(find $shm_dir -type f 2> /dev/null | wc -l)
         echo "$shm_dir: $FILE_COUNT files" >> $OUTPUT_DIR/general/shared_memory/SHMEM_SUMMARY.txt
     fi
 done
 if [ -f "$OUTPUT_DIR/general/shared_memory/executable_files.txt" ]
 then
-    EXEC_COUNT=$(wc -l < $OUTPUT_DIR/general/shared_memory/executable_files.txt 2>/dev/null || echo 0)
+    EXEC_COUNT=$(wc -l < $OUTPUT_DIR/general/shared_memory/executable_files.txt 2> /dev/null || echo 0)
     echo "Executable files found: $EXEC_COUNT" >> $OUTPUT_DIR/general/shared_memory/SHMEM_SUMMARY.txt
 fi
 if [ -f "$OUTPUT_DIR/general/shared_memory/suspicious_scripts.txt" ]
 then
-    SUSP_COUNT=$(grep -c "=== Suspicious file:" $OUTPUT_DIR/general/shared_memory/suspicious_scripts.txt 2>/dev/null || echo 0)
+    SUSP_COUNT=$(grep -c "=== Suspicious file:" $OUTPUT_DIR/general/shared_memory/suspicious_scripts.txt 2> /dev/null || echo 0)
     echo "Suspicious scripts found: $SUSP_COUNT" >> $OUTPUT_DIR/general/shared_memory/SHMEM_SUMMARY.txt
 fi
 echo "" >> $OUTPUT_DIR/general/shared_memory/SHMEM_SUMMARY.txt
@@ -1899,9 +1899,9 @@ fi
 # Systemd journal logs
 if [ -x "$(command -v journalctl)" ]; then
     echo "  ${COL_ENTRY}>${RESET} Systemd journal logs"
-    journalctl --no-pager -n 10000 > $OUTPUT_DIR/logs/journal_recent.txt 2>/dev/null
-    journalctl --no-pager -b > $OUTPUT_DIR/logs/journal_boot.txt 2>/dev/null
-    journalctl --no-pager -p err > $OUTPUT_DIR/logs/journal_errors.txt 2>/dev/null
+    journalctl --no-pager -n 10000 > $OUTPUT_DIR/logs/journal_recent.txt 2> /dev/null
+    journalctl --no-pager -b > $OUTPUT_DIR/logs/journal_boot.txt 2> /dev/null
+    journalctl --no-pager -p err > $OUTPUT_DIR/logs/journal_errors.txt 2> /dev/null
 fi
 
 echo "  ${COL_ENTRY}>${RESET} User Activity and Authentication Logs"
@@ -1916,10 +1916,10 @@ then
         last -f /var/log/wtmp -F 1> $OUTPUT_DIR/user_activity/last-wtmp-fulltime.txt 2> /dev/null
         echo "=== Login Statistics ===" > $OUTPUT_DIR/user_activity/login_stats.txt
         echo "Total logins by user:" >> $OUTPUT_DIR/user_activity/login_stats.txt
-        last -f /var/log/wtmp 2>/dev/null | awk '{print $1}' | grep -v "^$\|^wtmp\|^reboot" | sort | uniq -c | sort -rn >> $OUTPUT_DIR/user_activity/login_stats.txt
+        last -f /var/log/wtmp 2> /dev/null | awk '{print $1}' | grep -v "^$\|^wtmp\|^reboot" | sort | uniq -c | sort -rn >> $OUTPUT_DIR/user_activity/login_stats.txt
         echo "" >> $OUTPUT_DIR/user_activity/login_stats.txt
         echo "Logins by IP:" >> $OUTPUT_DIR/user_activity/login_stats.txt
-        last -f /var/log/wtmp -i 2>/dev/null | awk '{print $3}' | grep -E "^[0-9]" | sort | uniq -c | sort -rn | head -50 >> $OUTPUT_DIR/user_activity/login_stats.txt
+        last -f /var/log/wtmp -i 2> /dev/null | awk '{print $3}' | grep -E "^[0-9]" | sort | uniq -c | sort -rn | head -50 >> $OUTPUT_DIR/user_activity/login_stats.txt
     fi
     if [ -f /var/log/btmp ]; then
         cp /var/log/btmp $OUTPUT_DIR/user_activity/btmp.raw 2> /dev/null
@@ -1927,10 +1927,10 @@ then
         last -f /var/log/btmp 1> $OUTPUT_DIR/user_activity/last-btmp.txt 2> /dev/null
         echo "=== Failed Login Statistics ===" > $OUTPUT_DIR/user_activity/failed_login_stats.txt
         echo "Failed attempts by user:" >> $OUTPUT_DIR/user_activity/failed_login_stats.txt
-        lastb -f /var/log/btmp 2>/dev/null | awk '{print $1}' | grep -v "^$\|^btmp" | sort | uniq -c | sort -rn | head -50 >> $OUTPUT_DIR/user_activity/failed_login_stats.txt
+        lastb -f /var/log/btmp 2> /dev/null | awk '{print $1}' | grep -v "^$\|^btmp" | sort | uniq -c | sort -rn | head -50 >> $OUTPUT_DIR/user_activity/failed_login_stats.txt
         echo "" >> $OUTPUT_DIR/user_activity/failed_login_stats.txt
         echo "Failed attempts by IP:" >> $OUTPUT_DIR/user_activity/failed_login_stats.txt
-        lastb -f /var/log/btmp 2>/dev/null | awk '{print $3}' | grep -E "^[0-9]" | sort | uniq -c | sort -rn | head -50 >> $OUTPUT_DIR/user_activity/failed_login_stats.txt
+        lastb -f /var/log/btmp 2> /dev/null | awk '{print $3}' | grep -E "^[0-9]" | sort | uniq -c | sort -rn | head -50 >> $OUTPUT_DIR/user_activity/failed_login_stats.txt
     fi
     if [ -f /var/run/utmp ]; then
         cp /var/run/utmp $OUTPUT_DIR/user_activity/utmp.raw 2> /dev/null
@@ -2104,7 +2104,7 @@ if [ -f /etc/passwd ]; then
                     cat "$homedir/$history_file" 1> "$user_history_dir/${history_file}.txt" 2> /dev/null
                     ls -la "$homedir/$history_file" 1> "$user_history_dir/${history_file}.stats" 2> /dev/null
                     echo "=== Command Frequency ===" > "$user_history_dir/${history_file}.frequency"
-                    cat "$homedir/$history_file" 2>/dev/null | sed 's/^[ \t]*//' | cut -d' ' -f1 | sort | uniq -c | sort -rn | head -50 >> "$user_history_dir/${history_file}.frequency" 2> /dev/null
+                    cat "$homedir/$history_file" 2> /dev/null | sed 's/^[ \t]*//' | cut -d' ' -f1 | sort | uniq -c | sort -rn | head -50 >> "$user_history_dir/${history_file}.frequency" 2> /dev/null
                 fi
             done
             
@@ -2129,7 +2129,7 @@ if [ -f /etc/passwd ]; then
                 cp "$homedir/.python_history" "$user_history_dir/python_history" 2> /dev/null
             fi
             if [ -d "$homedir/.ipython" ]; then
-                find "$homedir/.ipython" -name "*history*" -type f 2>/dev/null | head -10 | while read pyhistory
+                find "$homedir/.ipython" -name "*history*" -type f 2> /dev/null | head -10 | while read pyhistory
                 do
                     pyname=`basename "$pyhistory"`
                     cp "$pyhistory" "$user_history_dir/ipython_$pyname" 2> /dev/null
@@ -2163,7 +2163,7 @@ fi
 
 if [ -d /var/run/sudo ]; then
     ls -la /var/run/sudo/ 1> $OUTPUT_DIR/user_activity/sudo_logs/sudo_timestamps.txt 2> /dev/null
-    find /var/run/sudo -type f 2>/dev/null | while read tsfile
+    find /var/run/sudo -type f 2> /dev/null | while read tsfile
     do
         ls -la "$tsfile" 1>> $OUTPUT_DIR/user_activity/sudo_logs/sudo_timestamp_details.txt 2> /dev/null
     done
@@ -2235,7 +2235,7 @@ if [ $PLATFORM = "linux" ]; then
         journalctl _COMM=login --since "90 days ago" 1> $OUTPUT_DIR/user_activity/journalctl-login-90days.txt 2> /dev/null
         loginctl list-sessions 1> $OUTPUT_DIR/user_activity/loginctl-sessions.txt 2> /dev/null
         loginctl list-users 1> $OUTPUT_DIR/user_activity/loginctl-users.txt 2> /dev/null
-        loginctl list-sessions --no-legend 2>/dev/null | awk '{print $1}' | while read session
+        loginctl list-sessions --no-legend 2> /dev/null | awk '{print $1}' | while read session
         do
             echo "=== Session $session ===" >> $OUTPUT_DIR/user_activity/loginctl-session-details.txt
             loginctl show-session $session >> $OUTPUT_DIR/user_activity/loginctl-session-details.txt 2> /dev/null
@@ -2283,14 +2283,14 @@ echo "User accounts with UID >= 500 or UID 0:" 1>> $OUTPUT_DIR/user_activity/sum
 awk -F: '$3 >= 500 || $3 == 0 {print $1}' /etc/passwd 2> /dev/null | sort 1>> $OUTPUT_DIR/user_activity/summary.txt 2> /dev/null
 echo "" 1>> $OUTPUT_DIR/user_activity/summary.txt 2> /dev/null
 echo "SSH Keys Found:" 1>> $OUTPUT_DIR/user_activity/summary.txt 2> /dev/null
-find $OUTPUT_DIR/user_activity/ssh_keys -name "*.pub" -o -name "authorized_keys*" 2>/dev/null | wc -l 1>> $OUTPUT_DIR/user_activity/summary.txt 2> /dev/null
+find $OUTPUT_DIR/user_activity/ssh_keys -name "*.pub" -o -name "authorized_keys*" 2> /dev/null | wc -l 1>> $OUTPUT_DIR/user_activity/summary.txt 2> /dev/null
 echo "" 1>> $OUTPUT_DIR/user_activity/summary.txt 2> /dev/null
 echo "Shell History Files Found:" 1>> $OUTPUT_DIR/user_activity/summary.txt 2> /dev/null
-find $OUTPUT_DIR/user_activity/shell_history -name "*history*" -type f 2>/dev/null | wc -l 1>> $OUTPUT_DIR/user_activity/summary.txt 2> /dev/null
+find $OUTPUT_DIR/user_activity/shell_history -name "*history*" -type f 2> /dev/null | wc -l 1>> $OUTPUT_DIR/user_activity/summary.txt 2> /dev/null
 echo "" 1>> $OUTPUT_DIR/user_activity/summary.txt 2> /dev/null
 if [ -f /var/log/btmp ]; then
     echo "Recent Failed Login Attempts:" 1>> $OUTPUT_DIR/user_activity/summary.txt 2> /dev/null
-    lastb -n 5 2>/dev/null | head -6 1>> $OUTPUT_DIR/user_activity/summary.txt 2> /dev/null
+    lastb -n 5 2> /dev/null | head -6 1>> $OUTPUT_DIR/user_activity/summary.txt 2> /dev/null
 fi
 
 echo "  ${COL_ENTRY}>${RESET} At scheduler"
@@ -2451,7 +2451,7 @@ then
     if [ -d /sys/module/apparmor/parameters ]; then
         for param in /sys/module/apparmor/parameters/*
         do
-            echo "`basename $param` = `cat $param 2>/dev/null`" 1>> $OUTPUT_DIR/security_frameworks/apparmor/kernel-parameters.txt 2> /dev/null
+            echo "`basename $param` = `cat $param 2> /dev/null`" 1>> $OUTPUT_DIR/security_frameworks/apparmor/kernel-parameters.txt 2> /dev/null
         done
     fi
     
@@ -2469,9 +2469,9 @@ then
     if [ -f /proc/sys/kernel/grsecurity/grsec_lock ]; then
         echo "grsecurity detected" > $OUTPUT_DIR/security_frameworks/grsecurity/detected.txt
         # Collect grsec settings (if readable)
-        find /proc/sys/kernel/grsecurity -type f 2>/dev/null | while read grsec_file
+        find /proc/sys/kernel/grsecurity -type f 2> /dev/null | while read grsec_file
         do
-            echo "$grsec_file = `cat $grsec_file 2>/dev/null || echo 'unreadable'`" 1>> $OUTPUT_DIR/security_frameworks/grsecurity/settings.txt 2> /dev/null
+            echo "$grsec_file = `cat $grsec_file 2> /dev/null || echo 'unreadable'`" 1>> $OUTPUT_DIR/security_frameworks/grsecurity/settings.txt 2> /dev/null
         done
     fi
     
@@ -2511,14 +2511,14 @@ then
         do
             if [ -f "$ima_file" ]; then
                 echo "=== `basename $ima_file` ===" >> $OUTPUT_DIR/security_frameworks/ima/measurements.txt
-                cat "$ima_file" 2>/dev/null >> $OUTPUT_DIR/security_frameworks/ima/measurements.txt || echo "unreadable" >> $OUTPUT_DIR/security_frameworks/ima/measurements.txt
+                cat "$ima_file" 2> /dev/null >> $OUTPUT_DIR/security_frameworks/ima/measurements.txt || echo "unreadable" >> $OUTPUT_DIR/security_frameworks/ima/measurements.txt
                 echo "" >> $OUTPUT_DIR/security_frameworks/ima/measurements.txt
             fi
         done
     fi
     
     # Check security-related kernel parameters
-    sysctl -a 2>/dev/null | grep -E "kernel.yama|kernel.kptr_restrict|kernel.dmesg_restrict|kernel.modules_disabled|kernel.unprivileged_|net.core.bpf_jit_harden|kernel.lockdown" 1> $OUTPUT_DIR/security_frameworks/security-sysctls.txt 2> /dev/null
+    sysctl -a 2> /dev/null | grep -E "kernel.yama|kernel.kptr_restrict|kernel.dmesg_restrict|kernel.modules_disabled|kernel.unprivileged_|net.core.bpf_jit_harden|kernel.lockdown" 1> $OUTPUT_DIR/security_frameworks/security-sysctls.txt 2> /dev/null
     
 elif [ $PLATFORM = "solaris" ]
 then
@@ -2664,7 +2664,7 @@ echo "" >> $OUTPUT_DIR/security_frameworks/summary.txt
 if [ $PLATFORM = "linux" -o $PLATFORM = "generic" ]; then
     # SELinux status
     if [ -f $OUTPUT_DIR/security_frameworks/selinux/getenforce.txt ]; then
-        SELINUX_STATUS=`cat $OUTPUT_DIR/security_frameworks/selinux/getenforce.txt 2>/dev/null`
+        SELINUX_STATUS=`cat $OUTPUT_DIR/security_frameworks/selinux/getenforce.txt 2> /dev/null`
         echo "SELinux: $SELINUX_STATUS" >> $OUTPUT_DIR/security_frameworks/summary.txt
     else
         echo "SELinux: Not installed" >> $OUTPUT_DIR/security_frameworks/summary.txt
@@ -2672,7 +2672,7 @@ if [ $PLATFORM = "linux" -o $PLATFORM = "generic" ]; then
     
     # AppArmor status
     if [ -f $OUTPUT_DIR/security_frameworks/apparmor/aa-status.txt ]; then
-        APPARMOR_PROFILES=`grep -c "profiles are loaded" $OUTPUT_DIR/security_frameworks/apparmor/aa-status.txt 2>/dev/null || echo "0"`
+        APPARMOR_PROFILES=`grep -c "profiles are loaded" $OUTPUT_DIR/security_frameworks/apparmor/aa-status.txt 2> /dev/null || echo "0"`
         echo "AppArmor: Active ($APPARMOR_PROFILES profiles)" >> $OUTPUT_DIR/security_frameworks/summary.txt
     else
         echo "AppArmor: Not installed" >> $OUTPUT_DIR/security_frameworks/summary.txt
@@ -2726,10 +2726,10 @@ fi
 # File ACLs and extended attributes
 echo "  ${COL_ENTRY}>${RESET} File ACLs and extended attributes"
 if [ -x "$(command -v getfacl)" ]; then
-    find / -xdev -type f -exec getfacl {} + > $OUTPUT_DIR/general/file_acls_getfacl.txt 2>/dev/null &
+    find / -xdev -type f -exec getfacl {} + > $OUTPUT_DIR/general/file_acls_getfacl.txt 2> /dev/null &
 fi
 if [ -x "$(command -v getfattr)" ]; then
-    find / -xdev -type f -exec getfattr -d {} + > $OUTPUT_DIR/general/extended_file_attributes_getfattr.txt 2>/dev/null &
+    find / -xdev -type f -exec getfattr -d {} + > $OUTPUT_DIR/general/extended_file_attributes_getfattr.txt 2> /dev/null &
 fi
 
 if [ $PLATFORM = "mac" ]
@@ -2914,8 +2914,8 @@ else
     dpkg --list 1> $OUTPUT_DIR/software/software-dpkg.txt 2> /dev/null
     dpkg -l 1> $OUTPUT_DIR/software/dpkg-patchlist.txt 2> /dev/null
     ls -1 /var/log/packages 1> $OUTPUT_DIR/software/slackware-patchlist.txt 2> /dev/null
-    grep -A 1 displayName /Library/Receipts/InstallHistory.plist 2>/dev/null| grep string | sed 's/<string>\(.*\)<\/string>.*/\1/g'  | sed 's/^[      ]*//g'|tr  -d -c 'a-zA-Z0-9\n _-'|sort|uniq > $OUTPUT_DIR/software/osx-patchlist.txt 2> /dev/null
-    ls -1 /Library/Receipts/boms /private/var/db/receipts 2>/dev/null | grep '\.bom$' > $OUTPUT_DIR/software/osx-bomlist.txt 2> /dev/null
+    grep -A 1 displayName /Library/Receipts/InstallHistory.plist 2> /dev/null| grep string | sed 's/<string>\(.*\)<\/string>.*/\1/g'  | sed 's/^[      ]*//g'|tr  -d -c 'a-zA-Z0-9\n _-'|sort|uniq > $OUTPUT_DIR/software/osx-patchlist.txt 2> /dev/null
+    ls -1 /Library/Receipts/boms /private/var/db/receipts 2> /dev/null | grep '\.bom$' > $OUTPUT_DIR/software/osx-bomlist.txt 2> /dev/null
     emerge -pev world 1> $OUTPUT_DIR/software/software-emerge.txt 2> /dev/null
     pkg_info > $OUTPUT_DIR/software/freebsd-patchlist.txt 2> /dev/null
     chkconfig --list > $OUTPUT_DIR/software/chkconfig--list.txt 2> /dev/null
@@ -3222,17 +3222,17 @@ DEV_TOOLS="gcc g++ cc c++ clang clang++ icc icpc pgcc xlc xlC javac java python 
 for tool in $DEV_TOOLS
 do
     if command -v $tool > /dev/null 2>&1; then
-        tool_path=`command -v $tool 2>/dev/null`
+        tool_path=`command -v $tool 2> /dev/null`
         echo "" >> $OUTPUT_DIR/software/development_tools/tools_in_path.txt
         echo "=== $tool ===" >> $OUTPUT_DIR/software/development_tools/tools_in_path.txt
         echo "Path: $tool_path" >> $OUTPUT_DIR/software/development_tools/tools_in_path.txt
-        ls -la "$tool_path" >> $OUTPUT_DIR/software/development_tools/tools_in_path.txt 2>/dev/null
+        ls -la "$tool_path" >> $OUTPUT_DIR/software/development_tools/tools_in_path.txt 2> /dev/null
         
         # Get version info if possible
         echo "Version:" >> $OUTPUT_DIR/software/development_tools/tools_in_path.txt
         case $tool in
             gcc|g++|clang|clang++|gfortran)
-                $tool --version 2>/dev/null | head -1 >> $OUTPUT_DIR/software/development_tools/tools_in_path.txt
+                $tool --version 2> /dev/null | head -1 >> $OUTPUT_DIR/software/development_tools/tools_in_path.txt
                 ;;
             javac|java)
                 $tool -version 2>&1 | head -1 >> $OUTPUT_DIR/software/development_tools/tools_in_path.txt
@@ -3250,11 +3250,11 @@ do
         
         # Get file hash
         if [ -x /usr/bin/sha256sum ]; then
-            sha256sum "$tool_path" >> $OUTPUT_DIR/software/development_tools/tools_in_path.txt 2>/dev/null
+            sha256sum "$tool_path" >> $OUTPUT_DIR/software/development_tools/tools_in_path.txt 2> /dev/null
         elif [ -x /usr/bin/sha1sum ]; then
-            sha1sum "$tool_path" >> $OUTPUT_DIR/software/development_tools/tools_in_path.txt 2>/dev/null
+            sha1sum "$tool_path" >> $OUTPUT_DIR/software/development_tools/tools_in_path.txt 2> /dev/null
         elif [ -x /usr/bin/shasum ]; then
-            shasum -a 256 "$tool_path" >> $OUTPUT_DIR/software/development_tools/tools_in_path.txt 2>/dev/null
+            shasum -a 256 "$tool_path" >> $OUTPUT_DIR/software/development_tools/tools_in_path.txt 2> /dev/null
         fi
     fi
 done
@@ -3264,13 +3264,13 @@ if [ $PLATFORM = "linux" -o $PLATFORM = "generic" ]; then
     # RPM-based systems
     if [ -x /usr/bin/rpm -o -x /bin/rpm ]; then
         echo "=== RPM Development Packages ===" > $OUTPUT_DIR/software/development_tools/rpm_dev_packages.txt
-        rpm -qa | grep -E 'gcc|clang|java|jdk|python|perl|ruby|nodejs|golang|rust|compiler|devel|sdk' | sort >> $OUTPUT_DIR/software/development_tools/rpm_dev_packages.txt 2>/dev/null
+        rpm -qa | grep -E 'gcc|clang|java|jdk|python|perl|ruby|nodejs|golang|rust|compiler|devel|sdk' | sort >> $OUTPUT_DIR/software/development_tools/rpm_dev_packages.txt 2> /dev/null
     fi
     
     # Debian-based systems
     if [ -x /usr/bin/dpkg ]; then
         echo "=== DEB Development Packages ===" > $OUTPUT_DIR/software/development_tools/deb_dev_packages.txt
-        dpkg -l | grep -E 'gcc|clang|java|jdk|python|perl|ruby|nodejs|golang|rust|compiler|dev|sdk' | grep '^ii' >> $OUTPUT_DIR/software/development_tools/deb_dev_packages.txt 2>/dev/null
+        dpkg -l | grep -E 'gcc|clang|java|jdk|python|perl|ruby|nodejs|golang|rust|compiler|dev|sdk' | grep '^ii' >> $OUTPUT_DIR/software/development_tools/deb_dev_packages.txt 2> /dev/null
     fi
 elif [ $PLATFORM = "mac" ]; then
     # Check Xcode and command line tools
@@ -3282,12 +3282,12 @@ elif [ $PLATFORM = "mac" ]; then
     # Check Homebrew packages
     if [ -x /usr/local/bin/brew -o -x /opt/homebrew/bin/brew ]; then
         echo "=== Homebrew Development Packages ===" > $OUTPUT_DIR/software/development_tools/brew_dev_packages.txt
-        brew list | grep -E 'gcc|llvm|java|python|perl|ruby|node|go|rust' >> $OUTPUT_DIR/software/development_tools/brew_dev_packages.txt 2>/dev/null
+        brew list | grep -E 'gcc|llvm|java|python|perl|ruby|node|go|rust' >> $OUTPUT_DIR/software/development_tools/brew_dev_packages.txt 2> /dev/null
     fi
 elif [ $PLATFORM = "solaris" ]; then
     if [ -x /usr/bin/pkg ]; then
         echo "=== Solaris Development Packages ===" > $OUTPUT_DIR/software/development_tools/solaris_dev_packages.txt
-        pkg list | grep -E 'gcc|java|jdk|python|perl|ruby|developer|compiler' >> $OUTPUT_DIR/software/development_tools/solaris_dev_packages.txt 2>/dev/null
+        pkg list | grep -E 'gcc|java|jdk|python|perl|ruby|developer|compiler' >> $OUTPUT_DIR/software/development_tools/solaris_dev_packages.txt 2> /dev/null
     fi
 fi
 
@@ -3301,7 +3301,7 @@ do
     if [ -d "$dir" ]; then
         echo "" >> $OUTPUT_DIR/software/development_tools/standard_locations.txt
         echo "=== Directory: $dir ===" >> $OUTPUT_DIR/software/development_tools/standard_locations.txt
-        ls -la $dir 2>/dev/null | grep -E 'gcc|g\+\+|clang|javac|java|python|perl|ruby|node|go|rustc|swift' >> $OUTPUT_DIR/software/development_tools/standard_locations.txt 2>/dev/null
+        ls -la $dir 2> /dev/null | grep -E 'gcc|g\+\+|clang|javac|java|python|perl|ruby|node|go|rustc|swift' >> $OUTPUT_DIR/software/development_tools/standard_locations.txt 2> /dev/null
     fi
 done
 
@@ -3313,21 +3313,21 @@ do
     if [ -e "$config" ]; then
         echo "" >> $OUTPUT_DIR/software/development_tools/build_environments.txt
         echo "Config: $config" >> $OUTPUT_DIR/software/development_tools/build_environments.txt
-        ls -la "$config" >> $OUTPUT_DIR/software/development_tools/build_environments.txt 2>/dev/null
+        ls -la "$config" >> $OUTPUT_DIR/software/development_tools/build_environments.txt 2> /dev/null
     fi
 done
 
 # Check environment variables
 echo "" >> $OUTPUT_DIR/software/development_tools/build_environments.txt
 echo "=== Development Environment Variables ===" >> $OUTPUT_DIR/software/development_tools/build_environments.txt
-env | grep -E 'JAVA_HOME|PYTHON_HOME|PERL5LIB|RUBY|GCC|GOPATH|GOROOT|CARGO_HOME|NODE_PATH|PATH' | sort >> $OUTPUT_DIR/software/development_tools/build_environments.txt 2>/dev/null
+env | grep -E 'JAVA_HOME|PYTHON_HOME|PERL5LIB|RUBY|GCC|GOPATH|GOROOT|CARGO_HOME|NODE_PATH|PATH' | sort >> $OUTPUT_DIR/software/development_tools/build_environments.txt 2> /dev/null
 
 # Platform specific checks
 if [ $PLATFORM = "android" ]; then
     echo "=== Android Development Tools ===" > $OUTPUT_DIR/software/development_tools/android_dev_tools.txt
     
     # Check for Android SDK/NDK
-    find /opt /usr/local -name "android-sdk*" -o -name "android-ndk*" 2>/dev/null | head -20 >> $OUTPUT_DIR/software/development_tools/android_dev_tools.txt
+    find /opt /usr/local -name "android-sdk*" -o -name "android-ndk*" 2> /dev/null | head -20 >> $OUTPUT_DIR/software/development_tools/android_dev_tools.txt
     
     # Check dalvikvm
     if command -v dalvikvm > /dev/null 2>&1; then
@@ -3340,11 +3340,11 @@ SEARCH_DIRS="/opt /usr/local /home /root"
 for search_dir in $SEARCH_DIRS
 do
     if [ -d "$search_dir" ]; then
-        find $search_dir -maxdepth 4 -type f \( -name 'gcc' -o -name 'g++' -o -name 'clang' -o -name 'javac' -o -name 'python' -o -name 'python[23]' -o -name 'perl' -o -name 'ruby' -o -name 'go' -o -name 'rustc' -o -name 'node' \) -executable 2>/dev/null | head -50 | while read compiler
+        find $search_dir -maxdepth 4 -type f \( -name 'gcc' -o -name 'g++' -o -name 'clang' -o -name 'javac' -o -name 'python' -o -name 'python[23]' -o -name 'perl' -o -name 'ruby' -o -name 'go' -o -name 'rustc' -o -name 'node' \) -executable 2> /dev/null | head -50 | while read compiler
         do
             echo "" >> $OUTPUT_DIR/software/development_tools/nonstandard_compilers.txt
             echo "Found: $compiler" >> $OUTPUT_DIR/software/development_tools/nonstandard_compilers.txt
-            ls -la "$compiler" >> $OUTPUT_DIR/software/development_tools/nonstandard_compilers.txt 2>/dev/null
+            ls -la "$compiler" >> $OUTPUT_DIR/software/development_tools/nonstandard_compilers.txt 2> /dev/null
         done
     fi
 done
@@ -3539,35 +3539,35 @@ echo "  ${COL_ENTRY}>${RESET} Copying proc dirs"
 # No /proc on mac and hpux
 if [ $PLATFORM = "solaris" ]
 then
-    find /proc/ -type f \( -name "cmdline" -o -name "psinfo" -o -name "fib_triestat" -o -name "status" -o -name "connector" -o -name "protocols" -o -name "route" -o -name "fib_trie" -o -name "snmp*" \) 2>/dev/null | while read line
+    find /proc/ -type f \( -name "cmdline" -o -name "psinfo" -o -name "fib_triestat" -o -name "status" -o -name "connector" -o -name "protocols" -o -name "route" -o -name "fib_trie" -o -name "snmp*" \) 2> /dev/null | while read line
 	do
 		mkdir -p "$OUTPUT_DIR/procfiles`dirname $line`" 2> /dev/null
 		cp -p "$line" "$OUTPUT_DIR/procfiles`dirname $line`" 2> /dev/null
 	done
 elif [ $PLATFORM = "aix" ]
 then
-    find /proc/ -type f \( -name "cred" -o -name "psinfo" -o -name "mmap" -o -name "cwd" -o -name "fd" -o -name "sysent" \) 2>/dev/null | while read line
+    find /proc/ -type f \( -name "cred" -o -name "psinfo" -o -name "mmap" -o -name "cwd" -o -name "fd" -o -name "sysent" \) 2> /dev/null | while read line
 	do
 		mkdir -p "$OUTPUT_DIR/procfiles`dirname $line`" 2> /dev/null
 		cp -p "$line" "$OUTPUT_DIR/procfiles`dirname $line`" 2> /dev/null
 	done
 elif [ $PLATFORM = "linux" ]
 then
-    find /proc/ -type f \( -name "cmdline" -o -name "fib_triestat" -o -name "status" -o -name "connector" -o -name "protocols" -o -name "route" -o -name "fib_trie" -o -name "snmp*" \) 2>/dev/null | while read line
+    find /proc/ -type f \( -name "cmdline" -o -name "fib_triestat" -o -name "status" -o -name "connector" -o -name "protocols" -o -name "route" -o -name "fib_trie" -o -name "snmp*" \) 2> /dev/null | while read line
 	do
 		mkdir -p "$OUTPUT_DIR/procfiles`dirname $line`" 2> /dev/null
 		cp -p "$line" "$OUTPUT_DIR/procfiles`dirname $line`" 2> /dev/null
 	done
 elif [ $PLATFORM = "android" ]
 then
-    find /proc/ -type f \( -name 'cmdline' -o -name 'fib_triestat' -o -name 'status' -o -name 'connector' -o -name 'route' -o -name 'fib_trie' \) 2>/dev/null | while read line
+    find /proc/ -type f \( -name 'cmdline' -o -name 'fib_triestat' -o -name 'status' -o -name 'connector' -o -name 'route' -o -name 'fib_trie' \) 2> /dev/null | while read line
 	do
 		mkdir -p "$OUTPUT_DIR/procfiles`dirname $line`" 2> /dev/null
 		cp -p "$line" "$OUTPUT_DIR/procfiles`dirname $line`" 2> /dev/null
 	done
 elif [ $PLATFORM = "generic" ]
 then
-    find /proc/ -type f \( -name "cmdline" -o -name "fib_triestat" -o -name "status" -o -name "connector" -o -name "protocols" -o -name "route" -o -name "fib_trie" -o -name "snmp*" \) 2>/dev/null | while read line
+    find /proc/ -type f \( -name "cmdline" -o -name "fib_triestat" -o -name "status" -o -name "connector" -o -name "protocols" -o -name "route" -o -name "fib_trie" -o -name "snmp*" \) 2> /dev/null | while read line
 	do
 		mkdir -p "$OUTPUT_DIR/procfiles`dirname $line`" 2> /dev/null
 		cp -p "$line" "$OUTPUT_DIR/procfiles`dirname $line`" 2> /dev/null
@@ -3671,7 +3671,7 @@ if [ $PLATFORM = "mac" ]
 then
 	echo "${COL_SECTION} Searching plist files [55% ]: ${RESET}"
 	mkdir $OUTPUT_DIR/plist
-	find / -size $TAR_MAX_FILESIZE -type f -iname "*.plist" 2>/dev/null | while read line
+	find / -size $TAR_MAX_FILESIZE -type f -iname "*.plist" 2> /dev/null | while read line
 	do  
 	    FILENAME=$(printf %q "$line")
 		echo $FILENAME >> $OUTPUT_DIR/plist/plist.files.txt
@@ -3686,7 +3686,7 @@ elif [ $PLATFORM = "android" ]
 then
 	echo "${COL_SECTION} Searching for APK files [55% ]: ${RESET}" 
 	mkdir $OUTPUT_DIR/apk
-	find / -size $TAR_MAX_FILESIZE -type f -iname "*.apk" 2>/dev/null | while read line
+	find / -size $TAR_MAX_FILESIZE -type f -iname "*.apk" 2> /dev/null | while read line
 	do
 	    FILENAME=$(printf %q "$line")
 		echo $FILENAME >> $OUTPUT_DIR/apk/apk.files.txt
@@ -3707,14 +3707,14 @@ mkdir $OUTPUT_DIR/setuid
 if [ $PLATFORM = "android" ]
 then
 	echo "  ${COL_ENTRY}>${RESET} Finding all SUID/SGID binaries"
-	find / -type f -a -perm /6000 2>/dev/null | while read line
+	find / -type f -a -perm /6000 2> /dev/null | while read line
 	do
 		mkdir -p "$OUTPUT_DIR/setuid`dirname $line`" 2> /dev/null
 		cp -p "$line" "$OUTPUT_DIR/setuid`dirname $line`" 2> /dev/null
 	done
 else
 	echo "  ${COL_ENTRY}>${RESET} Finding all SUID/SGID binaries"
-	find / -type f -a \( -perm -u+s -o -perm -g+s \) 2>/dev/null | while read line
+	find / -type f -a \( -perm -u+s -o -perm -g+s \) 2> /dev/null | while read line
 	do
 		mkdir -p "$OUTPUT_DIR/setuid`dirname $line`" 2> /dev/null
 		cp -p "$line" "$OUTPUT_DIR/setuid`dirname $line`" 2> /dev/null
@@ -3733,25 +3733,25 @@ if [ $PLATFORM = "linux" ]
 then 
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha256sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha1sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec md5sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
@@ -3760,25 +3760,25 @@ elif [ $PLATFORM = "generic" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha256sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha1sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec md5sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
@@ -3787,31 +3787,31 @@ elif [ $PLATFORM = "solaris" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha256sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha1sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec md5sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v digest)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec digest -a sha256 -v {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec digest -a sha256 -v {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
@@ -3820,31 +3820,31 @@ elif [ $PLATFORM = "aix" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha256sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha1sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec md5sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v csum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec csum -h MD5 {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec csum -h MD5 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
@@ -3853,25 +3853,25 @@ elif [ $PLATFORM = "hpux" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha256sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha1sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec md5sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
@@ -3880,31 +3880,31 @@ elif [ $PLATFORM = "mac" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha256sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha1sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec md5sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v shasum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec shasum -a 256 {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec shasum -a 256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
@@ -3913,31 +3913,31 @@ elif [ $PLATFORM = "android" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a -perm /6000 -exec sha256sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a -perm /6000 -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a -perm /6000 -exec sha1sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a -perm /6000 -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a -perm /6000 -exec md5sum {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a -perm /6000 -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a -perm /6000 -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a -perm /6000 -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v shasum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a -perm /6000 -exec shasum -a 256 {} \; 2>/dev/null | while read line
+		find / -size $HASH_MAX_FILESIZE -type f -a -perm /6000 -exec shasum -a 256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
@@ -3949,25 +3949,25 @@ if [ $PLATFORM = "linux" ]
 then 
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
@@ -3976,25 +3976,25 @@ elif [ $PLATFORM = "generic" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
@@ -4003,31 +4003,31 @@ elif [ $PLATFORM = "solaris" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /home/ /root/ /export/home/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ /export/home/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /home/ /root/ /export/home/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ /export/home/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /home/ /root/ /export/home/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ /export/home/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v digest)" ]
 	then
-		find /home/ /root/ /export/home/ -size $HASH_MAX_FILESIZE -type f -exec digest -a sha256 {} \; 2>/dev/null | while read line
+		find /home/ /root/ /export/home/ -size $HASH_MAX_FILESIZE -type f -exec digest -a sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /home/ /root/ /export/home/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /home/ /root/ /export/home/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
@@ -4036,31 +4036,31 @@ elif [ $PLATFORM = "aix" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v csum)" ]
 	then
-		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec csum -h MD5 {} \; 2>/dev/null | while read line
+		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec csum -h MD5 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
@@ -4069,25 +4069,25 @@ elif [ $PLATFORM = "hpux" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
@@ -4096,31 +4096,31 @@ elif [ $PLATFORM = "mac" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /Users/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /Users/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /Users/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /Users/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /Users/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /Users/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /Users/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /Users/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v shasum)" ]
 	then
-		find /Users/ -size $HASH_MAX_FILESIZE -type f -exec shasum -a 256 {} \; 2>/dev/null | while read line
+		find /Users/ -size $HASH_MAX_FILESIZE -type f -exec shasum -a 256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
@@ -4132,25 +4132,25 @@ then
 	echo "  ${COL_ENTRY}>${RESET} Hashing all /bin/ /sbin/ /usr/ /opt/ /tmp/ dirs"
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
@@ -4160,25 +4160,25 @@ then
 	echo "  ${COL_ENTRY}>${RESET} Hashing all /bin/ /sbin/ /usr/ /opt/ /tmp/ dirs"
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done
@@ -4188,31 +4188,31 @@ then
 	echo "  ${COL_ENTRY}>${RESET} Hashing all /bin/ /sbin/ /usr/ /opt/ /tmp/ dirs"
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v digest)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec digest -a sha256 {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec digest -a sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
@@ -4222,31 +4222,31 @@ then
 	echo "  ${COL_ENTRY}>${RESET} Hashing all /bin/ /sbin/ /usr/ /opt/ /tmp/ dirs"
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v csum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec csum -h MD5 {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec csum -h MD5 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/shaMD5sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
@@ -4256,25 +4256,25 @@ then
 	echo "  ${COL_ENTRY}>${RESET} Hashing all /bin/ /sbin/ /usr/ /opt/ /tmp/ dirs"
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
@@ -4284,31 +4284,31 @@ then
 	echo "  ${COL_ENTRY}>${RESET} Hashing all /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ dirs"
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v shasum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ -size $HASH_MAX_FILESIZE -type f -exec shasum -a 256 {} \; 2>/dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ -size $HASH_MAX_FILESIZE -type f -exec shasum -a 256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
@@ -4318,31 +4318,31 @@ then
 	echo "  ${COL_ENTRY}>${RESET} Hashing all /bin/ /storage/ /system/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ dirs"
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /bin/ /storage/ /system/ /sys/module/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2>/dev/null | while read line
+		find /bin/ /storage/ /system/ /sys/module/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /bin/ /storage/ /system/ /sys/module/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2>/dev/null | while read line
+		find /bin/ /storage/ /system/ /sys/module/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /bin/ /storage/ /system/ /sys/module/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2>/dev/null | while read line
+		find /bin/ /storage/ /system/ /sys/module/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /bin/ /storage/ /system/ /sys/module/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2>/dev/null | while read line
+		find /bin/ /storage/ /system/ /sys/module/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v shasum)" ]
 	then
-		find /bin/ /storage/ /system/ /sys/module/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -size $HASH_MAX_FILESIZE -type f -exec shasum -a 256 {} \; 2>/dev/null | while read line
+		find /bin/ /storage/ /system/ /sys/module/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -size $HASH_MAX_FILESIZE -type f -exec shasum -a 256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
@@ -4463,10 +4463,10 @@ if [ -d /etc/xinetd.d ]; then
     cp -R /etc/xinetd.d/* $OUTPUT_DIR/network/services/xinetd.d/ 2> /dev/null
     # List enabled services
     echo "=== Enabled xinetd Services ===" > $OUTPUT_DIR/network/services/xinetd-enabled-services.txt
-    grep -l "disable.*=.*no" /etc/xinetd.d/* 2>/dev/null | while read service_file
+    grep -l "disable.*=.*no" /etc/xinetd.d/* 2> /dev/null | while read service_file
     do
         echo "Service: `basename $service_file`" >> $OUTPUT_DIR/network/services/xinetd-enabled-services.txt
-        grep -E "server|port|socket_type|protocol" $service_file >> $OUTPUT_DIR/network/services/xinetd-enabled-services.txt 2>/dev/null
+        grep -E "server|port|socket_type|protocol" $service_file >> $OUTPUT_DIR/network/services/xinetd-enabled-services.txt 2> /dev/null
         echo "" >> $OUTPUT_DIR/network/services/xinetd-enabled-services.txt
     done
 fi
@@ -4630,11 +4630,11 @@ echo "=== Active Network Services ===" > $OUTPUT_DIR/network/services/active-lis
 
 # Get listening services with process information
 if command -v ss > /dev/null 2>&1; then
-    ss -tlnp 2>/dev/null | grep LISTEN >> $OUTPUT_DIR/network/services/active-listeners.txt
-    ss -ulnp 2>/dev/null >> $OUTPUT_DIR/network/services/active-listeners.txt
+    ss -tlnp 2> /dev/null | grep LISTEN >> $OUTPUT_DIR/network/services/active-listeners.txt
+    ss -ulnp 2> /dev/null >> $OUTPUT_DIR/network/services/active-listeners.txt
 elif command -v netstat > /dev/null 2>&1; then
-    netstat -tlnp 2>/dev/null | grep LISTEN >> $OUTPUT_DIR/network/services/active-listeners.txt
-    netstat -ulnp 2>/dev/null >> $OUTPUT_DIR/network/services/active-listeners.txt
+    netstat -tlnp 2> /dev/null | grep LISTEN >> $OUTPUT_DIR/network/services/active-listeners.txt
+    netstat -ulnp 2> /dev/null >> $OUTPUT_DIR/network/services/active-listeners.txt
 fi
 
 # Check xinetd/inetd process status
@@ -4682,7 +4682,7 @@ fi
 
 # SystemD sockets
 if [ -f $OUTPUT_DIR/network/services/systemd-sockets-status.txt ]; then
-    SOCKET_COUNT=`grep -c "\.socket" $OUTPUT_DIR/network/services/systemd-sockets-status.txt 2>/dev/null || echo 0`
+    SOCKET_COUNT=`grep -c "\.socket" $OUTPUT_DIR/network/services/systemd-sockets-status.txt 2> /dev/null || echo 0`
     echo "SystemD socket units: $SOCKET_COUNT" >> $OUTPUT_DIR/network/services/summary.txt
 fi
 
@@ -4777,7 +4777,7 @@ then
 		esxcli network nic get -n vmnic0 1> $OUTPUT_DIR/virtual/esxi/network/nics/vmnic0_details.txt 2> /dev/null
 		esxcli network nic stats get -n vmnic0 1> $OUTPUT_DIR/virtual/esxi/network/nics/vmnic0_stats.txt 2> /dev/null
 	
-		esxcli network nic list 2>/dev/null | grep -E "^vmnic" | awk '{print $1}' | while read nic; do
+		esxcli network nic list 2> /dev/null | grep -E "^vmnic" | awk '{print $1}' | while read nic; do
 			[ -n "$nic" ] && {
 				esxcli network nic get -n "$nic" > "$OUTPUT_DIR/virtual/esxi/network/nics/${nic}_details.txt" 2> /dev/null
 				esxcli network nic stats get -n "$nic" > "$OUTPUT_DIR/virtual/esxi/network/nics/${nic}_stats.txt" 2> /dev/null
@@ -4785,7 +4785,7 @@ then
 		done
 		esxcli network vswitch standard list 1> $OUTPUT_DIR/virtual/esxi/network/vswitches/standard_list.txt 2> /dev/null
 		esxcli network vswitch dvs vmware list 1> $OUTPUT_DIR/virtual/esxi/network/vswitches/dvs_list.txt 2> /dev/null
-		esxcli network vswitch standard list 2>/dev/null | grep "^   " | awk '{print $1}' | while read vswitch; do
+		esxcli network vswitch standard list 2> /dev/null | grep "^   " | awk '{print $1}' | while read vswitch; do
 			[ -n "$vswitch" ] && {
 				mkdir -p "$OUTPUT_DIR/virtual/esxi/network/vswitches/$vswitch"
 				esxcli network vswitch standard get -v "$vswitch" > "$OUTPUT_DIR/virtual/esxi/network/vswitches/$vswitch/config.txt" 2> /dev/null
@@ -4833,7 +4833,7 @@ then
 			vim-cmd hostsvc/datastore/listsummary > $OUTPUT_DIR/virtual/esxi/storage/datastores/summary.txt 2> /dev/null
 			vim-cmd hostsvc/datastore/list > $OUTPUT_DIR/virtual/esxi/storage/datastores/list.txt 2> /dev/null
 
-			vim-cmd hostsvc/datastore/list 2>/dev/null | grep -E "url.*\"" | sed 's/.*"\(.*\)".*/\1/' | while read ds_path; do
+			vim-cmd hostsvc/datastore/list 2> /dev/null | grep -E "url.*\"" | sed 's/.*"\(.*\)".*/\1/' | while read ds_path; do
 				if [ -n "$ds_path" ]; then
 					DS_NAME=$(basename "$ds_path")
 					vim-cmd hostsvc/datastore/info "$ds_path" > "$OUTPUT_DIR/virtual/esxi/storage/datastores/${DS_NAME}_info.txt" 2> /dev/null
@@ -4847,12 +4847,12 @@ then
 		if [ -x "$(command -v vim-cmd)" ]; then
 			vim-cmd vmsvc/getallvms 1> $OUTPUT_DIR/virtual/esxi/vms/all_vms.txt 2> /dev/null
 			
-			vim-cmd vmsvc/getallvms 2>/dev/null | awk 'NR>1 {print $1}' | while read vmid; do
-				if [ -n "$vmid" ] && [ "$vmid" -eq "$vmid" ] 2>/dev/null; then
+			vim-cmd vmsvc/getallvms 2> /dev/null | awk 'NR>1 {print $1}' | while read vmid; do
+				if [ -n "$vmid" ] && [ "$vmid" -eq "$vmid" ] 2> /dev/null; then
 					echo "  ${COL_ENTRY}>${RESET} Processing VM ID: $vmid"
 					
 					# Get VM name for directory
-					VM_NAME=$(vim-cmd vmsvc/get.summary $vmid 2>/dev/null | grep -E "name = " | head -1 | sed 's/.*= "\(.*\)".*/\1/' | sed 's/[^a-zA-Z0-9._-]/_/g')
+					VM_NAME=$(vim-cmd vmsvc/get.summary $vmid 2> /dev/null | grep -E "name = " | head -1 | sed 's/.*= "\(.*\)".*/\1/' | sed 's/[^a-zA-Z0-9._-]/_/g')
 					[ -z "$VM_NAME" ] && VM_NAME="vm_$vmid"
 					
 					mkdir -p "$OUTPUT_DIR/virtual/esxi/vms/$VM_NAME"
@@ -4969,9 +4969,9 @@ then
 		VBoxManage getextradata global enumerate > $OUTPUT_DIR/virtual/vbox/system/global_extradata.txt 2> /dev/null
 		
 		# Extract key paths from system properties
-		VBOX_HOME=$(VBoxManage list systemproperties 2>/dev/null | grep "Default machine folder:" | sed 's/Default machine folder:[ ]*//')
-		VBOX_LOG_FOLDER=$(VBoxManage list systemproperties 2>/dev/null | grep "Log folder:" | sed 's/Log folder:[ ]*//')
-		VBOX_VRDP_AUTH=$(VBoxManage list systemproperties 2>/dev/null | grep "VRDE auth library:" | sed 's/VRDE auth library:[ ]*//')
+		VBOX_HOME=$(VBoxManage list systemproperties 2> /dev/null | grep "Default machine folder:" | sed 's/Default machine folder:[ ]*//')
+		VBOX_LOG_FOLDER=$(VBoxManage list systemproperties 2> /dev/null | grep "Log folder:" | sed 's/Log folder:[ ]*//')
+		VBOX_VRDP_AUTH=$(VBoxManage list systemproperties 2> /dev/null | grep "VRDE auth library:" | sed 's/VRDE auth library:[ ]*//')
 
 		# Host Information
 		echo "  ${COL_ENTRY}>${RESET} Collecting host system information"
@@ -4992,7 +4992,7 @@ then
 		VBoxManage natnetwork list > $OUTPUT_DIR/virtual/vbox/network/natnetwork_list.txt 2> /dev/null
 		
 		# Detailed network configuration for each NAT network
-		VBoxManage list natnets 2>/dev/null | grep "NetworkName:" | awk '{print $2}' | while read natnet; do
+		VBoxManage list natnets 2> /dev/null | grep "NetworkName:" | awk '{print $2}' | while read natnet; do
 			[ -n "$natnet" ] && VBoxManage natnetwork showconfig "$natnet" > "$OUTPUT_DIR/virtual/vbox/network/natnet_${natnet}_config.txt" 2> /dev/null
 		done
 		
@@ -5088,14 +5088,14 @@ then
 			
 			if [ -d "$homedir/VirtualBox VMs" ]; then
 				echo "Found VirtualBox VMs in: $homedir/VirtualBox VMs" >> $OUTPUT_DIR/virtual/vbox/vms/vm_locations.txt
-				find "$homedir/VirtualBox VMs" -name "*.vbox" -o -name "*.vbox-prev" 2>/dev/null | head -100 >> $OUTPUT_DIR/virtual/vbox/vms/vm_files.txt
+				find "$homedir/VirtualBox VMs" -name "*.vbox" -o -name "*.vbox-prev" 2> /dev/null | head -100 >> $OUTPUT_DIR/virtual/vbox/vms/vm_files.txt
 			fi
 		done
 
 		if [ -n "$VBOX_HOME" ] && [ -d "$VBOX_HOME" ]; then
 			echo "VirtualBox Home: $VBOX_HOME" > $OUTPUT_DIR/virtual/vbox/logs/log_locations.txt
-			find "$VBOX_HOME" -name "*.log" -type f -mtime -7 2>/dev/null | head -100 >> $OUTPUT_DIR/virtual/vbox/logs/recent_logs.txt
-			find "$VBOX_HOME" -name "VBox.log*" -type f 2>/dev/null | head -50 >> $OUTPUT_DIR/virtual/vbox/logs/vbox_logs.txt
+			find "$VBOX_HOME" -name "*.log" -type f -mtime -7 2> /dev/null | head -100 >> $OUTPUT_DIR/virtual/vbox/logs/recent_logs.txt
+			find "$VBOX_HOME" -name "VBox.log*" -type f 2> /dev/null | head -50 >> $OUTPUT_DIR/virtual/vbox/logs/vbox_logs.txt
 		fi
 		
 		for svc_file in /etc/init.d/vboxdrv /etc/systemd/system/vbox*.service /lib/systemd/system/vbox*.service; do
@@ -5175,7 +5175,7 @@ then
 		
 		# Detailed VM collection
 		echo "  ${COL_ENTRY}>${RESET} Collecting detailed VM information"
-		virsh list --all --name 2>/dev/null | while read vm; do
+		virsh list --all --name 2> /dev/null | while read vm; do
 			if [ -n "$vm" ]; then
 				echo "  ${COL_ENTRY}>${RESET} Processing VM: $vm"
 				
@@ -5221,7 +5221,7 @@ then
 				virsh domblklist "$vm" --inactive > "$VM_DIR/storage/blklist_inactive.txt" 2> /dev/null
 				
 				# Get detailed stats for each block device
-				virsh domblklist "$vm" 2>/dev/null | tail -n +3 | awk '{print $1}' | while read device; do
+				virsh domblklist "$vm" 2> /dev/null | tail -n +3 | awk '{print $1}' | while read device; do
 					if [ -n "$device" ]; then
 						virsh domblkstat "$vm" "$device" > "$VM_DIR/storage/blkstat_${device//\//_}.txt" 2> /dev/null
 						virsh domblkinfo "$vm" "$device" > "$VM_DIR/storage/blkinfo_${device//\//_}.txt" 2> /dev/null
@@ -5235,7 +5235,7 @@ then
 				virsh domiflist "$vm" --inactive > "$VM_DIR/network/iflist_inactive.txt" 2> /dev/null
 				
 				# Get detailed stats for each network interface
-				virsh domiflist "$vm" 2>/dev/null | tail -n +3 | awk '{print $1}' | while read iface; do
+				virsh domiflist "$vm" 2> /dev/null | tail -n +3 | awk '{print $1}' | while read iface; do
 					if [ -n "$iface" ]; then
 						virsh domifstat "$vm" "$iface" > "$VM_DIR/network/ifstat_${iface}.txt" 2> /dev/null
 						virsh domif-getlink "$vm" "$iface" > "$VM_DIR/network/iflink_${iface}.txt" 2> /dev/null
@@ -5250,7 +5250,7 @@ then
 				virsh snapshot-list "$vm" --leaves > "$VM_DIR/snapshots/leaves.txt" 2> /dev/null
 				
 				# Get XML for each snapshot
-				virsh snapshot-list "$vm" --name 2>/dev/null | while read snap; do
+				virsh snapshot-list "$vm" --name 2> /dev/null | while read snap; do
 					if [ -n "$snap" ]; then
 						SAFE_SNAP=$(echo "$snap" | sed 's/[^a-zA-Z0-9._-]/_/g')
 						virsh snapshot-dumpxml "$vm" "$snap" > "$VM_DIR/snapshots/${SAFE_SNAP}.xml" 2> /dev/null
@@ -5287,7 +5287,7 @@ then
 				[ -f "/var/lib/libvirt/qemu/save/${vm}.save" ] && echo "Saved state exists" > "$VM_DIR/saved_state.txt"
 				
 				# If VM is running, collect additional runtime info
-				if virsh domstate "$vm" 2>/dev/null | grep -q "running"; then
+				if virsh domstate "$vm" 2> /dev/null | grep -q "running"; then
 					echo "Running" > "$VM_DIR/running_state.txt"
 					virsh qemu-monitor-command "$vm" --pretty '{"execute":"query-status"}' > "$VM_DIR/qemu_status.json" 2> /dev/null
 					virsh qemu-monitor-command "$vm" --pretty '{"execute":"query-kvm"}' > "$VM_DIR/qemu_kvm.json" 2> /dev/null
@@ -5307,7 +5307,7 @@ then
 		virsh net-list --all --uuid > $OUTPUT_DIR/virtual/virt/networks/list_uuids.txt 2> /dev/null
 		
 		# Detailed network collection
-		virsh net-list --all --name 2>/dev/null | while read net; do
+		virsh net-list --all --name 2> /dev/null | while read net; do
 			if [ -n "$net" ]; then
 				echo "  ${COL_ENTRY}>${RESET} Processing network: $net"
 				
@@ -5341,7 +5341,7 @@ then
 		virsh pool-list --all --uuid > $OUTPUT_DIR/virtual/virt/storage/pools/list_uuids.txt 2> /dev/null
 		
 		# Detailed storage pool collection
-		virsh pool-list --all --name 2>/dev/null | while read pool; do
+		virsh pool-list --all --name 2> /dev/null | while read pool; do
 			if [ -n "$pool" ]; then
 				echo "  ${COL_ENTRY}>${RESET} Processing storage pool: $pool"
 				
@@ -5363,7 +5363,7 @@ then
 				virsh vol-list "$pool" --details > "$POOL_DIR/volumes_details.txt" 2> /dev/null
 				
 				# Volume details
-				virsh vol-list "$pool" 2>/dev/null | tail -n +3 | awk '{print $1}' | while read vol; do
+				virsh vol-list "$pool" 2> /dev/null | tail -n +3 | awk '{print $1}' | while read vol; do
 					if [ -n "$vol" ]; then
 						SAFE_VOL=$(echo "$vol" | sed 's/[^a-zA-Z0-9._-]/_/g')
 						virsh vol-info "$vol" --pool "$pool" > "$POOL_DIR/vol_${SAFE_VOL}_info.txt" 2> /dev/null
@@ -5398,7 +5398,7 @@ then
 		# Network Filters
 		echo "  ${COL_ENTRY}>${RESET} Collecting network filter information"
 		virsh nwfilter-list > $OUTPUT_DIR/virtual/virt/nwfilters/list.txt 2> /dev/null
-		virsh nwfilter-list --name 2>/dev/null | while read filter; do
+		virsh nwfilter-list --name 2> /dev/null | while read filter; do
 			if [ -n "$filter" ]; then
 				SAFE_FILTER=$(echo "$filter" | sed 's/[^a-zA-Z0-9._-]/_/g')
 				virsh nwfilter-dumpxml "$filter" > "$OUTPUT_DIR/virtual/virt/nwfilters/${SAFE_FILTER}.xml" 2> /dev/null
@@ -5410,7 +5410,7 @@ then
 		if [ -d /var/log/libvirt ]; then
 			ls -la /var/log/libvirt/ > $OUTPUT_DIR/virtual/virt/logs/log_listing.txt 2> /dev/null
 			# Copy recent logs (limit size)
-			find /var/log/libvirt -name "*.log" -type f -mtime -7 -size -100M 2>/dev/null | while read logfile; do
+			find /var/log/libvirt -name "*.log" -type f -mtime -7 -size -100M 2> /dev/null | while read logfile; do
 				LOGNAME=$(basename "$logfile")
 				tail -n 10000 "$logfile" > "$OUTPUT_DIR/virtual/virt/logs/${LOGNAME}_tail10k.txt" 2> /dev/null
 			done
@@ -5436,7 +5436,7 @@ then
 		# Common locations for QEMU/KVM images
 		for dir in /var/lib/libvirt/images /var/lib/virt /var/lib/qemu; do
 			if [ -d "$dir" ]; then
-				find "$dir" \( -name "*.qcow2" -o -name "*.img" -o -name "*.raw" \) -type f 2>/dev/null | while read img; do
+				find "$dir" \( -name "*.qcow2" -o -name "*.img" -o -name "*.raw" \) -type f 2> /dev/null | while read img; do
 					echo "=== Image: $img ===" >> $OUTPUT_DIR/virtual/qemu_disk_info.txt
 					qemu-img info "$img" >> $OUTPUT_DIR/virtual/qemu_disk_info.txt 2> /dev/null
 					echo "" >> $OUTPUT_DIR/virtual/qemu_disk_info.txt
@@ -5449,7 +5449,7 @@ then
 	if [ -d "/etc/libvirt" ]; then
 		echo "  ${COL_ENTRY}>${RESET} Collecting libvirt configurations"
 		# List configuration files without copying sensitive content
-		find /etc/libvirt -name "*.conf" -type f 2>/dev/null | while read conf; do
+		find /etc/libvirt -name "*.conf" -type f 2> /dev/null | while read conf; do
 			echo "$conf" >> $OUTPUT_DIR/virtual/libvirt_config_files.txt
 			ls -la "$conf" >> $OUTPUT_DIR/virtual/libvirt_config_files.txt
 		done
@@ -5458,7 +5458,7 @@ then
 		if [ -d "/var/log/libvirt" ]; then
 			ls -la /var/log/libvirt/ > $OUTPUT_DIR/virtual/libvirt_log_listing.txt 2> /dev/null
 			# Copy recent QEMU logs (last 7 days)
-			find /var/log/libvirt/qemu -name "*.log" -mtime -7 -type f 2>/dev/null | while read log; do
+			find /var/log/libvirt/qemu -name "*.log" -mtime -7 -type f 2> /dev/null | while read log; do
 				cp "$log" "$OUTPUT_DIR/virtual/" 2> /dev/null
 			done
 		fi
@@ -5555,14 +5555,14 @@ then
 			echo "  ${COL_ENTRY}>${RESET} Collecting detailed containerd runtime information"
 			DEFAULT_NS="default"
 			ctr namespace ls 1> $OUTPUT_DIR/containers/containerd/namespaces/list.txt 2> /dev/null
-			ctr namespace ls -q 2>/dev/null | while read namespace; do
+			ctr namespace ls -q 2> /dev/null | while read namespace; do
 				[ -z "$namespace" ] && continue
 				echo "  ${COL_ENTRY}>${RESET} Processing namespace: $namespace"
 				mkdir -p $OUTPUT_DIR/containers/containerd/namespaces/$namespace
 				ctr -n $namespace namespace stats 1> $OUTPUT_DIR/containers/containerd/namespaces/$namespace/stats.txt 2> /dev/null
 				echo "  ${COL_ENTRY}>${RESET} Collecting images in namespace $namespace"
 				ctr -n $namespace images ls 1> $OUTPUT_DIR/containers/containerd/namespaces/$namespace/images_list.txt 2> /dev/null
-				ctr -n $namespace images ls -q 2>/dev/null | while read image; do
+				ctr -n $namespace images ls -q 2> /dev/null | while read image; do
 					[ -z "$image" ] && continue
 					# Sanitize image name for filename
 					safe_image=$(echo "$image" | sed 's/[^a-zA-Z0-9._-]/_/g')
@@ -5570,7 +5570,7 @@ then
 				done
 				echo "  ${COL_ENTRY}>${RESET} Collecting containers in namespace $namespace"
 				ctr -n $namespace containers ls 1> $OUTPUT_DIR/containers/containerd/namespaces/$namespace/containers_list.txt 2> /dev/null
-				ctr -n $namespace containers ls -q 2>/dev/null | while read container; do
+				ctr -n $namespace containers ls -q 2> /dev/null | while read container; do
 					[ -z "$container" ] && continue
 					mkdir -p $OUTPUT_DIR/containers/containerd/containers/$namespace
 					ctr -n $namespace containers info $container 1> $OUTPUT_DIR/containers/containerd/containers/$namespace/${container}_info.json 2> /dev/null
@@ -5578,7 +5578,7 @@ then
 				done
 				echo "  ${COL_ENTRY}>${RESET} Collecting tasks in namespace $namespace"
 				ctr -n $namespace tasks ls 1> $OUTPUT_DIR/containers/containerd/namespaces/$namespace/tasks_list.txt 2> /dev/null
-				ctr -n $namespace tasks ls -q 2>/dev/null | while read task; do
+				ctr -n $namespace tasks ls -q 2> /dev/null | while read task; do
 					[ -z "$task" ] && continue
 					mkdir -p $OUTPUT_DIR/containers/containerd/tasks/$namespace
 					ctr -n $namespace tasks ps $task 1> $OUTPUT_DIR/containers/containerd/tasks/$namespace/${task}_processes.txt 2> /dev/null
@@ -5593,7 +5593,7 @@ then
 			ctr plugins ls 1> $OUTPUT_DIR/containers/containerd/plugins/list.txt 2> /dev/null
 			ctr version 1> $OUTPUT_DIR/containers/containerd/version_detailed.txt 2> /dev/null
 			echo "  ${COL_ENTRY}>${RESET} Collecting recent containerd events"
-			timeout 5s ctr events 2>/dev/null | head -n 100 > $OUTPUT_DIR/containers/containerd/events/recent_events.txt 2> /dev/null
+			timeout 5s ctr events 2> /dev/null | head -n 100 > $OUTPUT_DIR/containers/containerd/events/recent_events.txt 2> /dev/null
 			ctr content ls 1> $OUTPUT_DIR/containers/containerd/content/global_content.txt 2> /dev/null
 		fi
 		echo "  ${COL_ENTRY}>${RESET} Collecting containerd logs"
@@ -5612,8 +5612,8 @@ then
 		done
 		if [ -d /var/lib/containerd ]; then
 			echo "  ${COL_ENTRY}>${RESET} Collecting state directory information"
-			find /var/lib/containerd -type d 2>/dev/null | head -1000 > $OUTPUT_DIR/containers/containerd/state_directory_structure.txt
-			du -sh /var/lib/containerd/* 2>/dev/null > $OUTPUT_DIR/containers/containerd/state_directory_sizes.txt
+			find /var/lib/containerd -type d 2> /dev/null | head -1000 > $OUTPUT_DIR/containers/containerd/state_directory_structure.txt
+			du -sh /var/lib/containerd/* 2> /dev/null > $OUTPUT_DIR/containers/containerd/state_directory_sizes.txt
 		fi
 		if [ -d /etc/cni/net.d ]; then
 			echo "  ${COL_ENTRY}>${RESET} Collecting CNI network configuration"
@@ -5823,22 +5823,22 @@ then
 			then
 
 				docker-compose version 1> $OUTPUT_DIR/containers/docker/compose/version.txt 2> /dev/null
-				find /home -name "docker-compose.yml" 2>/dev/null > $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
-				find /home -name "docker-compose.yaml" 2>/dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
-				find /home -name "compose.yml" 2>/dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
-				find /home -name "compose.yaml" 2>/dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
-				find /root -name "docker-compose.yml" 2>/dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
-				find /root -name "docker-compose.yaml" 2>/dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
-				find /root -name "compose.yml" 2>/dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
-				find /root -name "compose.yaml" 2>/dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
-				find /opt -name "docker-compose.yml" 2>/dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
-				find /opt -name "docker-compose.yaml" 2>/dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
-				find /opt -name "compose.yml" 2>/dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
-				find /opt -name "compose.yaml" 2>/dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
-				find /srv -name "docker-compose.yml" 2>/dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
-				find /srv -name "docker-compose.yaml" 2>/dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
-				find /srv -name "compose.yml" 2>/dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
-				find /srv -name "compose.yaml" 2>/dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
+				find /home -name "docker-compose.yml" 2> /dev/null > $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
+				find /home -name "docker-compose.yaml" 2> /dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
+				find /home -name "compose.yml" 2> /dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
+				find /home -name "compose.yaml" 2> /dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
+				find /root -name "docker-compose.yml" 2> /dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
+				find /root -name "docker-compose.yaml" 2> /dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
+				find /root -name "compose.yml" 2> /dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
+				find /root -name "compose.yaml" 2> /dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
+				find /opt -name "docker-compose.yml" 2> /dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
+				find /opt -name "docker-compose.yaml" 2> /dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
+				find /opt -name "compose.yml" 2> /dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
+				find /opt -name "compose.yaml" 2> /dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
+				find /srv -name "docker-compose.yml" 2> /dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
+				find /srv -name "docker-compose.yaml" 2> /dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
+				find /srv -name "compose.yml" 2> /dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
+				find /srv -name "compose.yaml" 2> /dev/null >> $OUTPUT_DIR/containers/docker/compose/compose_files_found.txt
 				
 				# Copy the actual compose files
 				mkdir -p $OUTPUT_DIR/containers/docker/compose/files 2> /dev/null
@@ -5878,11 +5878,11 @@ then
 			docker plugin ls > $OUTPUT_DIR/containers/docker/runtime/plugins.txt 2> /dev/null
 			docker buildx version > $OUTPUT_DIR/containers/docker/runtime/buildx_version.txt 2> /dev/null
 			docker buildx ls > $OUTPUT_DIR/containers/docker/runtime/buildx_builders.txt 2> /dev/null
-			docker info 2>/dev/null | grep -A 5 "Registry" > $OUTPUT_DIR/containers/docker/config/registries.txt 2> /dev/null
-			docker info 2>/dev/null | grep "Storage Driver" > $OUTPUT_DIR/containers/docker/runtime/drivers_info.txt 2> /dev/null
-			docker info 2>/dev/null | grep "Logging Driver" >> $OUTPUT_DIR/containers/docker/runtime/drivers_info.txt 2> /dev/null
-			docker info 2>/dev/null | grep "Cgroup" >> $OUTPUT_DIR/containers/docker/runtime/drivers_info.txt 2> /dev/null
-			docker info 2>/dev/null | grep "Runtime" >> $OUTPUT_DIR/containers/docker/runtime/drivers_info.txt 2> /dev/null
+			docker info 2> /dev/null | grep -A 5 "Registry" > $OUTPUT_DIR/containers/docker/config/registries.txt 2> /dev/null
+			docker info 2> /dev/null | grep "Storage Driver" > $OUTPUT_DIR/containers/docker/runtime/drivers_info.txt 2> /dev/null
+			docker info 2> /dev/null | grep "Logging Driver" >> $OUTPUT_DIR/containers/docker/runtime/drivers_info.txt 2> /dev/null
+			docker info 2> /dev/null | grep "Cgroup" >> $OUTPUT_DIR/containers/docker/runtime/drivers_info.txt 2> /dev/null
+			docker info 2> /dev/null | grep "Runtime" >> $OUTPUT_DIR/containers/docker/runtime/drivers_info.txt 2> /dev/null
 		fi
 
 	if [ -x "$(command -v lxc)" ]
@@ -5937,7 +5937,7 @@ then
 		lxc list --all-projects --format json > $OUTPUT_DIR/containers/lxc/containers/all_instances.json 2> /dev/null
 		lxc list --all-projects --format yaml > $OUTPUT_DIR/containers/lxc/containers/all_instances.yaml 2> /dev/null
 		
-		lxc list --all-projects --format compact 2>/dev/null | sed 1d | awk '{print $1"|"$2}' > $OUTPUT_DIR/containers/lxc/containers/instance_list.txt
+		lxc list --all-projects --format compact 2> /dev/null | sed 1d | awk '{print $1"|"$2}' > $OUTPUT_DIR/containers/lxc/containers/instance_list.txt
 		
 		# Process each container/VM
 		while IFS='|' read -r name project; do
@@ -5973,12 +5973,12 @@ then
 				
 				# Snapshots
 				lxc snapshot list $PROJECT_FLAG "$name" > "$INSTANCE_DIR/snapshots.txt" 2> /dev/null
-				lxc info $PROJECT_FLAG "$name" 2>/dev/null | grep -A 50 "Snapshots:" > "$INSTANCE_DIR/snapshots_detail.txt" 2> /dev/null
+				lxc info $PROJECT_FLAG "$name" 2> /dev/null | grep -A 50 "Snapshots:" > "$INSTANCE_DIR/snapshots_detail.txt" 2> /dev/null
 				
 				# If running, get additional info
-				if lxc info $PROJECT_FLAG "$name" 2>/dev/null | grep -q "Status: Running"; then
+				if lxc info $PROJECT_FLAG "$name" 2> /dev/null | grep -q "Status: Running"; then
 					# Process information
-					lxc info $PROJECT_FLAG "$name" 2>/dev/null | grep -A 20 "Processes:" > "$INSTANCE_DIR/processes.txt" 2> /dev/null
+					lxc info $PROJECT_FLAG "$name" 2> /dev/null | grep -A 20 "Processes:" > "$INSTANCE_DIR/processes.txt" 2> /dev/null
 					
 					# Try to get /etc/passwd for user enumeration (if container)
 					lxc file pull $PROJECT_FLAG "$name/etc/passwd" - > "$INSTANCE_DIR/passwd.txt" 2> /dev/null
@@ -5990,7 +5990,7 @@ then
 				
 				# State information
 				echo "Project: ${project:-default}" > "$INSTANCE_DIR/state.txt"
-				lxc info $PROJECT_FLAG "$name" 2>/dev/null | grep -E "^(Name|Location|Remote|Architecture|Created|Status|Type|Profiles|Description):" >> "$INSTANCE_DIR/state.txt"
+				lxc info $PROJECT_FLAG "$name" 2> /dev/null | grep -E "^(Name|Location|Remote|Architecture|Created|Status|Type|Profiles|Description):" >> "$INSTANCE_DIR/state.txt"
 			fi
 		done < $OUTPUT_DIR/containers/lxc/containers/instance_list.txt
 		
@@ -5998,7 +5998,7 @@ then
 		lxc image list --format json > $OUTPUT_DIR/containers/lxc/images/image_list.json 2> /dev/null
 		lxc image list --format yaml > $OUTPUT_DIR/containers/lxc/images/image_list.yaml 2> /dev/null
 		
-		lxc image list --format compact 2>/dev/null | sed 1d | awk '{print $2}' | while read imageid; do
+		lxc image list --format compact 2> /dev/null | sed 1d | awk '{print $2}' | while read imageid; do
 			if [ -n "$imageid" ]; then
 				echo "    Processing image: $imageid"
 				SAFE_IMAGE=$(echo "$imageid" | sed 's/[^a-zA-Z0-9_-]/_/g' | cut -c1-64)
@@ -6011,7 +6011,7 @@ then
 		lxc network list > $OUTPUT_DIR/containers/lxc/networks/network_list.txt 2> /dev/null
 		lxc network list --format yaml > $OUTPUT_DIR/containers/lxc/networks/network_list.yaml 2> /dev/null
 		
-		lxc network list --format compact 2>/dev/null | sed 1d | awk '{print $1}' | while read netname; do
+		lxc network list --format compact 2> /dev/null | sed 1d | awk '{print $1}' | while read netname; do
 			if [ -n "$netname" ]; then
 				echo "    Processing network: $netname"
 				SAFE_NET=$(echo "$netname" | sed 's/[^a-zA-Z0-9_-]/_/g')
@@ -6026,7 +6026,7 @@ then
 		lxc storage list --format compact > $OUTPUT_DIR/containers/lxc/storage/storage_list.txt 2> /dev/null
 		lxc storage list --format yaml > $OUTPUT_DIR/containers/lxc/storage/storage_list.yaml 2> /dev/null
 		
-		lxc storage list --format compact 2>/dev/null | sed 1d | awk '{print $1}' | while read storageid; do
+		lxc storage list --format compact 2> /dev/null | sed 1d | awk '{print $1}' | while read storageid; do
 			if [ -n "$storageid" ]; then
 				echo "    Processing storage: $storageid"
 				SAFE_STORAGE=$(echo "$storageid" | sed 's/[^a-zA-Z0-9_-]/_/g')
@@ -6042,7 +6042,7 @@ then
 		lxc profile list --format compact > $OUTPUT_DIR/containers/lxc/profiles/profile_list.txt 2> /dev/null
 		lxc profile list --format yaml > $OUTPUT_DIR/containers/lxc/profiles/profile_list.yaml 2> /dev/null
 		
-		lxc profile list --format compact 2>/dev/null | sed 1d | awk '{print $1}' | while read profile; do
+		lxc profile list --format compact 2> /dev/null | sed 1d | awk '{print $1}' | while read profile; do
 			if [ -n "$profile" ]; then
 				echo "    Processing profile: $profile"
 				SAFE_PROFILE=$(echo "$profile" | sed 's/[^a-zA-Z0-9_-]/_/g')
@@ -6054,7 +6054,7 @@ then
 		if [ -d "/var/lib/lxd" ]; then
 			ls -la /var/lib/lxd/ > $OUTPUT_DIR/containers/lxc/system/var_lib_lxd_listing.txt 2> /dev/null
 			
-			find /var/lib/lxd/logs -name "*.log" -type f -mtime -7 2>/dev/null | head -50 | while read logfile; do
+			find /var/lib/lxd/logs -name "*.log" -type f -mtime -7 2> /dev/null | head -50 | while read logfile; do
 				if [ -f "$logfile" ]; then
 					LOG_NAME=$(echo "$logfile" | sed 's|/var/lib/lxd/logs/||' | sed 's|/|_|g')
 					cat "$logfile" > "$OUTPUT_DIR/containers/lxc/logs/recent_${LOG_NAME}" 2> /dev/null
@@ -6106,19 +6106,19 @@ then
 		
 		# Resource counts
 		if [ -f "$OUTPUT_DIR/containers/lxc/containers/instance_list.txt" ]; then
-			INSTANCE_COUNT=$(wc -l < "$OUTPUT_DIR/containers/lxc/containers/instance_list.txt" 2>/dev/null || echo 0)
+			INSTANCE_COUNT=$(wc -l < "$OUTPUT_DIR/containers/lxc/containers/instance_list.txt" 2> /dev/null || echo 0)
 			echo "Total instances: $INSTANCE_COUNT" >> "$SUMMARY"
 			
 			# Count running instances
-			RUNNING_COUNT=$(lxc list --all-projects 2>/dev/null | grep -c "RUNNING" || echo 0)
+			RUNNING_COUNT=$(lxc list --all-projects 2> /dev/null | grep -c "RUNNING" || echo 0)
 			echo "Running instances: $RUNNING_COUNT" >> "$SUMMARY"
 		fi
 		
 		# Count resources
-		IMAGE_COUNT=$(lxc image list 2>/dev/null | grep -c "^|" || echo 0)
-		NETWORK_COUNT=$(lxc network list 2>/dev/null | grep -c "^|" || echo 0)
-		STORAGE_COUNT=$(lxc storage list 2>/dev/null | grep -c "^|" || echo 0)
-		PROFILE_COUNT=$(lxc profile list 2>/dev/null | grep -c "^|" || echo 0)
+		IMAGE_COUNT=$(lxc image list 2> /dev/null | grep -c "^|" || echo 0)
+		NETWORK_COUNT=$(lxc network list 2> /dev/null | grep -c "^|" || echo 0)
+		STORAGE_COUNT=$(lxc storage list 2> /dev/null | grep -c "^|" || echo 0)
+		PROFILE_COUNT=$(lxc profile list 2> /dev/null | grep -c "^|" || echo 0)
 		
 		echo "" >> "$SUMMARY"
 		echo "Resources:" >> "$SUMMARY"
@@ -6131,7 +6131,7 @@ then
 		if [ -f "$OUTPUT_DIR/containers/lxc/cluster/cluster_list.txt" ]; then
 			echo "" >> "$SUMMARY"
 			echo "Cluster: Yes" >> "$SUMMARY"
-			CLUSTER_NODES=$(wc -l < "$OUTPUT_DIR/containers/lxc/cluster/cluster_list.txt" 2>/dev/null || echo 0)
+			CLUSTER_NODES=$(wc -l < "$OUTPUT_DIR/containers/lxc/cluster/cluster_list.txt" 2> /dev/null || echo 0)
 			echo "Cluster nodes: $CLUSTER_NODES" >> "$SUMMARY"
 		else
 			echo "" >> "$SUMMARY"
@@ -6140,7 +6140,7 @@ then
 		
 		# Warnings
 		if [ -f "$OUTPUT_DIR/containers/lxc/system/warnings.txt" ]; then
-			WARNING_COUNT=$(grep -c "^|" "$OUTPUT_DIR/containers/lxc/system/warnings.txt" 2>/dev/null || echo 0)
+			WARNING_COUNT=$(grep -c "^|" "$OUTPUT_DIR/containers/lxc/system/warnings.txt" 2> /dev/null || echo 0)
 			if [ "$WARNING_COUNT" -gt 0 ]; then
 				echo "" >> "$SUMMARY"
 				echo "Warnings: $WARNING_COUNT (see system/warnings.txt)" >> "$SUMMARY"
@@ -6165,7 +6165,7 @@ then
 			ls -la /var/lib/lxc/ > $OUTPUT_DIR/containers/legacy_lxc/var_lib_listing.txt 2> /dev/null
 			
 			# Collect container configs
-			find /var/lib/lxc -name "config" -type f 2>/dev/null | while read cfg; do
+			find /var/lib/lxc -name "config" -type f 2> /dev/null | while read cfg; do
 				CONTAINER_NAME=$(echo "$cfg" | awk -F'/' '{print $(NF-1)}')
 				mkdir -p "$OUTPUT_DIR/containers/legacy_lxc/containers/$CONTAINER_NAME" 2> /dev/null
 				
@@ -6233,7 +6233,7 @@ then
 		if [ -x "$(command -v pvesm)" ]; then
 			pvesm status > $OUTPUT_DIR/virtual/proxmox/storage/storage_status.txt 2> /dev/null
 			pvesm list local > $OUTPUT_DIR/virtual/proxmox/storage/storage_list_local.txt 2> /dev/null
-			pvesm status 2>/dev/null | tail -n +2 | awk '{print $1}' | while read storage; do
+			pvesm status 2> /dev/null | tail -n +2 | awk '{print $1}' | while read storage; do
 				if [ -n "$storage" ]; then
 					pvesm list "$storage" > "$OUTPUT_DIR/virtual/proxmox/storage/content_${storage}.txt" 2> /dev/null
 					if [ -x "$(command -v pvesh)" ]; then
@@ -6246,7 +6246,7 @@ then
 			cp /etc/network/interfaces $OUTPUT_DIR/virtual/proxmox/network/interfaces.txt 2> /dev/null
 		fi
 		if [ -d /etc/pve/nodes ]; then
-			find /etc/pve/nodes -name "network" -type f 2>/dev/null | while read netconf; do
+			find /etc/pve/nodes -name "network" -type f 2> /dev/null | while read netconf; do
 				node=$(echo "$netconf" | awk -F'/' '{print $(NF-1)}')
 				cp "$netconf" "$OUTPUT_DIR/virtual/proxmox/network/network_${node}.txt" 2> /dev/null
 			done
@@ -6281,7 +6281,7 @@ then
 			pct list > $OUTPUT_DIR/containers/proxmox/container_list.txt 2> /dev/null
 			pct list --format json > $OUTPUT_DIR/containers/proxmox/container_list.json 2> /dev/null
 			pct cpusets > $OUTPUT_DIR/containers/proxmox/cpusets.txt 2> /dev/null
-			pct list 2>/dev/null | sed -e '1d' | awk '{print $1}' > $OUTPUT_DIR/containers/proxmox/container_ids.txt
+			pct list 2> /dev/null | sed -e '1d' | awk '{print $1}' > $OUTPUT_DIR/containers/proxmox/container_ids.txt
 			while read -r containerid; do
 				if [ -n "$containerid" ]; then
 					mkdir -p "$OUTPUT_DIR/containers/proxmox/ct_$containerid" 2> /dev/null
@@ -6289,7 +6289,7 @@ then
 					pct status "$containerid" > "$OUTPUT_DIR/containers/proxmox/ct_$containerid/status.txt" 2> /dev/null
 					pct pending "$containerid" > "$OUTPUT_DIR/containers/proxmox/ct_$containerid/pending.txt" 2> /dev/null
 					pct listsnapshot "$containerid" > "$OUTPUT_DIR/containers/proxmox/ct_$containerid/snapshots.txt" 2> /dev/null
-					if pct status "$containerid" 2>/dev/null | grep -q "running"; then
+					if pct status "$containerid" 2> /dev/null | grep -q "running"; then
 						pct df "$containerid" > "$OUTPUT_DIR/containers/proxmox/ct_$containerid/disk_usage.txt" 2> /dev/null
 					fi
 					if [ -x "$(command -v pvesh)" ]; then
@@ -6306,7 +6306,7 @@ then
 		then
 			qm list > $OUTPUT_DIR/virtual/proxmox/vms/vm_list.txt 2> /dev/null
 			qm list --full > $OUTPUT_DIR/virtual/proxmox/vms/vm_list_full.txt 2> /dev/null
-			qm list 2>/dev/null | sed -e '1d' | awk '{print $1}' > $OUTPUT_DIR/virtual/proxmox/vms/vm_ids.txt
+			qm list 2> /dev/null | sed -e '1d' | awk '{print $1}' > $OUTPUT_DIR/virtual/proxmox/vms/vm_ids.txt
 			while read -r vmid; do
 				if [ -n "$vmid" ]; then
 					mkdir -p "$OUTPUT_DIR/virtual/proxmox/vms/vm_$vmid" 2> /dev/null
@@ -6374,7 +6374,7 @@ then
 
 		if [ -d /etc/pve ]
 		then
-			find /etc/pve -type f -readable 2>/dev/null | sort > $OUTPUT_DIR/virtual/proxmox/config/pve_file_listing.txt
+			find /etc/pve -type f -readable 2> /dev/null | sort > $OUTPUT_DIR/virtual/proxmox/config/pve_file_listing.txt
 			for config_file in \
 				/etc/pve/corosync.conf \
 				/etc/pve/datacenter.cfg \
@@ -6407,7 +6407,7 @@ then
 			fi
 			if [ -d "/etc/pve/nodes/$NODENAME" ]; then
 				mkdir -p "$OUTPUT_DIR/virtual/proxmox/config/node_$NODENAME" 2> /dev/null
-				find "/etc/pve/nodes/$NODENAME" -type f -readable 2>/dev/null | while read file; do
+				find "/etc/pve/nodes/$NODENAME" -type f -readable 2> /dev/null | while read file; do
 					rel_path=$(echo "$file" | sed "s|/etc/pve/nodes/$NODENAME/||")
 					dest_dir="$OUTPUT_DIR/virtual/proxmox/config/node_$NODENAME/$(dirname "$rel_path")"
 					mkdir -p "$dest_dir" 2> /dev/null
@@ -6471,7 +6471,7 @@ then
 				fi
 			done
 			
-			find /var/log/pve/tasks -type f -mtime -7 -name "UPID*" 2>/dev/null | tail -100 | while read tasklog; do
+			find /var/log/pve/tasks -type f -mtime -7 -name "UPID*" 2> /dev/null | tail -100 | while read tasklog; do
 				cp "$tasklog" "$OUTPUT_DIR/logs/proxmox/" 2> /dev/null
 			done
 		fi
@@ -6506,22 +6506,22 @@ then
 		fi
 		
 		if [ -f "$OUTPUT_DIR/virtual/proxmox/vms/vm_ids.txt" ]; then
-			VM_COUNT=$(wc -l < "$OUTPUT_DIR/virtual/proxmox/vms/vm_ids.txt" 2>/dev/null || echo 0)
+			VM_COUNT=$(wc -l < "$OUTPUT_DIR/virtual/proxmox/vms/vm_ids.txt" 2> /dev/null || echo 0)
 			echo "Virtual Machines: $VM_COUNT" >> "$SUMMARY"
 		fi
 		
 		if [ -f "$OUTPUT_DIR/containers/proxmox/container_ids.txt" ]; then
-			CT_COUNT=$(wc -l < "$OUTPUT_DIR/containers/proxmox/container_ids.txt" 2>/dev/null || echo 0)
+			CT_COUNT=$(wc -l < "$OUTPUT_DIR/containers/proxmox/container_ids.txt" 2> /dev/null || echo 0)
 			echo "LXC Containers: $CT_COUNT" >> "$SUMMARY"
 		fi
 		
 		if [ -x "$(command -v qm)" ]; then
-			RUNNING_VMS=$(qm list 2>/dev/null | grep -c " running " || echo 0)
+			RUNNING_VMS=$(qm list 2> /dev/null | grep -c " running " || echo 0)
 			echo "Running VMs: $RUNNING_VMS" >> "$SUMMARY"
 		fi
 		
 		if [ -x "$(command -v pct)" ]; then
-			RUNNING_CTS=$(pct list 2>/dev/null | grep -c " running " || echo 0)
+			RUNNING_CTS=$(pct list 2> /dev/null | grep -c " running " || echo 0)
 			echo "Running Containers: $RUNNING_CTS" >> "$SUMMARY"
 		fi
 		
@@ -6553,7 +6553,7 @@ then
 		vzctl list -a > $OUTPUT_DIR/containers/openvz/container_list.txt 2> /dev/null
 		vzlist -a -o ctid,hostname,status,ip,diskspace,physpages > $OUTPUT_DIR/containers/openvz/detailed_list.txt 2> /dev/null
 		
-		vzlist -a -H -o ctid 2>/dev/null | while read ctid; do
+		vzlist -a -H -o ctid 2> /dev/null | while read ctid; do
 			if [ -n "$ctid" ]; then
 				mkdir -p "$OUTPUT_DIR/containers/openvz/ct_$ctid" 2> /dev/null
 				vzctl status $ctid > "$OUTPUT_DIR/containers/openvz/ct_$ctid/status.txt" 2> /dev/null
@@ -6593,7 +6593,7 @@ then
 			podman machine info > $OUTPUT_DIR/containers/podman/system/machine_info.txt 2> /dev/null
 		fi
 		
-		if [ "$EUID" -ne 0 ] 2>/dev/null || [ "$(id -u)" -ne 0 ] 2>/dev/null
+		if [ "$EUID" -ne 0 ] 2> /dev/null || [ "$(id -u)" -ne 0 ] 2> /dev/null
 		then
 			echo "Running as rootless podman" > $OUTPUT_DIR/containers/podman/system/rootless_info.txt
 			echo "User: $(id -un)" >> $OUTPUT_DIR/containers/podman/system/rootless_info.txt
@@ -6640,7 +6640,7 @@ then
 		done < $OUTPUT_DIR/containers/podman/images/image_ids.txt 2> /dev/null
 		podman network ls > $OUTPUT_DIR/containers/podman/networks/network_list.txt 2> /dev/null
 		podman network ls --format json > $OUTPUT_DIR/containers/podman/networks/network_list.json 2> /dev/null
-		podman network ls --format "{{.Name}}" 2>/dev/null | while read netname; do
+		podman network ls --format "{{.Name}}" 2> /dev/null | while read netname; do
 			if [ -n "$netname" ]; then
 				SAFE_NAME=$(echo "$netname" | sed 's/[^a-zA-Z0-9_-]/_/g')
 				podman network inspect "$netname" > "$OUTPUT_DIR/containers/podman/networks/network_${SAFE_NAME}.json" 2> /dev/null
@@ -6648,7 +6648,7 @@ then
 		done
 		podman volume ls > $OUTPUT_DIR/containers/podman/volumes/volume_list.txt 2> /dev/null
 		podman volume ls --format json > $OUTPUT_DIR/containers/podman/volumes/volume_list.json 2> /dev/null
-		podman volume ls --format "{{.Name}}" 2>/dev/null | while read volumeid; do
+		podman volume ls --format "{{.Name}}" 2> /dev/null | while read volumeid; do
 			if [ -n "$volumeid" ]; then
 				SAFE_VOL=$(echo "$volumeid" | sed 's/[^a-zA-Z0-9_-]/_/g' | cut -c1-64)
 				podman volume inspect "$volumeid" > "$OUTPUT_DIR/containers/podman/volumes/volume_${SAFE_VOL}.json" 2> /dev/null
@@ -6657,7 +6657,7 @@ then
 		podman pod ls > $OUTPUT_DIR/containers/podman/pods/pod_list.txt 2> /dev/null
 		podman pod ls --format json > $OUTPUT_DIR/containers/podman/pods/pod_list.json 2> /dev/null
 		
-		podman pod ls --format "{{.ID}}" 2>/dev/null | while read podid; do
+		podman pod ls --format "{{.ID}}" 2> /dev/null | while read podid; do
 			if [ -n "$podid" ]; then
 				mkdir -p "$OUTPUT_DIR/containers/podman/pods/$podid" 2> /dev/null	
 				podman pod inspect "$podid" > "$OUTPUT_DIR/containers/podman/pods/$podid/inspect.json" 2> /dev/null
@@ -6696,16 +6696,16 @@ then
 			fi
 		done
 		if [ -d "$HOME/.config/systemd/user" ]; then
-			find "$HOME/.config/systemd/user" -name "*podman*" -o -name "*container*" -ls > $OUTPUT_DIR/containers/podman/systemd/user_units.txt 2>/dev/null
-			find "$HOME/.config/systemd/user" \( -name "*podman*.service" -o -name "*container*.service" \) -exec cp {} $OUTPUT_DIR/containers/podman/systemd/ \; 2>/dev/null
+			find "$HOME/.config/systemd/user" -name "*podman*" -o -name "*container*" -ls > $OUTPUT_DIR/containers/podman/systemd/user_units.txt 2> /dev/null
+			find "$HOME/.config/systemd/user" \( -name "*podman*.service" -o -name "*container*.service" \) -exec cp {} $OUTPUT_DIR/containers/podman/systemd/ \; 2> /dev/null
 		fi
 		for systemd_dir in /etc/systemd/system /lib/systemd/system /usr/lib/systemd/system
 		do
 			if [ -d "$systemd_dir" ]; then
-				find "$systemd_dir" -name "*podman*" -o -name "*container*" -ls >> $OUTPUT_DIR/containers/podman/systemd/system_units.txt 2>/dev/null
+				find "$systemd_dir" -name "*podman*" -o -name "*container*" -ls >> $OUTPUT_DIR/containers/podman/systemd/system_units.txt 2> /dev/null
 			fi
 		done
-		podman container ls --format "{{.Names}}" 2>/dev/null | while read cname; do
+		podman container ls --format "{{.Names}}" 2> /dev/null | while read cname; do
 			if [ -n "$cname" ]; then
 				SAFE_CNAME=$(echo "$cname" | sed 's/[^a-zA-Z0-9_-]/_/g')
 				podman generate systemd "$cname" > "$OUTPUT_DIR/containers/podman/systemd/generated_${SAFE_CNAME}.service" 2> /dev/null
@@ -6730,12 +6730,12 @@ then
 		echo "" >> "$SUMMARY"
 		podman version --format "Version: {{.Client.Version}}" >> "$SUMMARY" 2> /dev/null
 		echo "" >> "$SUMMARY"
-		CONTAINER_COUNT=$(wc -l < $OUTPUT_DIR/containers/podman/containers/container_ids.txt 2>/dev/null || echo 0)
-		RUNNING_COUNT=$(podman ps -q | wc -l 2>/dev/null || echo 0)
-		IMAGE_COUNT=$(wc -l < $OUTPUT_DIR/containers/podman/images/image_ids.txt 2>/dev/null || echo 0)
-		NETWORK_COUNT=$(podman network ls -q | wc -l 2>/dev/null || echo 0)
-		VOLUME_COUNT=$(podman volume ls -q | wc -l 2>/dev/null || echo 0)
-		POD_COUNT=$(podman pod ls -q 2>/dev/null | wc -l || echo 0)
+		CONTAINER_COUNT=$(wc -l < $OUTPUT_DIR/containers/podman/containers/container_ids.txt 2> /dev/null || echo 0)
+		RUNNING_COUNT=$(podman ps -q | wc -l 2> /dev/null || echo 0)
+		IMAGE_COUNT=$(wc -l < $OUTPUT_DIR/containers/podman/images/image_ids.txt 2> /dev/null || echo 0)
+		NETWORK_COUNT=$(podman network ls -q | wc -l 2> /dev/null || echo 0)
+		VOLUME_COUNT=$(podman volume ls -q | wc -l 2> /dev/null || echo 0)
+		POD_COUNT=$(podman pod ls -q 2> /dev/null | wc -l || echo 0)
 		echo "Resources:" >> "$SUMMARY"
 		echo "  Total containers: $CONTAINER_COUNT (Running: $RUNNING_COUNT)" >> "$SUMMARY"
 		echo "  Total images: $IMAGE_COUNT" >> "$SUMMARY"
