@@ -2559,59 +2559,327 @@ then
 		# Check kernel modules
 		lsmod | grep -i vbox > $OUTPUT_DIR/virtual/vbox/system/kernel_modules.txt 2> /dev/null
 	fi
-    # VIRT 
+	# VIRT (KVM/QEMU with libvirt)
 	if [ -x "$(command -v virsh)" ]
 	then
 		echo "  ${COL_ENTRY}>${RESET} Collecting KVM/QEMU information"
-		virsh list --all 1> $OUTPUT_DIR/virtual/virt_vm_list.txt 2> /dev/null
-		virsh list --all --name 1> $OUTPUT_DIR/virtual/virt_vm_list_names.txt 2> /dev/null
-		virsh hostname 1> $OUTPUT_DIR/virtual/virt_hostname.txt 2> /dev/null
-		virsh sysinfo 1> $OUTPUT_DIR/virtual/virt_sysinfo.txt 2> /dev/null
-		virsh net-list --all --name 1> $OUTPUT_DIR/virtual/virt_network_list.txt 2> /dev/null
-		virsh nodeinfo 1> $OUTPUT_DIR/virtual/virt_nodeinfo.txt 2> /dev/null
-		virsh pool-list --all 1> $OUTPUT_DIR/virtual/virt_pool_list.txt 2> /dev/null
-		virsh net-list --all --details 1> $OUTPUT_DIR/virtual/virt_networks_detailed.txt 2> /dev/null
-		virsh net-list --all --name 2>/dev/null | while read net; do
-			if [ -n "$net" ]; then
-				echo "=== Network: $net ===" >> $OUTPUT_DIR/virtual/virt_network_configs.txt
-				virsh net-dumpxml "$net" >> $OUTPUT_DIR/virtual/virt_network_configs.txt 2> /dev/null
-				virsh net-info "$net" >> $OUTPUT_DIR/virtual/virt_network_configs.txt 2> /dev/null
-				virsh net-dhcp-leases "$net" >> $OUTPUT_DIR/virtual/virt_network_configs.txt 2> /dev/null
-				echo "" >> $OUTPUT_DIR/virtual/virt_network_configs.txt
-			fi
-		done
-		virsh pool-list --all --details 1> $OUTPUT_DIR/virtual/virt_storage_pools_detailed.txt 2> /dev/null
-		virsh pool-list --all --name 2>/dev/null | while read pool; do
-			if [ -n "$pool" ]; then
-				echo "=== Storage Pool: $pool ===" >> $OUTPUT_DIR/virtual/virt_storage_pool_configs.txt
-				virsh pool-dumpxml "$pool" >> $OUTPUT_DIR/virtual/virt_storage_pool_configs.txt 2> /dev/null
-				virsh pool-info "$pool" >> $OUTPUT_DIR/virtual/virt_storage_pool_configs.txt 2> /dev/null
-				virsh vol-list "$pool" --details >> $OUTPUT_DIR/virtual/virt_storage_pool_configs.txt 2> /dev/null
-				echo "" >> $OUTPUT_DIR/virtual/virt_storage_pool_configs.txt
-			fi
-		done
+		
+		# Create organized directory structure
+		mkdir -p $OUTPUT_DIR/virtual/virt
+		mkdir -p $OUTPUT_DIR/virtual/virt/system
+		mkdir -p $OUTPUT_DIR/virtual/virt/host
+		mkdir -p $OUTPUT_DIR/virtual/virt/capabilities
+		mkdir -p $OUTPUT_DIR/virtual/virt/vms
+		mkdir -p $OUTPUT_DIR/virtual/virt/vms/running
+		mkdir -p $OUTPUT_DIR/virtual/virt/vms/configs
+		mkdir -p $OUTPUT_DIR/virtual/virt/networks
+		mkdir -p $OUTPUT_DIR/virtual/virt/storage
+		mkdir -p $OUTPUT_DIR/virtual/virt/storage/pools
+		mkdir -p $OUTPUT_DIR/virtual/virt/storage/volumes
+		mkdir -p $OUTPUT_DIR/virtual/virt/interfaces
+		mkdir -p $OUTPUT_DIR/virtual/virt/devices
+		mkdir -p $OUTPUT_DIR/virtual/virt/secrets
+		mkdir -p $OUTPUT_DIR/virtual/virt/nwfilters
+		mkdir -p $OUTPUT_DIR/virtual/virt/checkpoints
+		mkdir -p $OUTPUT_DIR/virtual/virt/logs
+		
+		# System Information
+		echo "  ${COL_ENTRY}>${RESET} Collecting libvirt system information"
+		virsh version > $OUTPUT_DIR/virtual/virt/system/version.txt 2> /dev/null
+		virsh version --daemon > $OUTPUT_DIR/virtual/virt/system/version_daemon.txt 2> /dev/null
+		virsh hostname > $OUTPUT_DIR/virtual/virt/system/hostname.txt 2> /dev/null
+		virsh uri > $OUTPUT_DIR/virtual/virt/system/uri.txt 2> /dev/null
+		virsh connect > $OUTPUT_DIR/virtual/virt/system/connection.txt 2> /dev/null
+		virsh sysinfo > $OUTPUT_DIR/virtual/virt/system/sysinfo.txt 2> /dev/null
+		
+		# Check libvirt service status
+		systemctl status libvirtd --no-pager > $OUTPUT_DIR/virtual/virt/system/libvirtd_status.txt 2> /dev/null
+		systemctl status virtlogd --no-pager > $OUTPUT_DIR/virtual/virt/system/virtlogd_status.txt 2> /dev/null
+		systemctl status virtlockd --no-pager > $OUTPUT_DIR/virtual/virt/system/virtlockd_status.txt 2> /dev/null
+		
+		# Host Information
+		echo "  ${COL_ENTRY}>${RESET} Collecting host information"
+		virsh nodeinfo > $OUTPUT_DIR/virtual/virt/host/nodeinfo.txt 2> /dev/null
+		virsh nodecpumap > $OUTPUT_DIR/virtual/virt/host/cpumap.txt 2> /dev/null
+		virsh nodecpustats > $OUTPUT_DIR/virtual/virt/host/cpustats.txt 2> /dev/null
+		virsh nodememstats > $OUTPUT_DIR/virtual/virt/host/memstats.txt 2> /dev/null
+		virsh nodesuspend --target mem --duration 0 2>&1 | grep -E "error|capability" > $OUTPUT_DIR/virtual/virt/host/suspend_capabilities.txt 2> /dev/null
+		virsh maxvcpus > $OUTPUT_DIR/virtual/virt/host/maxvcpus.txt 2> /dev/null
+		virsh freecell --all > $OUTPUT_DIR/virtual/virt/host/freecell.txt 2> /dev/null
+		virsh freepages --all > $OUTPUT_DIR/virtual/virt/host/freepages.txt 2> /dev/null
+		
+		# Capabilities
+		echo "  ${COL_ENTRY}>${RESET} Collecting capabilities information"
+		virsh capabilities > $OUTPUT_DIR/virtual/virt/capabilities/capabilities.xml 2> /dev/null
+		virsh domcapabilities > $OUTPUT_DIR/virtual/virt/capabilities/domain_capabilities.xml 2> /dev/null
+		virsh domcapabilities --machine pc > $OUTPUT_DIR/virtual/virt/capabilities/domain_capabilities_pc.xml 2> /dev/null
+		virsh domcapabilities --machine q35 > $OUTPUT_DIR/virtual/virt/capabilities/domain_capabilities_q35.xml 2> /dev/null
+		
+		# Virtual Machine Lists
+		echo "  ${COL_ENTRY}>${RESET} Collecting virtual machine lists"
+		virsh list --all > $OUTPUT_DIR/virtual/virt/vms/all_vms.txt 2> /dev/null
+		virsh list --all --name > $OUTPUT_DIR/virtual/virt/vms/all_vms_names.txt 2> /dev/null
+		virsh list --all --uuid > $OUTPUT_DIR/virtual/virt/vms/all_vms_uuids.txt 2> /dev/null
+		virsh list --all --title > $OUTPUT_DIR/virtual/virt/vms/all_vms_titles.txt 2> /dev/null
+		virsh list --all --managed-save > $OUTPUT_DIR/virtual/virt/vms/vms_with_managed_save.txt 2> /dev/null
+		virsh list --all --with-snapshot > $OUTPUT_DIR/virtual/virt/vms/vms_with_snapshots.txt 2> /dev/null
+		virsh list --all --with-checkpoint > $OUTPUT_DIR/virtual/virt/vms/vms_with_checkpoints.txt 2> /dev/null
+		
+		# Detailed VM collection
+		echo "  ${COL_ENTRY}>${RESET} Collecting detailed VM information"
 		virsh list --all --name 2>/dev/null | while read vm; do
 			if [ -n "$vm" ]; then
-				echo "=== VM: $vm ===" >> $OUTPUT_DIR/virtual/virt_vm_details.txt
-				virsh dominfo "$vm" >> $OUTPUT_DIR/virtual/virt_vm_details.txt 2> /dev/null
-				virsh dumpxml "$vm" > $OUTPUT_DIR/virtual/virt_vm_${vm}_config.xml 2> /dev/null
-				virsh domblklist "$vm" --details >> $OUTPUT_DIR/virtual/virt_vm_details.txt 2> /dev/null
-				virsh domiflist "$vm" >> $OUTPUT_DIR/virtual/virt_vm_details.txt 2> /dev/null
-				virsh vcpuinfo "$vm" >> $OUTPUT_DIR/virtual/virt_vm_details.txt 2> /dev/null
-				virsh dommemstat "$vm" >> $OUTPUT_DIR/virtual/virt_vm_details.txt 2> /dev/null
-				virsh domblkstat "$vm" --human >> $OUTPUT_DIR/virtual/virt_vm_details.txt 2> /dev/null
-				echo "" >> $OUTPUT_DIR/virtual/virt_vm_details.txt
-				virsh snapshot-list "$vm" --tree > $OUTPUT_DIR/virtual/virt_vm_${vm}_snapshots.txt 2> /dev/null
-				virsh snapshot-list "$vm" --details >> $OUTPUT_DIR/virtual/virt_vm_${vm}_snapshots.txt 2> /dev/null
+				echo "  ${COL_ENTRY}>${RESET} Processing VM: $vm"
+				
+				# Sanitize VM name for directory
+				SAFE_NAME=$(echo "$vm" | sed 's/[^a-zA-Z0-9._-]/_/g')
+				VM_DIR="$OUTPUT_DIR/virtual/virt/vms/$SAFE_NAME"
+				mkdir -p "$VM_DIR"
+				mkdir -p "$VM_DIR/snapshots"
+				mkdir -p "$VM_DIR/checkpoints"
+				mkdir -p "$VM_DIR/storage"
+				mkdir -p "$VM_DIR/network"
+				mkdir -p "$VM_DIR/stats"
+				
+				# Basic VM information
+				virsh dominfo "$vm" > "$VM_DIR/dominfo.txt" 2> /dev/null
+				virsh domstate "$vm" --reason > "$VM_DIR/state.txt" 2> /dev/null
+				virsh domuuid "$vm" > "$VM_DIR/uuid.txt" 2> /dev/null
+				virsh domid "$vm" > "$VM_DIR/id.txt" 2> /dev/null
+				virsh domname "$vm" > "$VM_DIR/name.txt" 2> /dev/null
+				
+				# VM configuration (XML)
+				virsh dumpxml "$vm" > "$VM_DIR/config.xml" 2> /dev/null
+				virsh dumpxml "$vm" --inactive > "$VM_DIR/config_inactive.xml" 2> /dev/null
+				virsh dumpxml "$vm" --security-info > "$VM_DIR/config_with_security.xml" 2> /dev/null
+				virsh dumpxml "$vm" --update-cpu > "$VM_DIR/config_update_cpu.xml" 2> /dev/null
+				
+				# CPU information
+				virsh vcpuinfo "$vm" > "$VM_DIR/vcpuinfo.txt" 2> /dev/null
+				virsh vcpucount "$vm" > "$VM_DIR/vcpucount.txt" 2> /dev/null
+				virsh vcpupin "$vm" > "$VM_DIR/vcpupin.txt" 2> /dev/null
+				virsh emulatorpin "$vm" > "$VM_DIR/emulatorpin.txt" 2> /dev/null
+				virsh cpu-stats "$vm" --total > "$VM_DIR/stats/cpu_stats_total.txt" 2> /dev/null
+				virsh cpu-stats "$vm" > "$VM_DIR/stats/cpu_stats.txt" 2> /dev/null
+				
+				# Memory information
+				virsh dommemstat "$vm" > "$VM_DIR/stats/memstat.txt" 2> /dev/null
+				virsh domblkstat "$vm" --human > "$VM_DIR/stats/blkstat_human.txt" 2> /dev/null
+				virsh memtune "$vm" > "$VM_DIR/memtune.txt" 2> /dev/null
+				virsh numatune "$vm" > "$VM_DIR/numatune.txt" 2> /dev/null
+				
+				# Storage devices
+				virsh domblklist "$vm" --details > "$VM_DIR/storage/blklist.txt" 2> /dev/null
+				virsh domblklist "$vm" --inactive > "$VM_DIR/storage/blklist_inactive.txt" 2> /dev/null
+				
+				# Get detailed stats for each block device
+				virsh domblklist "$vm" 2>/dev/null | tail -n +3 | awk '{print $1}' | while read device; do
+					if [ -n "$device" ]; then
+						virsh domblkstat "$vm" "$device" > "$VM_DIR/storage/blkstat_${device//\//_}.txt" 2> /dev/null
+						virsh domblkinfo "$vm" "$device" > "$VM_DIR/storage/blkinfo_${device//\//_}.txt" 2> /dev/null
+						virsh domblkthreshold "$vm" "$device" > "$VM_DIR/storage/blkthreshold_${device//\//_}.txt" 2> /dev/null
+						virsh domblkerror "$vm" > "$VM_DIR/storage/blkerror.txt" 2> /dev/null
+					fi
+				done
+				
+				# Network interfaces
+				virsh domiflist "$vm" > "$VM_DIR/network/iflist.txt" 2> /dev/null
+				virsh domiflist "$vm" --inactive > "$VM_DIR/network/iflist_inactive.txt" 2> /dev/null
+				
+				# Get detailed stats for each network interface
+				virsh domiflist "$vm" 2>/dev/null | tail -n +3 | awk '{print $1}' | while read iface; do
+					if [ -n "$iface" ]; then
+						virsh domifstat "$vm" "$iface" > "$VM_DIR/network/ifstat_${iface}.txt" 2> /dev/null
+						virsh domif-getlink "$vm" "$iface" > "$VM_DIR/network/iflink_${iface}.txt" 2> /dev/null
+					fi
+				done
+				
+				# Snapshots
+				virsh snapshot-list "$vm" --tree > "$VM_DIR/snapshots/tree.txt" 2> /dev/null
+				virsh snapshot-list "$vm" --details > "$VM_DIR/snapshots/list_details.txt" 2> /dev/null
+				virsh snapshot-list "$vm" --parent > "$VM_DIR/snapshots/list_parent.txt" 2> /dev/null
+				virsh snapshot-list "$vm" --roots > "$VM_DIR/snapshots/roots.txt" 2> /dev/null
+				virsh snapshot-list "$vm" --leaves > "$VM_DIR/snapshots/leaves.txt" 2> /dev/null
+				
+				# Get XML for each snapshot
+				virsh snapshot-list "$vm" --name 2>/dev/null | while read snap; do
+					if [ -n "$snap" ]; then
+						SAFE_SNAP=$(echo "$snap" | sed 's/[^a-zA-Z0-9._-]/_/g')
+						virsh snapshot-dumpxml "$vm" "$snap" > "$VM_DIR/snapshots/${SAFE_SNAP}.xml" 2> /dev/null
+					fi
+				done
+				
+				# Checkpoints (if supported)
+				virsh checkpoint-list "$vm" > "$VM_DIR/checkpoints/list.txt" 2> /dev/null
+				virsh checkpoint-list "$vm" --tree > "$VM_DIR/checkpoints/tree.txt" 2> /dev/null
+				
+				# Guest information (if agent is running)
+				virsh domfsinfo "$vm" > "$VM_DIR/guest_fsinfo.txt" 2> /dev/null
+				virsh domhostname "$vm" > "$VM_DIR/guest_hostname.txt" 2> /dev/null
+				virsh domifaddr "$vm" > "$VM_DIR/guest_ifaddr.txt" 2> /dev/null
+				virsh domifaddr "$vm" --source agent > "$VM_DIR/guest_ifaddr_agent.txt" 2> /dev/null
+				virsh domtime "$vm" > "$VM_DIR/guest_time.txt" 2> /dev/null
+				virsh guestinfo "$vm" > "$VM_DIR/guest_info.txt" 2> /dev/null
+				virsh guestvcpus "$vm" > "$VM_DIR/guest_vcpus.txt" 2> /dev/null
+				
+				# Performance and tuning
+				virsh domstats "$vm" > "$VM_DIR/stats/domstats.txt" 2> /dev/null
+				virsh domstats "$vm" --raw > "$VM_DIR/stats/domstats_raw.txt" 2> /dev/null
+				virsh domcontrol "$vm" > "$VM_DIR/control.txt" 2> /dev/null
+				virsh schedinfo "$vm" > "$VM_DIR/schedinfo.txt" 2> /dev/null
+				virsh blkiotune "$vm" > "$VM_DIR/blkiotune.txt" 2> /dev/null
+				virsh domiftune "$vm" > "$VM_DIR/domiftune.txt" 2> /dev/null
+				
+				# Security
+				virsh domdisplay "$vm" > "$VM_DIR/display.txt" 2> /dev/null
+				virsh domjobinfo "$vm" > "$VM_DIR/jobinfo.txt" 2> /dev/null
+				virsh domlaunchsecinfo "$vm" > "$VM_DIR/launchsecinfo.txt" 2> /dev/null
+				
+				# Save/Restore information
+				[ -f "/var/lib/libvirt/qemu/save/${vm}.save" ] && echo "Saved state exists" > "$VM_DIR/saved_state.txt"
+				
+				# If VM is running, collect additional runtime info
+				if virsh domstate "$vm" 2>/dev/null | grep -q "running"; then
+					echo "Running" > "$VM_DIR/running_state.txt"
+					virsh qemu-monitor-command "$vm" --pretty '{"execute":"query-status"}' > "$VM_DIR/qemu_status.json" 2> /dev/null
+					virsh qemu-monitor-command "$vm" --pretty '{"execute":"query-kvm"}' > "$VM_DIR/qemu_kvm.json" 2> /dev/null
+					virsh qemu-monitor-command "$vm" --pretty '{"execute":"query-cpus"}' > "$VM_DIR/qemu_cpus.json" 2> /dev/null
+					virsh qemu-monitor-command "$vm" --pretty '{"execute":"query-block"}' > "$VM_DIR/qemu_block.json" 2> /dev/null
+					virsh qemu-monitor-command "$vm" --pretty '{"execute":"query-blockstats"}' > "$VM_DIR/qemu_blockstats.json" 2> /dev/null
+					virsh qemu-monitor-command "$vm" --pretty '{"execute":"query-mem"}' > "$VM_DIR/qemu_mem.json" 2> /dev/null
+				fi
 			fi
 		done
-		virsh capabilities > $OUTPUT_DIR/virtual/virt_capabilities.xml 2> /dev/null
-		virsh domcapabilities > $OUTPUT_DIR/virtual/virt_domain_capabilities.xml 2> /dev/null
-		virsh nodedev-list > $OUTPUT_DIR/virtual/virt_nodedev_list.txt 2> /dev/null
-		virsh nodedev-list --tree > $OUTPUT_DIR/virtual/virt_nodedev_tree.txt 2> /dev/null
-		virsh iface-list --all > $OUTPUT_DIR/virtual/virt_interfaces.txt 2> /dev/null
-		virsh version > $OUTPUT_DIR/virtual/virt_version.txt 2> /dev/null
-		virsh uri > $OUTPUT_DIR/virtual/virt_uri.txt 2> /dev/null
+		
+		# Network Configuration
+		echo "  ${COL_ENTRY}>${RESET} Collecting network configuration"
+		virsh net-list --all > $OUTPUT_DIR/virtual/virt/networks/list_all.txt 2> /dev/null
+		virsh net-list --all --details > $OUTPUT_DIR/virtual/virt/networks/list_details.txt 2> /dev/null
+		virsh net-list --all --name > $OUTPUT_DIR/virtual/virt/networks/list_names.txt 2> /dev/null
+		virsh net-list --all --uuid > $OUTPUT_DIR/virtual/virt/networks/list_uuids.txt 2> /dev/null
+		
+		# Detailed network collection
+		virsh net-list --all --name 2>/dev/null | while read net; do
+			if [ -n "$net" ]; then
+				echo "  ${COL_ENTRY}>${RESET} Processing network: $net"
+				
+				SAFE_NET=$(echo "$net" | sed 's/[^a-zA-Z0-9._-]/_/g')
+				NET_DIR="$OUTPUT_DIR/virtual/virt/networks/$SAFE_NET"
+				mkdir -p "$NET_DIR"
+				
+				# Network information
+				virsh net-info "$net" > "$NET_DIR/info.txt" 2> /dev/null
+				virsh net-uuid "$net" > "$NET_DIR/uuid.txt" 2> /dev/null
+				virsh net-name "$net" > "$NET_DIR/name.txt" 2> /dev/null
+				
+				# Network configuration
+				virsh net-dumpxml "$net" > "$NET_DIR/config.xml" 2> /dev/null
+				virsh net-dumpxml "$net" --inactive > "$NET_DIR/config_inactive.xml" 2> /dev/null
+				
+				# DHCP leases
+				virsh net-dhcp-leases "$net" > "$NET_DIR/dhcp_leases.txt" 2> /dev/null
+				
+				# Port information
+				virsh net-port-list "$net" > "$NET_DIR/port_list.txt" 2> /dev/null
+				virsh net-port-list "$net" --uuid > "$NET_DIR/port_list_uuid.txt" 2> /dev/null
+			fi
+		done
+		
+		# Storage Pools
+		echo "  ${COL_ENTRY}>${RESET} Collecting storage pool configuration"
+		virsh pool-list --all > $OUTPUT_DIR/virtual/virt/storage/pools/list_all.txt 2> /dev/null
+		virsh pool-list --all --details > $OUTPUT_DIR/virtual/virt/storage/pools/list_details.txt 2> /dev/null
+		virsh pool-list --all --name > $OUTPUT_DIR/virtual/virt/storage/pools/list_names.txt 2> /dev/null
+		virsh pool-list --all --uuid > $OUTPUT_DIR/virtual/virt/storage/pools/list_uuids.txt 2> /dev/null
+		
+		# Detailed storage pool collection
+		virsh pool-list --all --name 2>/dev/null | while read pool; do
+			if [ -n "$pool" ]; then
+				echo "  ${COL_ENTRY}>${RESET} Processing storage pool: $pool"
+				
+				SAFE_POOL=$(echo "$pool" | sed 's/[^a-zA-Z0-9._-]/_/g')
+				POOL_DIR="$OUTPUT_DIR/virtual/virt/storage/pools/$SAFE_POOL"
+				mkdir -p "$POOL_DIR"
+				
+				# Pool information
+				virsh pool-info "$pool" > "$POOL_DIR/info.txt" 2> /dev/null
+				virsh pool-uuid "$pool" > "$POOL_DIR/uuid.txt" 2> /dev/null
+				virsh pool-name "$pool" > "$POOL_DIR/name.txt" 2> /dev/null
+				
+				# Pool configuration
+				virsh pool-dumpxml "$pool" > "$POOL_DIR/config.xml" 2> /dev/null
+				virsh pool-dumpxml "$pool" --inactive > "$POOL_DIR/config_inactive.xml" 2> /dev/null
+				
+				# Volume list
+				virsh vol-list "$pool" > "$POOL_DIR/volumes.txt" 2> /dev/null
+				virsh vol-list "$pool" --details > "$POOL_DIR/volumes_details.txt" 2> /dev/null
+				
+				# Volume details
+				virsh vol-list "$pool" 2>/dev/null | tail -n +3 | awk '{print $1}' | while read vol; do
+					if [ -n "$vol" ]; then
+						SAFE_VOL=$(echo "$vol" | sed 's/[^a-zA-Z0-9._-]/_/g')
+						virsh vol-info "$vol" --pool "$pool" > "$POOL_DIR/vol_${SAFE_VOL}_info.txt" 2> /dev/null
+						virsh vol-dumpxml "$vol" --pool "$pool" > "$POOL_DIR/vol_${SAFE_VOL}_config.xml" 2> /dev/null
+					fi
+				done
+			fi
+		done
+		
+		# Node Devices
+		echo "  ${COL_ENTRY}>${RESET} Collecting node device information"
+		virsh nodedev-list > $OUTPUT_DIR/virtual/virt/devices/list.txt 2> /dev/null
+		virsh nodedev-list --tree > $OUTPUT_DIR/virtual/virt/devices/tree.txt 2> /dev/null
+		virsh nodedev-list --cap net > $OUTPUT_DIR/virtual/virt/devices/net_devices.txt 2> /dev/null
+		virsh nodedev-list --cap pci > $OUTPUT_DIR/virtual/virt/devices/pci_devices.txt 2> /dev/null
+		virsh nodedev-list --cap scsi > $OUTPUT_DIR/virtual/virt/devices/scsi_devices.txt 2> /dev/null
+		virsh nodedev-list --cap storage > $OUTPUT_DIR/virtual/virt/devices/storage_devices.txt 2> /dev/null
+		virsh nodedev-list --cap system > $OUTPUT_DIR/virtual/virt/devices/system_devices.txt 2> /dev/null
+		virsh nodedev-list --cap usb > $OUTPUT_DIR/virtual/virt/devices/usb_devices.txt 2> /dev/null
+		virsh nodedev-list --cap usb_device > $OUTPUT_DIR/virtual/virt/devices/usb_devices_detail.txt 2> /dev/null
+		
+		# Interfaces
+		echo "  ${COL_ENTRY}>${RESET} Collecting interface information"
+		virsh iface-list --all > $OUTPUT_DIR/virtual/virt/interfaces/list_all.txt 2> /dev/null
+		virsh iface-list --all --inactive > $OUTPUT_DIR/virtual/virt/interfaces/list_inactive.txt 2> /dev/null
+		
+		# Secrets
+		echo "  ${COL_ENTRY}>${RESET} Collecting secret information (not values)"
+		virsh secret-list > $OUTPUT_DIR/virtual/virt/secrets/list.txt 2> /dev/null
+		virsh secret-list --all > $OUTPUT_DIR/virtual/virt/secrets/list_all.txt 2> /dev/null
+		
+		# Network Filters
+		echo "  ${COL_ENTRY}>${RESET} Collecting network filter information"
+		virsh nwfilter-list > $OUTPUT_DIR/virtual/virt/nwfilters/list.txt 2> /dev/null
+		virsh nwfilter-list --name 2>/dev/null | while read filter; do
+			if [ -n "$filter" ]; then
+				SAFE_FILTER=$(echo "$filter" | sed 's/[^a-zA-Z0-9._-]/_/g')
+				virsh nwfilter-dumpxml "$filter" > "$OUTPUT_DIR/virtual/virt/nwfilters/${SAFE_FILTER}.xml" 2> /dev/null
+			fi
+		done
+		
+		# libvirt logs
+		echo "  ${COL_ENTRY}>${RESET} Collecting libvirt logs"
+		if [ -d /var/log/libvirt ]; then
+			ls -la /var/log/libvirt/ > $OUTPUT_DIR/virtual/virt/logs/log_listing.txt 2> /dev/null
+			# Copy recent logs (limit size)
+			find /var/log/libvirt -name "*.log" -type f -mtime -7 -size -100M 2>/dev/null | while read logfile; do
+				LOGNAME=$(basename "$logfile")
+				tail -n 10000 "$logfile" > "$OUTPUT_DIR/virtual/virt/logs/${LOGNAME}_tail10k.txt" 2> /dev/null
+			done
+		fi
+		
+		# Configuration files
+		echo "  ${COL_ENTRY}>${RESET} Collecting libvirt configuration"
+		for conf in /etc/libvirt/libvirtd.conf /etc/libvirt/qemu.conf /etc/libvirt/lxc.conf /etc/libvirt/libxl.conf; do
+			if [ -f "$conf" ]; then
+				cp "$conf" "$OUTPUT_DIR/virtual/virt/system/$(basename $conf)" 2> /dev/null
+			fi
+		done
+		
+		# Check QEMU capabilities
+		if [ -x "$(command -v qemu-system-x86_64)" ]; then
+			qemu-system-x86_64 -version > $OUTPUT_DIR/virtual/virt/system/qemu_version.txt 2> /dev/null
+		fi
 	fi
 
 	# QEMU specific artifacts (often used with KVM)
