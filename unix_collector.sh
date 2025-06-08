@@ -716,27 +716,213 @@ then
     done
 fi
 
-echo "  ${COL_ENTRY}>${RESET} Kernel Modules"
+echo "  ${COL_ENTRY}>${RESET} Kernel Modules and Verification"
+mkdir $OUTPUT_DIR/general/kernel_modules 2> /dev/null
+
 if [ $PLATFORM = "solaris" ]
 then
-    modinfo 1> $OUTPUT_DIR/general/kernel-modules.txt 2> /dev/null
+    modinfo 1> $OUTPUT_DIR/general/kernel_modules/modinfo.txt 2> /dev/null
+    # Get detailed module information
+    modinfo | tail -n +2 | awk '{print $1}' | while read mod_id
+    do
+        echo "=== Module ID: $mod_id ===" 1>> $OUTPUT_DIR/general/kernel_modules/module_details.txt 2> /dev/null
+        modinfo -c -i $mod_id 1>> $OUTPUT_DIR/general/kernel_modules/module_details.txt 2> /dev/null
+        echo "" 1>> $OUTPUT_DIR/general/kernel_modules/module_details.txt 2> /dev/null
+    done
+    # List module paths
+    find /kernel /usr/kernel -name "*.ko" -o -name "drv/*" 1> $OUTPUT_DIR/general/kernel_modules/module_paths.txt 2> /dev/null
+    # Verify module checksums
+    pkg verify -v 2> /dev/null | grep "/kernel/" 1> $OUTPUT_DIR/general/kernel_modules/kernel_file_verification.txt 2> /dev/null
 elif [ $PLATFORM = "linux" ]
 then
-    lsmod 1> $OUTPUT_DIR/general/kernel-modules.txt 2> /dev/null
+    lsmod 1> $OUTPUT_DIR/general/kernel_modules/lsmod.txt 2> /dev/null
+    # Check secure boot status
+    if [ -d /sys/firmware/efi ]
+    then
+        if [ -f /sys/firmware/efi/vars/SecureBoot-*/data ]
+        then
+            od -An -t u1 /sys/firmware/efi/vars/SecureBoot-*/data 1> $OUTPUT_DIR/general/kernel_modules/secure_boot_raw.txt 2> /dev/null
+        fi
+        if [ -x /usr/bin/mokutil ]
+        then
+            mokutil --sb-state 1> $OUTPUT_DIR/general/kernel_modules/secure_boot_status.txt 2> /dev/null
+        fi
+    fi
+    # Get detailed module information
+    if [ -x /sbin/modinfo -o -x /usr/sbin/modinfo ]
+    then
+        lsmod | tail -n +2 | awk '{print $1}' | while read module
+        do
+            echo "=== Module: $module ===" 1>> $OUTPUT_DIR/general/kernel_modules/modinfo_all.txt 2> /dev/null
+            modinfo $module 1>> $OUTPUT_DIR/general/kernel_modules/modinfo_all.txt 2> /dev/null
+            echo "" 1>> $OUTPUT_DIR/general/kernel_modules/modinfo_all.txt 2> /dev/null
+            # Get module parameters
+            if [ -d /sys/module/$module/parameters ]
+            then
+                echo "=== Parameters for $module ===" 1>> $OUTPUT_DIR/general/kernel_modules/module_parameters.txt 2> /dev/null
+                ls /sys/module/$module/parameters/ 2> /dev/null | while read param
+                do
+                    echo -n "$param = " 1>> $OUTPUT_DIR/general/kernel_modules/module_parameters.txt 2> /dev/null
+                    cat /sys/module/$module/parameters/$param 1>> $OUTPUT_DIR/general/kernel_modules/module_parameters.txt 2> /dev/null || echo "unreadable" 1>> $OUTPUT_DIR/general/kernel_modules/module_parameters.txt 2> /dev/null
+                done
+                echo "" 1>> $OUTPUT_DIR/general/kernel_modules/module_parameters.txt 2> /dev/null
+            fi
+        done
+    fi
+    # Check module taint status
+    for module_dir in /sys/module/*
+    do
+        if [ -f "$module_dir/taint" ]
+        then
+            module_name=`basename $module_dir`
+            taint_value=`cat $module_dir/taint 2> /dev/null`
+            if [ "$taint_value" != "0" ] && [ ! -z "$taint_value" ]
+            then
+                echo "$module_name: taint=$taint_value" 1>> $OUTPUT_DIR/general/kernel_modules/tainted_modules.txt 2> /dev/null
+            fi
+        fi
+    done
+    # Check module signature enforcement
+    if [ -f /proc/sys/kernel/modules_disabled ]
+    then
+        echo "modules_disabled = `cat /proc/sys/kernel/modules_disabled`" 1> $OUTPUT_DIR/general/kernel_modules/module_loading_restrictions.txt 2> /dev/null
+    fi
+    if [ -f /proc/sys/kernel/kexec_load_disabled ]
+    then
+        echo "kexec_load_disabled = `cat /proc/sys/kernel/kexec_load_disabled`" 1>> $OUTPUT_DIR/general/kernel_modules/module_loading_restrictions.txt 2> /dev/null
+    fi
+    if [ -f /proc/sys/kernel/module.sig_enforce ]
+    then
+        echo "module.sig_enforce = `cat /proc/sys/kernel/module.sig_enforce`" 1>> $OUTPUT_DIR/general/kernel_modules/module_loading_restrictions.txt 2> /dev/null
+    fi
+    # Find loaded module files and hash them
+    find /lib/modules/`uname -r` -name "*.ko" -o -name "*.ko.xz" -o -name "*.ko.gz" 2> /dev/null | head -100 | while read module_file
+    do
+        module_name=`basename $module_file | sed 's/\.\(ko\|ko\.xz\|ko\.gz\)$//'`
+        # Check if module is currently loaded
+        if lsmod | grep -q "^$module_name "
+        then
+            echo "$module_file (LOADED)" 1>> $OUTPUT_DIR/general/kernel_modules/loaded_module_paths.txt 2> /dev/null
+            # Get file hash
+            if [ -x /usr/bin/sha256sum ]
+            then
+                sha256sum "$module_file" 1>> $OUTPUT_DIR/general/kernel_modules/module_hashes.txt 2> /dev/null
+            elif [ -x /usr/bin/sha1sum ]
+            then
+                sha1sum "$module_file" 1>> $OUTPUT_DIR/general/kernel_modules/module_hashes.txt 2> /dev/null
+            elif [ -x /usr/bin/md5sum ]
+            then
+                md5sum "$module_file" 1>> $OUTPUT_DIR/general/kernel_modules/module_hashes.txt 2> /dev/null
+            fi
+        fi
+    done
+    # Check for out-of-tree modules
+    find /lib/modules/`uname -r` -name "*.ko" -path "*/extra/*" -o -path "*/updates/*" 1> $OUTPUT_DIR/general/kernel_modules/out_of_tree_modules.txt 2> /dev/null
+    # List module dependencies
+    lsmod | tail -n +2 | awk '{print $1}' | while read module
+    do
+        echo -n "$module: " 1>> $OUTPUT_DIR/general/kernel_modules/module_dependencies.txt 2> /dev/null
+        modinfo -F depends $module 1>> $OUTPUT_DIR/general/kernel_modules/module_dependencies.txt 2> /dev/null || echo "unknown" 1>> $OUTPUT_DIR/general/kernel_modules/module_dependencies.txt 2> /dev/null
+    done
+    # Check for hidden modules
+    cat /proc/modules | awk '{print $1}' | sort 1> $OUTPUT_DIR/general/kernel_modules/proc_modules.txt 2> /dev/null
+    lsmod | tail -n +2 | awk '{print $1}' | sort 1> $OUTPUT_DIR/general/kernel_modules/lsmod_modules.txt 2> /dev/null
+    diff $OUTPUT_DIR/general/kernel_modules/proc_modules.txt $OUTPUT_DIR/general/kernel_modules/lsmod_modules.txt 1> $OUTPUT_DIR/general/kernel_modules/module_discrepancies.txt 2> /dev/null
+    # Check sysfs vs proc
+    ls /sys/module/ | grep -v "^builtin$" | sort 1> $OUTPUT_DIR/general/kernel_modules/sysfs_modules.txt 2> /dev/null
+    diff $OUTPUT_DIR/general/kernel_modules/proc_modules.txt $OUTPUT_DIR/general/kernel_modules/sysfs_modules.txt 1>> $OUTPUT_DIR/general/kernel_modules/module_discrepancies.txt 2> /dev/null
 elif [ $PLATFORM = "android" ]
 then
-    lsmod 1> $OUTPUT_DIR/general/kernel-modules.txt 2> /dev/null
+    lsmod 1> $OUTPUT_DIR/general/kernel_modules/lsmod.txt 2> /dev/null
+    ls -la /sys/module/ 1> $OUTPUT_DIR/general/kernel_modules/sys_modules.txt 2> /dev/null
+    ls -la /system/lib/modules/ 1> $OUTPUT_DIR/general/kernel_modules/system_lib_modules.txt 2> /dev/null
+    ls -la /vendor/lib/modules/ 1> $OUTPUT_DIR/general/kernel_modules/vendor_lib_modules.txt 2> /dev/null
+    # Check for Magisk modules
+    if [ -d /data/adb/modules ]
+    then
+        ls -la /data/adb/modules/ 1> $OUTPUT_DIR/general/kernel_modules/magisk_modules.txt 2> /dev/null
+    fi
+    # Module info if available
+    if [ -x /system/bin/modinfo ]
+    then
+        lsmod | tail -n +2 | awk '{print $1}' | while read module
+        do
+            echo "=== Module: $module ===" 1>> $OUTPUT_DIR/general/kernel_modules/modinfo_all.txt 2> /dev/null
+            modinfo $module 1>> $OUTPUT_DIR/general/kernel_modules/modinfo_all.txt 2> /dev/null
+            echo "" 1>> $OUTPUT_DIR/general/kernel_modules/modinfo_all.txt 2> /dev/null
+        done
+    fi
 elif [ $PLATFORM = "mac" ]
 then
-	kmutil showloaded 1> $OUTPUT_DIR/general/kernel-modules.txt 2> /dev/null
-elif [ $PLATFORM = "android" ]
-then
-	ls -la /sys/module/ 1> $OUTPUT_DIR/general/kernel-modules.txt 2> /dev/null
-	ls -la /system/lib/modules/ 1> $OUTPUT_DIR/general/loadable-modules.txt 2> /dev/null
+    kextstat 1> $OUTPUT_DIR/general/kernel_modules/kextstat.txt 2> /dev/null
+    kmutil showloaded 1> $OUTPUT_DIR/general/kernel_modules/kmutil_showloaded.txt 2> /dev/null
+    # Get detailed kext information
+    kextstat | tail -n +2 | awk '{print $6}' | while read kext_id
+    do
+        echo "=== Kext: $kext_id ===" 1>> $OUTPUT_DIR/general/kernel_modules/kext_info_all.txt 2> /dev/null
+        kextutil -show-diagnostics $kext_id 1>> $OUTPUT_DIR/general/kernel_modules/kext_info_all.txt 2> /dev/null
+        echo "" 1>> $OUTPUT_DIR/general/kernel_modules/kext_info_all.txt 2> /dev/null
+    done
+    # Verify kext signatures
+    find /System/Library/Extensions /Library/Extensions -name "*.kext" -maxdepth 1 2> /dev/null | while read kext_path
+    do
+        kext_name=`basename "$kext_path"`
+        echo "=== $kext_name ===" 1>> $OUTPUT_DIR/general/kernel_modules/kext_signatures.txt 2> /dev/null
+        codesign -dvvv "$kext_path" 1>> $OUTPUT_DIR/general/kernel_modules/kext_signatures.txt 2> /dev/null
+        echo "" 1>> $OUTPUT_DIR/general/kernel_modules/kext_signatures.txt 2> /dev/null
+    done
+    # Check system integrity protection
+    csrutil status 1> $OUTPUT_DIR/general/kernel_modules/sip_status.txt 2> /dev/null
+    # Check for unsigned kexts
+    kextfind -not -authentic 1> $OUTPUT_DIR/general/kernel_modules/unsigned_kexts.txt 2> /dev/null
+    # Kernel extension cache info
+    kextcache -showinfo 1> $OUTPUT_DIR/general/kernel_modules/kextcache_info.txt 2> /dev/null
 elif [ $PLATFORM = "aix" ]
 then
-	genkex 1> $OUTPUT_DIR/general/kernel-modules.txt 2> /dev/null
+    genkex 1> $OUTPUT_DIR/general/kernel_modules/genkex.txt 2> /dev/null
+    # List kernel extension files
+    find /usr/lib/drivers -name "*.ext" 1> $OUTPUT_DIR/general/kernel_modules/driver_files.txt 2> /dev/null
+    # Check trusted computing base
+    trustchk -n ALL 1> $OUTPUT_DIR/general/kernel_modules/trustchk.txt 2> /dev/null
+elif [ $PLATFORM = "hpux" ]
+then
+    # HP-UX kernel modules
+    kmadmin -s 1> $OUTPUT_DIR/general/kernel_modules/kmadmin.txt 2> /dev/null
+    kcmodule 1> $OUTPUT_DIR/general/kernel_modules/kcmodule.txt 2> /dev/null
+    kctune 1> $OUTPUT_DIR/general/kernel_modules/kctune.txt 2> /dev/null
+else
+    # Generic/BSD platforms
+    if [ -x /sbin/kldstat ]
+    then
+        kldstat 1> $OUTPUT_DIR/general/kernel_modules/kldstat.txt 2> /dev/null
+        # Get detailed module information
+        kldstat | tail -n +2 | awk '{print $5}' | while read module
+        do
+            echo "=== Module: $module ===" 1>> $OUTPUT_DIR/general/kernel_modules/module_info.txt 2> /dev/null
+            kldstat -v -n $module 1>> $OUTPUT_DIR/general/kernel_modules/module_info.txt 2> /dev/null
+            echo "" 1>> $OUTPUT_DIR/general/kernel_modules/module_info.txt 2> /dev/null
+        done
+        # List available modules
+        find /boot/kernel /boot/modules -name "*.ko" 1> $OUTPUT_DIR/general/kernel_modules/available_modules.txt 2> /dev/null
+    else
+        # Fallback to basic lsmod
+        lsmod 1> $OUTPUT_DIR/general/kernel_modules/lsmod.txt 2> /dev/null
+    fi
 fi
+# Count modules if possible
+if [ -f $OUTPUT_DIR/general/kernel_modules/lsmod.txt ]
+then
+    MODULE_COUNT=`cat $OUTPUT_DIR/general/kernel_modules/lsmod.txt | wc -l`
+    MODULE_COUNT=`expr $MODULE_COUNT - 1`
+    echo "Total Loaded Modules: $MODULE_COUNT" 1>> $OUTPUT_DIR/general/kernel_modules/verification_summary.txt 2> /dev/null
+fi
+
+if [ -f $OUTPUT_DIR/general/kernel_modules/tainted_modules.txt ]
+then
+    TAINTED_COUNT=`cat $OUTPUT_DIR/general/kernel_modules/tainted_modules.txt | wc -l`
+    echo "Tainted Modules: $TAINTED_COUNT" 1>> $OUTPUT_DIR/general/kernel_modules/verification_summary.txt 2> /dev/null
+fi
+
 
 # Systemd journal logs
 if [ -x "$(command -v journalctl)" ]; then
@@ -745,6 +931,237 @@ if [ -x "$(command -v journalctl)" ]; then
     journalctl --no-pager -b > $OUTPUT_DIR/logs/journal_boot.txt 2>/dev/null
     journalctl --no-pager -p err > $OUTPUT_DIR/logs/journal_errors.txt 2>/dev/null
 fi
+
+echo "  ${COL_ENTRY}>${RESET} User Activity and Authentication Logs"
+mkdir $OUTPUT_DIR/user_activity 2> /dev/null
+
+# Collect login/logout records
+echo "    Collecting login records..."
+if [ $PLATFORM = "linux" -o $PLATFORM = "generic" ]
+then
+    # Copy raw wtmp/btmp/utmp files
+    if [ -f /var/log/wtmp ]; then
+        cp /var/log/wtmp $OUTPUT_DIR/user_activity/wtmp.raw 2> /dev/null
+        last -f /var/log/wtmp 1> $OUTPUT_DIR/user_activity/last-wtmp.txt 2> /dev/null
+        last -f /var/log/wtmp -x 1> $OUTPUT_DIR/user_activity/last-wtmp-extended.txt 2> /dev/null
+    fi
+    if [ -f /var/log/btmp ]; then
+        cp /var/log/btmp $OUTPUT_DIR/user_activity/btmp.raw 2> /dev/null
+        lastb -f /var/log/btmp 1> $OUTPUT_DIR/user_activity/lastb-failed-logins.txt 2> /dev/null
+        last -f /var/log/btmp 1> $OUTPUT_DIR/user_activity/last-btmp.txt 2> /dev/null
+    fi
+    if [ -f /var/run/utmp ]; then
+        cp /var/run/utmp $OUTPUT_DIR/user_activity/utmp.raw 2> /dev/null
+        who -a /var/run/utmp 1> $OUTPUT_DIR/user_activity/who-utmp.txt 2> /dev/null
+    fi
+    if [ -f /var/log/lastlog ]; then
+        cp /var/log/lastlog $OUTPUT_DIR/user_activity/lastlog.raw 2> /dev/null
+        lastlog 1> $OUTPUT_DIR/user_activity/lastlog.txt 2> /dev/null
+        lastlog -u 0-99999 1> $OUTPUT_DIR/user_activity/lastlog-all-users.txt 2> /dev/null
+    fi
+    # Collect rotated wtmp files
+    for wtmp_file in /var/log/wtmp.*
+    do
+        if [ -f "$wtmp_file" ]; then
+            filename=`basename $wtmp_file`
+            cp $wtmp_file $OUTPUT_DIR/user_activity/${filename}.raw 2> /dev/null
+            last -f $wtmp_file 1> $OUTPUT_DIR/user_activity/last-${filename}.txt 2> /dev/null
+        fi
+    done
+    # Additional login records
+    w 1> $OUTPUT_DIR/user_activity/w-current-users.txt 2> /dev/null
+    who -a 1> $OUTPUT_DIR/user_activity/who-all.txt 2> /dev/null
+    users 1> $OUTPUT_DIR/user_activity/users.txt 2> /dev/null
+    ac -p 1> $OUTPUT_DIR/user_activity/ac-user-connect-time.txt 2> /dev/null
+    ac -d 1> $OUTPUT_DIR/user_activity/ac-daily-connect-time.txt 2> /dev/null
+elif [ $PLATFORM = "solaris" ]
+then
+    # Solaris login records
+    if [ -f /var/adm/wtmpx ]; then
+        cp /var/adm/wtmpx $OUTPUT_DIR/user_activity/wtmpx.raw 2> /dev/null
+        last -f /var/adm/wtmpx 1> $OUTPUT_DIR/user_activity/last-wtmpx.txt 2> /dev/null
+    fi
+    if [ -f /var/adm/lastlog ]; then
+        cp /var/adm/lastlog $OUTPUT_DIR/user_activity/lastlog.raw 2> /dev/null
+        lastlog 1> $OUTPUT_DIR/user_activity/lastlog.txt 2> /dev/null
+    fi
+    if [ -f /var/adm/utmpx ]; then
+        cp /var/adm/utmpx $OUTPUT_DIR/user_activity/utmpx.raw 2> /dev/null
+        who -a /var/adm/utmpx 1> $OUTPUT_DIR/user_activity/who-utmpx.txt 2> /dev/null
+    fi
+    w 1> $OUTPUT_DIR/user_activity/w-current-users.txt 2> /dev/null
+    who -a 1> $OUTPUT_DIR/user_activity/who-all.txt 2> /dev/null
+elif [ $PLATFORM = "aix" ]
+then
+    # AIX login records
+    if [ -f /var/adm/wtmp ]; then
+        cp /var/adm/wtmp $OUTPUT_DIR/user_activity/wtmp.raw 2> /dev/null
+        last -f /var/adm/wtmp 1> $OUTPUT_DIR/user_activity/last-wtmp.txt 2> /dev/null
+    fi
+    if [ -f /etc/security/lastlog ]; then
+        cp /etc/security/lastlog $OUTPUT_DIR/user_activity/lastlog.raw 2> /dev/null
+        lsuser -f ALL 1> $OUTPUT_DIR/user_activity/lsuser-all.txt 2> /dev/null
+    fi
+    w 1> $OUTPUT_DIR/user_activity/w-current-users.txt 2> /dev/null
+    who -a 1> $OUTPUT_DIR/user_activity/who-all.txt 2> /dev/null
+elif [ $PLATFORM = "mac" ]
+then
+    # macOS login records
+    if [ -f /var/log/wtmp ]; then
+        cp /var/log/wtmp $OUTPUT_DIR/user_activity/wtmp.raw 2> /dev/null
+        last 1> $OUTPUT_DIR/user_activity/last.txt 2> /dev/null
+    fi
+    if [ -f /var/log/lastlog ]; then
+        cp /var/log/lastlog $OUTPUT_DIR/user_activity/lastlog.raw 2> /dev/null
+        lastlog 1> $OUTPUT_DIR/user_activity/lastlog.txt 2> /dev/null
+    fi
+    # macOS specific logs
+    log show --predicate 'process == "loginwindow"' --last 7d 1> $OUTPUT_DIR/user_activity/loginwindow-7days.txt 2> /dev/null
+    log show --predicate 'eventMessage contains "Authentication"' --last 7d 1> $OUTPUT_DIR/user_activity/authentication-7days.txt 2> /dev/null
+    w 1> $OUTPUT_DIR/user_activity/w-current-users.txt 2> /dev/null
+    who -a 1> $OUTPUT_DIR/user_activity/who-all.txt 2> /dev/null
+    ac -p 1> $OUTPUT_DIR/user_activity/ac-user-connect-time.txt 2> /dev/null
+elif [ $PLATFORM = "android" ]
+then
+    # Android doesn't have traditional login records
+    dumpsys user 1> $OUTPUT_DIR/user_activity/android-user-state.txt 2> /dev/null
+    dumpsys account 1> $OUTPUT_DIR/user_activity/android-accounts.txt 2> /dev/null
+fi
+
+# Collect SSH authentication logs
+echo "    Collecting SSH authentication logs..."
+mkdir $OUTPUT_DIR/user_activity/ssh_logs 2> /dev/null
+if [ -f /var/log/auth.log ]; then
+    grep -i ssh /var/log/auth.log 1> $OUTPUT_DIR/user_activity/ssh_logs/auth-ssh.txt 2> /dev/null
+    grep -i "Accepted\|Failed\|Invalid" /var/log/auth.log 1> $OUTPUT_DIR/user_activity/ssh_logs/auth-login-attempts.txt 2> /dev/null
+fi
+if [ -f /var/log/secure ]; then
+    grep -i ssh /var/log/secure 1> $OUTPUT_DIR/user_activity/ssh_logs/secure-ssh.txt 2> /dev/null
+    grep -i "Accepted\|Failed\|Invalid" /var/log/secure 1> $OUTPUT_DIR/user_activity/ssh_logs/secure-login-attempts.txt 2> /dev/null
+fi
+if [ -f /var/log/messages ]; then
+    grep -i "sshd\|authentication" /var/log/messages 1> $OUTPUT_DIR/user_activity/ssh_logs/messages-ssh.txt 2> /dev/null
+fi
+# Copy SSH host keys info
+ls -la /etc/ssh/ssh_host_* 1> $OUTPUT_DIR/user_activity/ssh_logs/ssh_host_keys_list.txt 2> /dev/null
+
+# Collect user shell history files
+echo "    Collecting user shell history files..."
+mkdir $OUTPUT_DIR/user_activity/shell_history 2> /dev/null
+# Get list of users with valid shells
+if [ -f /etc/passwd ]; then
+    # Process each user
+    cat /etc/passwd | while IFS=: read username x uid gid gecos homedir shell
+    do
+        # Skip system users and users without home directories
+        if [ $uid -ge 500 -o $uid -eq 0 ] && [ -d "$homedir" ]; then
+            user_history_dir="$OUTPUT_DIR/user_activity/shell_history/$username"
+            mkdir $user_history_dir 2> /dev/null
+            
+            # Collect various shell history files
+            for history_file in .bash_history .sh_history .zsh_history .ksh_history .history .ash_history .dash_history
+            do
+                if [ -f "$homedir/$history_file" ]; then
+                    cp "$homedir/$history_file" "$user_history_dir/$history_file" 2> /dev/null
+                    # Also create readable version
+                    cat "$homedir/$history_file" 1> "$user_history_dir/${history_file}.txt" 2> /dev/null
+                fi
+            done
+            
+            # Collect shell configuration files that might contain history settings
+            for config_file in .bashrc .bash_profile .profile .zshrc .kshrc
+            do
+                if [ -f "$homedir/$config_file" ]; then
+                    grep -i "history\|HIST" "$homedir/$config_file" 1> "$user_history_dir/${config_file}_history_settings.txt" 2> /dev/null
+                fi
+            done
+            
+            # Collect recently used files
+            if [ -d "$homedir/.local/share" ]; then
+                find "$homedir/.local/share" -name "*recent*" -o -name "*history*" 2> /dev/null | head -20 | while read recent_file
+                do
+                    relative_path=`echo $recent_file | sed "s|$homedir/||"`
+                    mkdir -p "$user_history_dir/`dirname $relative_path`" 2> /dev/null
+                    cp "$recent_file" "$user_history_dir/$relative_path" 2> /dev/null
+                done
+            fi
+            
+            # Get last modified times for history files
+            ls -la $homedir/.*history* 1> "$user_history_dir/history_files_list.txt" 2> /dev/null
+        fi
+    done
+fi
+
+# Collect sudo logs
+echo "    Collecting sudo activity logs..."
+mkdir $OUTPUT_DIR/user_activity/sudo_logs 2> /dev/null
+if [ -f /var/log/sudo.log ]; then
+    cp /var/log/sudo.log $OUTPUT_DIR/user_activity/sudo_logs/ 2> /dev/null
+fi
+if [ -f /var/log/auth.log ]; then
+    grep -i sudo /var/log/auth.log 1> $OUTPUT_DIR/user_activity/sudo_logs/auth-sudo.txt 2> /dev/null
+fi
+if [ -f /var/log/secure ]; then
+    grep -i sudo /var/log/secure 1> $OUTPUT_DIR/user_activity/sudo_logs/secure-sudo.txt 2> /dev/null
+fi
+# Sudo timestamp files
+if [ -d /var/run/sudo ]; then
+    ls -la /var/run/sudo/ 1> $OUTPUT_DIR/user_activity/sudo_logs/sudo_timestamps.txt 2> /dev/null
+fi
+if [ -d /var/db/sudo ]; then
+    ls -la /var/db/sudo/ 1> $OUTPUT_DIR/user_activity/sudo_logs/sudo_db_timestamps.txt 2> /dev/null
+fi
+
+# Collect su logs
+echo "    Collecting su activity logs..."
+if [ -f /var/log/sulog ]; then
+    cp /var/log/sulog $OUTPUT_DIR/user_activity/sulog 2> /dev/null
+fi
+if [ -f /var/adm/sulog ]; then
+    cp /var/adm/sulog $OUTPUT_DIR/user_activity/sulog 2> /dev/null
+fi
+
+# Platform specific user activity
+if [ $PLATFORM = "linux" ]; then
+    # SystemD journal logs for user sessions
+    if [ -x /usr/bin/journalctl ]; then
+        journalctl _COMM=sshd --since "7 days ago" 1> $OUTPUT_DIR/user_activity/journalctl-sshd-7days.txt 2> /dev/null
+        journalctl _COMM=sudo --since "7 days ago" 1> $OUTPUT_DIR/user_activity/journalctl-sudo-7days.txt 2> /dev/null
+        journalctl _COMM=su --since "7 days ago" 1> $OUTPUT_DIR/user_activity/journalctl-su-7days.txt 2> /dev/null
+        loginctl list-sessions 1> $OUTPUT_DIR/user_activity/loginctl-sessions.txt 2> /dev/null
+        loginctl list-users 1> $OUTPUT_DIR/user_activity/loginctl-users.txt 2> /dev/null
+    fi
+    # PAM logs
+    if [ -d /var/log/pam ]; then
+        cp -R /var/log/pam $OUTPUT_DIR/user_activity/ 2> /dev/null
+    fi
+elif [ $PLATFORM = "mac" ]; then
+    # macOS specific user activity
+    dscl . -list /Users | grep -v '^_' | while read username
+    do
+        echo "User: $username" 1>> $OUTPUT_DIR/user_activity/macos_user_info.txt 2> /dev/null
+        dscl . -read /Users/$username LastLoginTime 1>> $OUTPUT_DIR/user_activity/macos_user_info.txt 2> /dev/null
+        dscl . -read /Users/$username accountPolicyData 1>> $OUTPUT_DIR/user_activity/macos_user_info.txt 2> /dev/null
+        echo "---" 1>> $OUTPUT_DIR/user_activity/macos_user_info.txt 2> /dev/null
+    done
+elif [ $PLATFORM = "solaris" ]; then
+    # Solaris specific
+    if [ -f /var/log/authlog ]; then
+        cp /var/log/authlog $OUTPUT_DIR/user_activity/ 2> /dev/null
+    fi
+    logins -x 1> $OUTPUT_DIR/user_activity/logins-extended.txt 2> /dev/null
+fi
+
+# Create user activity summary
+echo "=== User Activity Collection Summary ===" 1> $OUTPUT_DIR/user_activity/summary.txt 2> /dev/null
+echo "Platform: $PLATFORM" 1>> $OUTPUT_DIR/user_activity/summary.txt 2> /dev/null
+echo "Collection Date: `date`" 1>> $OUTPUT_DIR/user_activity/summary.txt 2> /dev/null
+echo "" 1>> $OUTPUT_DIR/user_activity/summary.txt 2> /dev/null
+echo "Currently logged in users:" 1>> $OUTPUT_DIR/user_activity/summary.txt 2> /dev/null
+who | wc -l 1>> $OUTPUT_DIR/user_activity/summary.txt 2> /dev/null
+echo "" 1>> $OUTPUT_DIR/user_activity/summary.txt 2> /dev/null
+echo "User accounts with UID >= 500 or UID 0:" 1>> $OUTPUT_DIR/user_activity/summary.txt 2> /dev/null
+awk -F: '$3 >= 500 || $3 == 0 {print $1}' /etc/passwd 2> /dev/null | sort 1>> $OUTPUT_DIR/user_activity/summary.txt 2> /dev/null
 
 echo "  ${COL_ENTRY}>${RESET} At scheduler"
 if [ $PLATFORM != "solaris" ]
