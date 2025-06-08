@@ -974,13 +974,17 @@ fi
 echo "" >> $OUTPUT_DIR/process_info/ANALYSIS_SUMMARY.txt
 echo "Check individual files for detailed information." >> $OUTPUT_DIR/process_info/ANALYSIS_SUMMARY.txt
 
-echo "  ${COL_ENTRY}>${RESET} Cron and other scheduler files"
-if [ -f "/etc/crontab" ] && [ -r "/etc/crontab" ]; then
-	cp /etc/crontab $OUTPUT_DIR/general/etc-crontab.txt 2>/dev/null
-fi
 
+echo "  ${COL_ENTRY}>${RESET} Cron and other scheduler files"
 mkdir $OUTPUT_DIR/general/crontabs/ 2> /dev/null
 
+# System-wide crontab
+if [ -f "/etc/crontab" ] && [ -r "/etc/crontab" ]; then
+	cp /etc/crontab $OUTPUT_DIR/general/crontabs/etc-crontab.txt 2>/dev/null
+	ls -la /etc/crontab >> $OUTPUT_DIR/general/crontabs/etc-crontab-perms.txt 2>/dev/null
+fi
+
+# Collect various cron directories
 if [ -d /var/cron/ ]
 then
 	cp -R /var/cron/ $OUTPUT_DIR/general/crontabs/var_cron 2> /dev/null
@@ -1001,20 +1005,309 @@ then
 	cp -R /var/spool/cron/ $OUTPUT_DIR/general/crontabs/var_spool_cron 2> /dev/null
 fi
 
+# Additional cron locations
+if [ -d /var/spool/cron/crontabs/ ]
+then
+	cp -R /var/spool/cron/crontabs/ $OUTPUT_DIR/general/crontabs/var_spool_cron_crontabs 2> /dev/null
+	# List permissions for each user crontab
+	ls -la /var/spool/cron/crontabs/ > $OUTPUT_DIR/general/crontabs/user_crontabs_perms.txt 2> /dev/null
+fi
+
+if [ -d /var/spool/cron/tabs/ ]
+then
+	cp -R /var/spool/cron/tabs/ $OUTPUT_DIR/general/crontabs/var_spool_cron_tabs 2> /dev/null
+	ls -la /var/spool/cron/tabs/ > $OUTPUT_DIR/general/crontabs/user_tabs_perms.txt 2> /dev/null
+fi
+
+# Android/embedded system location
 if [ -d /data/crontab/ ]
 then
-	cp -R /data/crontab/ $OUTPUT_DIR/general/crontabs/ 2> /dev/null
+	cp -R /data/crontab/ $OUTPUT_DIR/general/crontabs/data_crontab 2> /dev/null
 fi
+
+# Collect cron.d and periodic directories
+if [ -d /etc/cron.d/ ]
+then
+	cp -R /etc/cron.d/ $OUTPUT_DIR/general/crontabs/etc_cron.d 2> /dev/null
+	ls -la /etc/cron.d/ > $OUTPUT_DIR/general/crontabs/etc_cron.d_perms.txt 2> /dev/null
+fi
+
+if [ -d /etc/cron.hourly/ ]
+then
+	cp -R /etc/cron.hourly/ $OUTPUT_DIR/general/crontabs/etc_cron.hourly 2> /dev/null
+	ls -la /etc/cron.hourly/ > $OUTPUT_DIR/general/crontabs/etc_cron.hourly_perms.txt 2> /dev/null
+fi
+
+if [ -d /etc/cron.daily/ ]
+then
+	cp -R /etc/cron.daily/ $OUTPUT_DIR/general/crontabs/etc_cron.daily 2> /dev/null
+	ls -la /etc/cron.daily/ > $OUTPUT_DIR/general/crontabs/etc_cron.daily_perms.txt 2> /dev/null
+fi
+
+if [ -d /etc/cron.weekly/ ]
+then
+	cp -R /etc/cron.weekly/ $OUTPUT_DIR/general/crontabs/etc_cron.weekly 2> /dev/null
+	ls -la /etc/cron.weekly/ > $OUTPUT_DIR/general/crontabs/etc_cron.weekly_perms.txt 2> /dev/null
+fi
+
+if [ -d /etc/cron.monthly/ ]
+then
+	cp -R /etc/cron.monthly/ $OUTPUT_DIR/general/crontabs/etc_cron.monthly 2> /dev/null
+	ls -la /etc/cron.monthly/ > $OUTPUT_DIR/general/crontabs/etc_cron.monthly_perms.txt 2> /dev/null
+fi
+
+# Collect cron allow/deny files
+if [ -f /etc/cron.allow ]
+then
+	cp /etc/cron.allow $OUTPUT_DIR/general/crontabs/cron.allow 2> /dev/null
+fi
+
+if [ -f /etc/cron.deny ]
+then
+	cp /etc/cron.deny $OUTPUT_DIR/general/crontabs/cron.deny 2> /dev/null
+fi
+
+if [ -f /etc/at.allow ]
+then
+	cp /etc/at.allow $OUTPUT_DIR/general/crontabs/at.allow 2> /dev/null
+fi
+
+if [ -f /etc/at.deny ]
+then
+	cp /etc/at.deny $OUTPUT_DIR/general/crontabs/at.deny 2> /dev/null
+fi
+
+# Anacron
+if [ -f /etc/anacrontab ]
+then
+	cp /etc/anacrontab $OUTPUT_DIR/general/crontabs/anacrontab 2> /dev/null
+fi
+
+if [ -d /var/spool/anacron/ ]
+then
+	cp -R /var/spool/anacron/ $OUTPUT_DIR/general/crontabs/var_spool_anacron 2> /dev/null
+fi
+
+crontab -l > $OUTPUT_DIR/general/crontabs/current_user_crontab.txt 2> /dev/null
+
+# Method 1: Check crontab spool directories
+if [ -d /var/spool/cron/crontabs ]
+then
+	for user in /var/spool/cron/crontabs/*
+	do
+		if [ -f "$user" ]
+		then
+			USERNAME=$(basename $user)
+			echo "=== Crontab for user: $USERNAME ===" >> $OUTPUT_DIR/general/crontabs/all_user_crontabs.txt
+			cat $user >> $OUTPUT_DIR/general/crontabs/all_user_crontabs.txt 2> /dev/null
+			echo "" >> $OUTPUT_DIR/general/crontabs/all_user_crontabs.txt
+		fi
+	done
+fi
+
+# Method 2: Alternative location
+if [ -d /var/spool/cron/tabs ]
+then
+	for user in /var/spool/cron/tabs/*
+	do
+		if [ -f "$user" ]
+		then
+			USERNAME=$(basename $user)
+			echo "=== Crontab for user: $USERNAME ===" >> $OUTPUT_DIR/general/crontabs/all_user_crontabs_alt.txt
+			cat $user >> $OUTPUT_DIR/general/crontabs/all_user_crontabs_alt.txt 2> /dev/null
+			echo "" >> $OUTPUT_DIR/general/crontabs/all_user_crontabs_alt.txt
+		fi
+	done
+fi
+
+# Systemd timers (modern Linux systems)
+echo "  ${COL_ENTRY}>${RESET} Systemd timers"
+if [ -x /bin/systemctl ] || [ -x /usr/bin/systemctl ]
+then
+	systemctl list-timers --all > $OUTPUT_DIR/general/crontabs/systemd_timers.txt 2> /dev/null
+	systemctl list-unit-files --type=timer > $OUTPUT_DIR/general/crontabs/systemd_timer_units.txt 2> /dev/null
+fi
+
+# Collect systemd timer files
+if [ -d /etc/systemd/system/ ]
+then
+	find /etc/systemd/system/ -name "*.timer" -exec cp {} $OUTPUT_DIR/general/crontabs/ \; 2> /dev/null
+fi
+
+if [ -d /lib/systemd/system/ ]
+then
+	find /lib/systemd/system/ -name "*.timer" -exec cp {} $OUTPUT_DIR/general/crontabs/ \; 2> /dev/null
+fi
+
+if [ -d /usr/lib/systemd/system/ ]
+then
+	find /usr/lib/systemd/system/ -name "*.timer" -exec cp {} $OUTPUT_DIR/general/crontabs/ \; 2> /dev/null
+fi
+
+# At jobs
+echo "  ${COL_ENTRY}>${RESET} At scheduler jobs"
+atq > $OUTPUT_DIR/general/crontabs/atq_list.txt 2> /dev/null
+
+# List at jobs with details if running as root
+if [ "$WHOAMI" = "root" ] || [ $(id -u) -eq 0 ]
+then
+	for job in $(atq 2>/dev/null | awk '{print $1}')
+	do
+		echo "=== At job $job ===" >> $OUTPUT_DIR/general/crontabs/at_jobs_details.txt
+		at -c $job >> $OUTPUT_DIR/general/crontabs/at_jobs_details.txt 2> /dev/null
+		echo "" >> $OUTPUT_DIR/general/crontabs/at_jobs_details.txt
+	done
+fi
+
+# Collect at spool directory
+if [ -d /var/spool/at ]
+then
+	ls -la /var/spool/at/ > $OUTPUT_DIR/general/crontabs/at_spool_listing.txt 2> /dev/null
+fi
+
+# Platform-specific scheduler files
+echo "  ${COL_ENTRY}>${RESET} Platform-specific schedulers"
+# macOS specific
+if [ $PLATFORM = "mac" ]
+then
+	# LaunchAgents and LaunchDaemons
+	if [ -d /Library/LaunchAgents/ ]
+	then
+		cp -R /Library/LaunchAgents/ $OUTPUT_DIR/general/crontabs/Library_LaunchAgents 2> /dev/null
+	fi
+	
+	if [ -d /Library/LaunchDaemons/ ]
+	then
+		cp -R /Library/LaunchDaemons/ $OUTPUT_DIR/general/crontabs/Library_LaunchDaemons 2> /dev/null
+	fi
+	
+	if [ -d /System/Library/LaunchAgents/ ]
+	then
+		cp -R /System/Library/LaunchAgents/ $OUTPUT_DIR/general/crontabs/System_Library_LaunchAgents 2> /dev/null
+	fi
+	
+	if [ -d /System/Library/LaunchDaemons/ ]
+	then
+		cp -R /System/Library/LaunchDaemons/ $OUTPUT_DIR/general/crontabs/System_Library_LaunchDaemons 2> /dev/null
+	fi
+	
+	# User LaunchAgents
+	for user_home in /Users/*
+	do
+		if [ -d "$user_home/Library/LaunchAgents/" ]
+		then
+			USERNAME=$(basename $user_home)
+			mkdir -p $OUTPUT_DIR/general/crontabs/User_LaunchAgents_$USERNAME 2> /dev/null
+			cp -R $user_home/Library/LaunchAgents/ $OUTPUT_DIR/general/crontabs/User_LaunchAgents_$USERNAME/ 2> /dev/null
+		fi
+	done
+	
+	# List loaded launch items
+	launchctl list > $OUTPUT_DIR/general/crontabs/launchctl_list.txt 2> /dev/null
+fi
+
+# Solaris specific
+if [ $PLATFORM = "solaris" ]
+then
+	# SMF scheduled services
+	svcs -a | grep -E "(online|offline)" > $OUTPUT_DIR/general/crontabs/smf_services.txt 2> /dev/null
+	# Check for legacy rc scripts
+	if [ -d /etc/rc2.d/ ]
+	then
+		ls -la /etc/rc*.d/ > $OUTPUT_DIR/general/crontabs/rc_scripts.txt 2> /dev/null
+	fi
+fi
+
+# AIX specific
+if [ $PLATFORM = "aix" ]
+then
+	# ODM cron entries
+	odmget cron > $OUTPUT_DIR/general/crontabs/aix_odm_cron.txt 2> /dev/null	
+	# List subsystems
+	lssrc -a > $OUTPUT_DIR/general/crontabs/aix_subsystems.txt 2> /dev/null
+fi
+
+# Find all collected cron files and look for suspicious patterns
+find $OUTPUT_DIR/general/crontabs/ -type f 2>/dev/null | while read cronfile
+do
+	# Skip binary files and directories
+	if file "$cronfile" 2>/dev/null | grep -q "text"
+	then
+		# Look for suspicious patterns
+		grep -H -E "(wget|curl|nc|netcat|/tmp/|/dev/shm/|base64|bash -i|sh -i)" "$cronfile" >> $OUTPUT_DIR/general/crontabs/suspicious_cron_entries.txt 2>/dev/null
+		
+		# Look for hidden files being executed
+		grep -H -E "/\.[^/]+$" "$cronfile" | grep -v "^#" >> $OUTPUT_DIR/general/crontabs/hidden_file_cron_entries.txt 2>/dev/null
+		
+		# Look for cron entries running as root
+		grep -H -E "^[^#]*root" "$cronfile" >> $OUTPUT_DIR/general/crontabs/root_cron_entries.txt 2>/dev/null
+	fi
+done
+echo "Cron and Scheduler Analysis Summary" > $OUTPUT_DIR/general/crontabs/CRON_SUMMARY.txt
+echo "===================================" >> $OUTPUT_DIR/general/crontabs/CRON_SUMMARY.txt
+echo "Collection Date: $(date)" >> $OUTPUT_DIR/general/crontabs/CRON_SUMMARY.txt
+echo "Platform: $PLATFORM" >> $OUTPUT_DIR/general/crontabs/CRON_SUMMARY.txt
+echo "" >> $OUTPUT_DIR/general/crontabs/CRON_SUMMARY.txt
+
+# Count various findings
+if [ -f "$OUTPUT_DIR/general/crontabs/all_user_crontabs.txt" ]
+then
+	USER_COUNT=$(grep -c "=== Crontab for user:" $OUTPUT_DIR/general/crontabs/all_user_crontabs.txt 2>/dev/null || echo 0)
+	echo "User crontabs found: $USER_COUNT" >> $OUTPUT_DIR/general/crontabs/CRON_SUMMARY.txt
+fi
+
+if [ -f "$OUTPUT_DIR/general/crontabs/suspicious_cron_entries.txt" ]
+then
+	SUSP_COUNT=$(wc -l < $OUTPUT_DIR/general/crontabs/suspicious_cron_entries.txt 2>/dev/null || echo 0)
+	echo "Suspicious cron entries: $SUSP_COUNT" >> $OUTPUT_DIR/general/crontabs/CRON_SUMMARY.txt
+fi
+
+if [ -f "$OUTPUT_DIR/general/crontabs/hidden_file_cron_entries.txt" ]
+then
+	HIDDEN_COUNT=$(wc -l < $OUTPUT_DIR/general/crontabs/hidden_file_cron_entries.txt 2>/dev/null || echo 0)
+	echo "Hidden file executions: $HIDDEN_COUNT" >> $OUTPUT_DIR/general/crontabs/CRON_SUMMARY.txt
+fi
+
+if [ -f "$OUTPUT_DIR/general/crontabs/root_cron_entries.txt" ]
+then
+	ROOT_COUNT=$(wc -l < $OUTPUT_DIR/general/crontabs/root_cron_entries.txt 2>/dev/null || echo 0)
+	echo "Root cron entries: $ROOT_COUNT" >> $OUTPUT_DIR/general/crontabs/CRON_SUMMARY.txt
+fi
+
+if [ -f "$OUTPUT_DIR/general/crontabs/systemd_timers.txt" ]
+then
+	TIMER_COUNT=$(grep -c ".timer" $OUTPUT_DIR/general/crontabs/systemd_timers.txt 2>/dev/null || echo 0)
+	echo "Systemd timers: $TIMER_COUNT" >> $OUTPUT_DIR/general/crontabs/CRON_SUMMARY.txt
+fi
+
+echo "" >> $OUTPUT_DIR/general/crontabs/CRON_SUMMARY.txt
+echo "Check individual files for detailed information." >> $OUTPUT_DIR/general/crontabs/CRON_SUMMARY.txt
+
+# Note about /dev/shm and /run/shm collection
+echo "  ${COL_ENTRY}>${RESET} Shared memory directories"
+
+mkdir $OUTPUT_DIR/general/shared_memory/ 2> /dev/null
 
 if [ -d /dev/shm/ ]
 then
-	cp -R /dev/shm/ $OUTPUT_DIR/general/dev_shm_folder/ 2> /dev/null
+	ls -la /dev/shm/ > $OUTPUT_DIR/general/shared_memory/dev_shm_listing.txt 2> /dev/null
+	# Only copy files, not the entire directory to avoid large temp files
+	find /dev/shm/ -type f -size -10M -exec cp {} $OUTPUT_DIR/general/shared_memory/ \; 2> /dev/null
 fi
 
 if [ -d /run/shm ]
 then
-	cp -R /run/shm/ $OUTPUT_DIR/general/run_shm_folder/ 2> /dev/null
+	ls -la /run/shm/ > $OUTPUT_DIR/general/shared_memory/run_shm_listing.txt 2> /dev/null
+	find /run/shm/ -type f -size -10M -exec cp {} $OUTPUT_DIR/general/shared_memory/ \; 2> /dev/null
 fi
+
+# Check for executables in shared memory
+find /dev/shm /run/shm -type f -executable 2>/dev/null | while read file
+do
+	echo "$file" >> $OUTPUT_DIR/general/shared_memory/executable_files.txt
+	ls -la "$file" >> $OUTPUT_DIR/general/shared_memory/executable_files_details.txt 2>/dev/null
+	file "$file" >> $OUTPUT_DIR/general/shared_memory/executable_files_types.txt 2>/dev/null
+done
 
 echo "  ${COL_ENTRY}>${RESET} Systemd timers and services"
 mkdir -p $OUTPUT_DIR/general/systemd
