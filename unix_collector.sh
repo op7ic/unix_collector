@@ -1228,11 +1228,331 @@ then
     cp /etc/sysconfig/selinux $OUTPUT_DIR/selinux/sysconfig-selinux 2> /dev/null
 fi
 
-if [ $PLATFORM = "mac" ]
+echo "  ${COL_ENTRY}>${RESET} Security frameworks and policies"
+mkdir $OUTPUT_DIR/security_frameworks 2> /dev/null
+
+if [ $PLATFORM = "linux" -o $PLATFORM = "generic" ]
 then
-	cp /etc/security/audit_control $OUTPUT_DIR/auditd/ 2> /dev/null
-	cp /var/audit/ $OUTPUT_DIR/auditd/ 2> /dev/null
-	
+    # SELinux collection
+    mkdir $OUTPUT_DIR/security_frameworks/selinux 2> /dev/null
+    
+    # Basic SELinux status
+    if [ -x /usr/sbin/getenforce ]; then
+        getenforce 1> $OUTPUT_DIR/security_frameworks/selinux/getenforce.txt 2> /dev/null
+    fi
+    if [ -x /usr/sbin/sestatus ]; then
+        sestatus 1> $OUTPUT_DIR/security_frameworks/selinux/sestatus.txt 2> /dev/null
+        sestatus -v 1> $OUTPUT_DIR/security_frameworks/selinux/sestatus-verbose.txt 2> /dev/null
+        sestatus -b 1> $OUTPUT_DIR/security_frameworks/selinux/sestatus-booleans.txt 2> /dev/null
+    fi
+    
+    # SELinux configuration files
+    if [ -f /etc/selinux/config ]; then
+        cp /etc/selinux/config $OUTPUT_DIR/security_frameworks/selinux/ 2> /dev/null
+    fi
+    if [ -f /etc/sysconfig/selinux ]; then
+        cp /etc/sysconfig/selinux $OUTPUT_DIR/security_frameworks/selinux/sysconfig-selinux 2> /dev/null
+    fi
+    
+    # SELinux policy information
+    if [ -x /usr/sbin/semodule ]; then
+        semodule -l 1> $OUTPUT_DIR/security_frameworks/selinux/semodule-list.txt 2> /dev/null
+    fi
+    if [ -x /usr/sbin/semanage ]; then
+        # Export current policy
+        semanage export 1> $OUTPUT_DIR/security_frameworks/selinux/semanage-export.txt 2> /dev/null
+        # List various SELinux configurations
+        semanage login -l 1> $OUTPUT_DIR/security_frameworks/selinux/semanage-login.txt 2> /dev/null
+        semanage user -l 1> $OUTPUT_DIR/security_frameworks/selinux/semanage-user.txt 2> /dev/null
+        semanage port -l 1> $OUTPUT_DIR/security_frameworks/selinux/semanage-port.txt 2> /dev/null
+        semanage fcontext -l 1> $OUTPUT_DIR/security_frameworks/selinux/semanage-fcontext.txt 2> /dev/null
+        semanage boolean -l 1> $OUTPUT_DIR/security_frameworks/selinux/semanage-boolean.txt 2> /dev/null
+        semanage node -l 1> $OUTPUT_DIR/security_frameworks/selinux/semanage-node.txt 2> /dev/null
+        semanage interface -l 1> $OUTPUT_DIR/security_frameworks/selinux/semanage-interface.txt 2> /dev/null
+    fi
+    
+    # Get current SELinux contexts
+    if [ -x /usr/bin/id ]; then
+        id -Z 1> $OUTPUT_DIR/security_frameworks/selinux/current-context.txt 2> /dev/null
+    fi
+    ps auxZ 1> $OUTPUT_DIR/security_frameworks/selinux/ps-contexts.txt 2> /dev/null
+    ls -laZ / 1> $OUTPUT_DIR/security_frameworks/selinux/root-contexts.txt 2> /dev/null
+    
+    # SELinux denials and audit logs
+    if [ -x /usr/bin/ausearch ]; then
+        ausearch -m avc -ts recent 1> $OUTPUT_DIR/security_frameworks/selinux/avc-denials-recent.txt 2> /dev/null
+    fi
+    if [ -f /var/log/audit/audit.log ]; then
+        grep -i avc /var/log/audit/audit.log | tail -1000 1> $OUTPUT_DIR/security_frameworks/selinux/avc-denials-log.txt 2> /dev/null
+    fi
+    
+    # Check loaded policy
+    if [ -f /sys/fs/selinux/policy ]; then
+        ls -la /sys/fs/selinux/policy 1> $OUTPUT_DIR/security_frameworks/selinux/loaded-policy-info.txt 2> /dev/null
+    fi
+    
+    # AppArmor collection
+    mkdir $OUTPUT_DIR/security_frameworks/apparmor 2> /dev/null
+    # AppArmor status
+    if [ -x /usr/sbin/aa-status ]; then
+        aa-status 1> $OUTPUT_DIR/security_frameworks/apparmor/aa-status.txt 2> /dev/null
+    fi
+    if [ -x /usr/sbin/apparmor_status ]; then
+        apparmor_status 1> $OUTPUT_DIR/security_frameworks/apparmor/apparmor-status.txt 2> /dev/null
+    fi
+    
+    # AppArmor configuration
+    if [ -d /etc/apparmor ]; then
+        cp -R /etc/apparmor $OUTPUT_DIR/security_frameworks/apparmor/etc-apparmor 2> /dev/null
+    fi
+    if [ -d /etc/apparmor.d ]; then
+        mkdir $OUTPUT_DIR/security_frameworks/apparmor/profiles 2> /dev/null
+        cp -R /etc/apparmor.d/* $OUTPUT_DIR/security_frameworks/apparmor/profiles/ 2> /dev/null
+        # List profiles
+        ls -la /etc/apparmor.d/ 1> $OUTPUT_DIR/security_frameworks/apparmor/profiles-list.txt 2> /dev/null
+    fi
+    
+    # Loaded AppArmor profiles
+    if [ -f /sys/kernel/security/apparmor/profiles ]; then
+        cat /sys/kernel/security/apparmor/profiles 1> $OUTPUT_DIR/security_frameworks/apparmor/loaded-profiles.txt 2> /dev/null
+    fi
+    
+    # AppArmor kernel parameters
+    if [ -d /sys/module/apparmor/parameters ]; then
+        for param in /sys/module/apparmor/parameters/*
+        do
+            echo "`basename $param` = `cat $param 2>/dev/null`" 1>> $OUTPUT_DIR/security_frameworks/apparmor/kernel-parameters.txt 2> /dev/null
+        done
+    fi
+    
+    # Check for AppArmor denials
+    if [ -f /var/log/audit/audit.log ]; then
+        grep -i apparmor /var/log/audit/audit.log | 1> $OUTPUT_DIR/security_frameworks/apparmor/denials-audit.txt 2> /dev/null
+    fi
+    if [ -f /var/log/kern.log ]; then
+        grep -i apparmor /var/log/kern.log | 1> $OUTPUT_DIR/security_frameworks/apparmor/denials-kern.txt 2> /dev/null
+    fi
+    
+    # grsecurity/PaX collection
+    mkdir $OUTPUT_DIR/security_frameworks/grsecurity 2> /dev/null
+    
+    if [ -f /proc/sys/kernel/grsecurity/grsec_lock ]; then
+        echo "grsecurity detected" > $OUTPUT_DIR/security_frameworks/grsecurity/detected.txt
+        # Collect grsec settings (if readable)
+        find /proc/sys/kernel/grsecurity -type f 2>/dev/null | while read grsec_file
+        do
+            echo "$grsec_file = `cat $grsec_file 2>/dev/null || echo 'unreadable'`" 1>> $OUTPUT_DIR/security_frameworks/grsecurity/settings.txt 2> /dev/null
+        done
+    fi
+    
+    # Check for PaX flags
+    if [ -x /sbin/paxctl ]; then
+        paxctl -v 1> $OUTPUT_DIR/security_frameworks/grsecurity/paxctl-version.txt 2> /dev/null
+    fi
+    
+    # SMACK collection
+    mkdir $OUTPUT_DIR/security_frameworks/smack 2> /dev/null
+    
+    if [ -d /sys/fs/smackfs ]; then
+        echo "SMACK detected" > $OUTPUT_DIR/security_frameworks/smack/detected.txt
+        ls -la /sys/fs/smackfs/ 1> $OUTPUT_DIR/security_frameworks/smack/smackfs-contents.txt 2> /dev/null
+        if [ -f /sys/fs/smackfs/load2 ]; then
+            cat /sys/fs/smackfs/load2 1> $OUTPUT_DIR/security_frameworks/smack/loaded-rules.txt 2> /dev/null
+        fi
+    fi
+    
+    # TOMOYO collection
+    mkdir $OUTPUT_DIR/security_frameworks/tomoyo 2> /dev/null
+    
+    if [ -d /sys/kernel/security/tomoyo ]; then
+        echo "TOMOYO detected" > $OUTPUT_DIR/security_frameworks/tomoyo/detected.txt
+        ls -la /sys/kernel/security/tomoyo/ 1> $OUTPUT_DIR/security_frameworks/tomoyo/kernel-interface.txt 2> /dev/null
+    fi
+    if [ -d /etc/tomoyo ]; then
+        cp -R /etc/tomoyo $OUTPUT_DIR/security_frameworks/tomoyo/etc-tomoyo 2> /dev/null
+    fi
+    
+    # Integrity Measurement Architecture (IMA)
+    mkdir $OUTPUT_DIR/security_frameworks/ima 2> /dev/null
+    
+    if [ -d /sys/kernel/security/ima ]; then
+        echo "IMA detected" > $OUTPUT_DIR/security_frameworks/ima/detected.txt
+        for ima_file in /sys/kernel/security/ima/*
+        do
+            if [ -f "$ima_file" ]; then
+                echo "=== `basename $ima_file` ===" >> $OUTPUT_DIR/security_frameworks/ima/measurements.txt
+                cat "$ima_file" 2>/dev/null >> $OUTPUT_DIR/security_frameworks/ima/measurements.txt || echo "unreadable" >> $OUTPUT_DIR/security_frameworks/ima/measurements.txt
+                echo "" >> $OUTPUT_DIR/security_frameworks/ima/measurements.txt
+            fi
+        done
+    fi
+    
+    # Check security-related kernel parameters
+    sysctl -a 2>/dev/null | grep -E "kernel.yama|kernel.kptr_restrict|kernel.dmesg_restrict|kernel.modules_disabled|kernel.unprivileged_|net.core.bpf_jit_harden|kernel.lockdown" 1> $OUTPUT_DIR/security_frameworks/security-sysctls.txt 2> /dev/null
+    
+elif [ $PLATFORM = "solaris" ]
+then
+    mkdir $OUTPUT_DIR/security_frameworks/solaris 2> /dev/null
+    
+    # Solaris Trusted Extensions
+    if [ -x /usr/bin/tncfg ]; then
+        echo "Trusted Extensions detected" > $OUTPUT_DIR/security_frameworks/solaris/trusted-extensions.txt
+        tncfg list 1>> $OUTPUT_DIR/security_frameworks/solaris/trusted-extensions.txt 2> /dev/null
+    fi
+    
+    # Basic Security Module (BSM) / Solaris Audit
+    if [ -x /usr/sbin/auditconfig ]; then
+        auditconfig -getpolicy 1> $OUTPUT_DIR/security_frameworks/solaris/audit-policy.txt 2> /dev/null
+        auditconfig -getflags 1> $OUTPUT_DIR/security_frameworks/solaris/audit-flags.txt 2> /dev/null
+        auditconfig -getnaflags 1> $OUTPUT_DIR/security_frameworks/solaris/audit-naflags.txt 2> /dev/null
+    fi
+    if [ -f /etc/security/audit_control ]; then
+        cp /etc/security/audit_control $OUTPUT_DIR/security_frameworks/solaris/ 2> /dev/null
+    fi
+    if [ -f /etc/security/audit_class ]; then
+        cp /etc/security/audit_class $OUTPUT_DIR/security_frameworks/solaris/ 2> /dev/null
+    fi
+    
+    # Solaris privileges
+    if [ -x /usr/bin/ppriv ]; then
+        ppriv -l 1> $OUTPUT_DIR/security_frameworks/solaris/privileges-list.txt 2> /dev/null
+        ppriv $$ 1> $OUTPUT_DIR/security_frameworks/solaris/current-privileges.txt 2> /dev/null
+    fi
+    
+    # Solaris RBAC
+    if [ -f /etc/security/exec_attr ]; then
+        cp /etc/security/exec_attr $OUTPUT_DIR/security_frameworks/solaris/ 2> /dev/null
+    fi
+    if [ -f /etc/security/prof_attr ]; then
+        cp /etc/security/prof_attr $OUTPUT_DIR/security_frameworks/solaris/ 2> /dev/null
+    fi
+    if [ -f /etc/user_attr ]; then
+        cp /etc/user_attr $OUTPUT_DIR/security_frameworks/solaris/ 2> /dev/null
+    fi
+    
+elif [ $PLATFORM = "aix" ]
+then
+    mkdir $OUTPUT_DIR/security_frameworks/aix 2> /dev/null
+    
+    # AIX Trusted Execution
+    if [ -x /usr/sbin/trustchk ]; then
+        trustchk -p ALL 1> $OUTPUT_DIR/security_frameworks/aix/trustchk-policy.txt 2> /dev/null
+        trustchk -n ALL 1> $OUTPUT_DIR/security_frameworks/aix/trustchk-verify.txt 2> /dev/null
+    fi
+    
+    # AIX Role Based Access Control
+    if [ -f /etc/security/roles ]; then
+        cp /etc/security/roles $OUTPUT_DIR/security_frameworks/aix/ 2> /dev/null
+    fi
+    if [ -f /etc/security/authorizations ]; then
+        cp /etc/security/authorizations $OUTPUT_DIR/security_frameworks/aix/ 2> /dev/null
+    fi
+    if [ -f /etc/security/privcmds ]; then
+        cp /etc/security/privcmds $OUTPUT_DIR/security_frameworks/aix/ 2> /dev/null
+    fi
+    
+    # AIX security settings
+    if [ -f /etc/security/limits ]; then
+        cp /etc/security/limits $OUTPUT_DIR/security_frameworks/aix/ 2> /dev/null
+    fi
+    if [ -f /etc/security/login.cfg ]; then
+        cp /etc/security/login.cfg $OUTPUT_DIR/security_frameworks/aix/ 2> /dev/null
+    fi
+    
+    # List security attributes
+    lssec -f /etc/security/user -s default -a 1> $OUTPUT_DIR/security_frameworks/aix/default-user-security.txt 2> /dev/null
+    
+elif [ $PLATFORM = "mac" ]
+then
+    mkdir $OUTPUT_DIR/security_frameworks/macos 2> /dev/null
+    
+    # System Integrity Protection (SIP)
+    csrutil status 1> $OUTPUT_DIR/security_frameworks/macos/sip-status.txt 2> /dev/null
+    
+    # Gatekeeper
+    spctl --status 1> $OUTPUT_DIR/security_frameworks/macos/gatekeeper-status.txt 2> /dev/null
+    spctl --list 1> $OUTPUT_DIR/security_frameworks/macos/gatekeeper-rules.txt 2> /dev/null
+    
+    # FileVault
+    fdesetup status 1> $OUTPUT_DIR/security_frameworks/macos/filevault-status.txt 2> /dev/null
+    
+    # Application Firewall
+    /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate 1> $OUTPUT_DIR/security_frameworks/macos/firewall-state.txt 2> /dev/null
+    /usr/libexec/ApplicationFirewall/socketfilterfw --listapps 1> $OUTPUT_DIR/security_frameworks/macos/firewall-apps.txt 2> /dev/null
+    
+    # Mandatory Access Control Framework
+    if [ -f /etc/security/audit_control ]; then
+        cp /etc/security/audit_control $OUTPUT_DIR/security_frameworks/macos/ 2> /dev/null
+    fi
+    
+    # TCC (Transparency, Consent, and Control)
+    if [ -f /Library/Application\ Support/com.apple.TCC/TCC.db ]; then
+        echo "TCC database found at /Library/Application Support/com.apple.TCC/TCC.db" > $OUTPUT_DIR/security_frameworks/macos/tcc-location.txt
+    fi
+    
+elif [ $PLATFORM = "hpux" ]
+then
+    mkdir $OUTPUT_DIR/security_frameworks/hpux 2> /dev/null
+    
+    # HP-UX Security Containment
+    if [ -x /usr/sbin/compartments ]; then
+        compartments -l 1> $OUTPUT_DIR/security_frameworks/hpux/compartments.txt 2> /dev/null
+    fi
+    
+    # HP-UX RBAC
+    if [ -f /etc/rbac/cmd_priv ]; then
+        cp /etc/rbac/cmd_priv $OUTPUT_DIR/security_frameworks/hpux/ 2> /dev/null
+    fi
+    if [ -f /etc/rbac/role_auth ]; then
+        cp /etc/rbac/role_auth $OUTPUT_DIR/security_frameworks/hpux/ 2> /dev/null
+    fi
+    
+elif [ $PLATFORM = "android" ]
+then
+    mkdir $OUTPUT_DIR/security_frameworks/android 2> /dev/null
+    
+    # SELinux on Android
+    getenforce 1> $OUTPUT_DIR/security_frameworks/android/selinux-status.txt 2> /dev/null
+    
+    # Android permissions
+    pm list permissions -g -f 1> $OUTPUT_DIR/security_frameworks/android/permissions-groups.txt 2> /dev/null
+    
+    # Security properties
+    getprop | grep -E "ro.secure|security|selinux|crypto" 1> $OUTPUT_DIR/security_frameworks/android/security-properties.txt 2> /dev/null
+fi
+
+# Check for security-related processes
+ps aux | grep -E "selinux|apparmor|grsec|auditd" | grep -v grep 1> $OUTPUT_DIR/security_frameworks/security-processes.txt 2> /dev/null
+
+# Create summary
+echo "=== Security Frameworks Summary ===" > $OUTPUT_DIR/security_frameworks/summary.txt
+echo "Platform: $PLATFORM" >> $OUTPUT_DIR/security_frameworks/summary.txt
+echo "Collection Date: `date`" >> $OUTPUT_DIR/security_frameworks/summary.txt
+echo "" >> $OUTPUT_DIR/security_frameworks/summary.txt
+
+# Summary for Linux systems
+if [ $PLATFORM = "linux" -o $PLATFORM = "generic" ]; then
+    # SELinux status
+    if [ -f $OUTPUT_DIR/security_frameworks/selinux/getenforce.txt ]; then
+        SELINUX_STATUS=`cat $OUTPUT_DIR/security_frameworks/selinux/getenforce.txt 2>/dev/null`
+        echo "SELinux: $SELINUX_STATUS" >> $OUTPUT_DIR/security_frameworks/summary.txt
+    else
+        echo "SELinux: Not installed" >> $OUTPUT_DIR/security_frameworks/summary.txt
+    fi
+    
+    # AppArmor status
+    if [ -f $OUTPUT_DIR/security_frameworks/apparmor/aa-status.txt ]; then
+        APPARMOR_PROFILES=`grep -c "profiles are loaded" $OUTPUT_DIR/security_frameworks/apparmor/aa-status.txt 2>/dev/null || echo "0"`
+        echo "AppArmor: Active ($APPARMOR_PROFILES profiles)" >> $OUTPUT_DIR/security_frameworks/summary.txt
+    else
+        echo "AppArmor: Not installed" >> $OUTPUT_DIR/security_frameworks/summary.txt
+    fi
+    
+    # Other frameworks
+    [ -f $OUTPUT_DIR/security_frameworks/grsecurity/detected.txt ] && echo "grsecurity: Detected" >> $OUTPUT_DIR/security_frameworks/summary.txt
+    [ -f $OUTPUT_DIR/security_frameworks/smack/detected.txt ] && echo "SMACK: Detected" >> $OUTPUT_DIR/security_frameworks/summary.txt
+    [ -f $OUTPUT_DIR/security_frameworks/tomoyo/detected.txt ] && echo "TOMOYO: Detected" >> $OUTPUT_DIR/security_frameworks/summary.txt
+    [ -f $OUTPUT_DIR/security_frameworks/ima/detected.txt ] && echo "IMA: Detected" >> $OUTPUT_DIR/security_frameworks/summary.txt
 fi
 
 echo "  ${COL_ENTRY}>${RESET} spool files"
@@ -3017,8 +3337,6 @@ fi
 echo "  ${COL_ENTRY}>${RESET} Network services configuration"
 mkdir $OUTPUT_DIR/network/services 2> /dev/null
 
-# Collect xinetd configuration
-echo "    Collecting xinetd configuration..."
 if [ -f /etc/xinetd.conf ]; then
     cp /etc/xinetd.conf $OUTPUT_DIR/network/services/ 2> /dev/null
     # Get xinetd status
@@ -3039,8 +3357,6 @@ if [ -d /etc/xinetd.d ]; then
     done
 fi
 
-# Collect inetd configuration
-echo "    Collecting inetd configuration..."
 if [ -f /etc/inetd.conf ]; then
     cp /etc/inetd.conf $OUTPUT_DIR/network/services/ 2> /dev/null
     # Extract active services (non-commented lines)
@@ -3055,7 +3371,6 @@ fi
 # Platform-specific network services
 if [ $PLATFORM = "solaris" ]
 then
-    echo "    Collecting Solaris network services..."
     # SMF services (Service Management Facility)
     svcs -a 1> $OUTPUT_DIR/network/services/svcs-all.txt 2> /dev/null
     svcs -p 1> $OUTPUT_DIR/network/services/svcs-processes.txt 2> /dev/null
@@ -3075,7 +3390,6 @@ then
     
 elif [ $PLATFORM = "aix" ]
 then
-    echo "    Collecting AIX network services..."
     # AIX uses SRC (System Resource Controller)
     lssrc -a 1> $OUTPUT_DIR/network/services/lssrc-all.txt 2> /dev/null
     # List inetd subservices
@@ -3093,7 +3407,6 @@ then
     
 elif [ $PLATFORM = "hpux" ]
 then
-    echo "    Collecting HP-UX network services..."
     # HP-UX inetd
     if [ -f /etc/inetd.conf ]; then
         cp /etc/inetd.conf $OUTPUT_DIR/network/services/ 2> /dev/null
@@ -3106,7 +3419,6 @@ then
     
 elif [ $PLATFORM = "mac" ]
 then
-    echo "    Collecting macOS network services..."
     # launchd services (modern macOS)
     launchctl list 1> $OUTPUT_DIR/network/services/launchctl-list.txt 2> /dev/null
     # Network-specific launch daemons
@@ -3130,7 +3442,6 @@ then
     
 elif [ $PLATFORM = "android" ]
 then
-    echo "    Collecting Android network services..."
     # Android doesn't use traditional inetd/xinetd
     # List running services
     dumpsys connectivity 1> $OUTPUT_DIR/network/services/android-connectivity.txt 2> /dev/null
@@ -3139,10 +3450,7 @@ then
     # List network-related services
     service list | grep -E "network|wifi|connectivity|netd" > $OUTPUT_DIR/network/services/android-network-services.txt 2> /dev/null
     
-else
-    # Linux and generic Unix systems
-    echo "    Collecting Linux/Unix network services..."
-    
+else    
     # SystemD socket activation (modern replacement for inetd)
     if command -v systemctl > /dev/null 2>&1; then
         echo "    Collecting systemd socket units..."
