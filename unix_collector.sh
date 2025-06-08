@@ -1363,38 +1363,101 @@ then
     showrev 1> $OUTPUT_DIR/software/software-showrev.txt 2> /dev/null
     pkginfo -x 2> /dev/null | awk '{ if ( NR % 2 ) { prev = $1 } else { print prev" "$0 } }' > $OUTPUT_DIR/software/solaris-pkginfo.txt 2> /dev/null
     showrev -a > $OUTPUT_DIR/software/showrev.txt 2> /dev/null
+    
+    # Package verification for Solaris
+    echo "  ${COL_ENTRY}>${RESET} Verifying package integrity (Solaris)"
+    mkdir $OUTPUT_DIR/software/verification 2> /dev/null
+    pkg verify 1> $OUTPUT_DIR/software/verification/pkg-verify-all.txt 2> /dev/null
+    pkg verify -v 1> $OUTPUT_DIR/software/verification/pkg-verify-verbose.txt 2> /dev/null
+    pkg verify 2>&1 | grep -E "ERROR|FAIL" 1> $OUTPUT_DIR/software/verification/pkg-verify-errors.txt 2> /dev/null
+    if [ -x /usr/bin/pkg ]; then
+        pkg list 1> $OUTPUT_DIR/software/verification/ips-packages.txt 2> /dev/null
+        for pkg in system/core-os system/kernel system/library
+        do
+            echo "=== Verifying $pkg ===" 1>> $OUTPUT_DIR/software/verification/critical-pkg-verify.txt 2> /dev/null
+            pkg verify $pkg 1>> $OUTPUT_DIR/software/verification/critical-pkg-verify.txt 2> /dev/null
+            echo "" 1>> $OUTPUT_DIR/software/verification/critical-pkg-verify.txt 2> /dev/null
+        done
+    fi
+    
 elif [ $PLATFORM = "aix" ]
 then
     lslpp -L all 1> $OUTPUT_DIR/software/software-lslpp.txt 2> /dev/null
     lslpp -Lc 1> $OUTPUT_DIR/software/aix-patchlist.txt 2> /dev/null
     pkginfo 1> $OUTPUT_DIR/software/software-pkginfo.txt 2> /dev/null
+    
+    # Package verification for AIX
+    echo "  ${COL_ENTRY}>${RESET} Verifying package integrity (AIX)"
+    mkdir $OUTPUT_DIR/software/verification 2> /dev/null
+    lppchk -v 1> $OUTPUT_DIR/software/verification/lppchk-verify.txt 2> /dev/null
+    lppchk -c 1> $OUTPUT_DIR/software/verification/lppchk-checksum.txt 2> /dev/null
+    lppchk -l 1> $OUTPUT_DIR/software/verification/lppchk-links.txt 2> /dev/null
+    lppchk -n 1> $OUTPUT_DIR/software/verification/lppchk-requisites.txt 2> /dev/null
+    lppchk -f 1> $OUTPUT_DIR/software/verification/lppchk-files.txt 2> /dev/null
+    
 elif [ $PLATFORM = "android" ]
 then
     find / -iname "*.apk" 1> $OUTPUT_DIR/software/software-apps.txt 2> /dev/null
-	pm list packages 1> $OUTPUT_DIR/software/list_packages-pm.txt 2> /dev/null 
-	cmd package list packages -f -u -i -U 1> $OUTPUT_DIR/software/android_list_packages-package.txt 2> /dev/null 
-	dumpsys -l 1> $OUTPUT_DIR/software/android_services_list.txt 2> /dev/null
-	dumpsys 1> $OUTPUT_DIR/software/android_services_dumpsys.txt 2> /dev/null
-	pm list libraries 1> $OUTPUT_DIR/software/android_libraries.txt 2> /dev/null
-	pm list permissions -f -u 1> $OUTPUT_DIR/software/android_permissions.txt 2> /dev/null
-	pm list permission-groups -f 1> $OUTPUT_DIR/software/android_group_permissions.txt 2> /dev/null
-	pm list instrumentation 1> $OUTPUT_DIR/software/android_instrumentation.txt 2> /dev/null
-	pm list features 1> $OUTPUT_DIR/software/android_features.txt 2> /dev/null
-	pm get-install-location 1> $OUTPUT_DIR/software/android_install_location.txt 2> /dev/null
+    pm list packages 1> $OUTPUT_DIR/software/list_packages-pm.txt 2> /dev/null 
+    cmd package list packages -f -u -i -U 1> $OUTPUT_DIR/software/android_list_packages-package.txt 2> /dev/null 
+    dumpsys -l 1> $OUTPUT_DIR/software/android_services_list.txt 2> /dev/null
+    dumpsys 1> $OUTPUT_DIR/software/android_services_dumpsys.txt 2> /dev/null
+    pm list libraries 1> $OUTPUT_DIR/software/android_libraries.txt 2> /dev/null
+    pm list permissions -f -u 1> $OUTPUT_DIR/software/android_permissions.txt 2> /dev/null
+    pm list permission-groups -f 1> $OUTPUT_DIR/software/android_group_permissions.txt 2> /dev/null
+    pm list instrumentation 1> $OUTPUT_DIR/software/android_instrumentation.txt 2> /dev/null
+    pm list features 1> $OUTPUT_DIR/software/android_features.txt 2> /dev/null
+    pm get-install-location 1> $OUTPUT_DIR/software/android_install_location.txt 2> /dev/null
+    
+    # Package verification for Android
+    echo "  ${COL_ENTRY}>${RESET} Verifying package integrity (Android)"
+    mkdir $OUTPUT_DIR/software/verification 2> /dev/null
+    pm list packages | sed 's/package://' | while read pkg
+    do
+        echo "=== Package: $pkg ===" 1>> $OUTPUT_DIR/software/verification/package-signatures.txt 2> /dev/null
+        dumpsys package $pkg | grep -A5 "signatures=" 1>> $OUTPUT_DIR/software/verification/package-signatures.txt 2> /dev/null
+        echo "" 1>> $OUTPUT_DIR/software/verification/package-signatures.txt 2> /dev/null
+    done
+    
 elif [ $PLATFORM = "mac" ]
 then
     find / -iname "*.app" 1> $OUTPUT_DIR/software/software-apps.txt 2> /dev/null
-	find / -iname "*.plist" 1> $OUTPUT_DIR/software/software-plist.txt 2> /dev/null
+    find / -iname "*.plist" 1> $OUTPUT_DIR/software/software-plist.txt 2> /dev/null
     ls -la /Applications/ 1> $OUTPUT_DIR/software/software-Applications-folder.txt 2> /dev/null
-	mkdir $OUTPUT_DIR/software/System_Kernel_Extensions/ 2> /dev/null
-	cp -R /System/Library/Extensions/ $OUTPUT_DIR/software/System_Kernel_Extensions/ 2> /dev/null
-	mkdir $OUTPUT_DIR/software/Library_Kernel_Extensions/ 2> /dev/null
-	cp -R /Library/Extensions/ $OUTPUT_DIR/software/Library_Kernel_Extensions/ 2> /dev/null
+    mkdir $OUTPUT_DIR/software/System_Kernel_Extensions/ 2> /dev/null
+    cp -R /System/Library/Extensions/ $OUTPUT_DIR/software/System_Kernel_Extensions/ 2> /dev/null
+    mkdir $OUTPUT_DIR/software/Library_Kernel_Extensions/ 2> /dev/null
+    cp -R /Library/Extensions/ $OUTPUT_DIR/software/Library_Kernel_Extensions/ 2> /dev/null
+    
+    # Package verification for macOS
+    echo "  ${COL_ENTRY}>${RESET} Verifying package integrity (macOS)"
+    mkdir $OUTPUT_DIR/software/verification 2> /dev/null
+    if [ -x /usr/bin/csrutil ]; then
+        csrutil status 1> $OUTPUT_DIR/software/verification/csrutil-status.txt 2> /dev/null
+    fi
+    find /Applications -maxdepth 2 -name "*.app" 2> /dev/null | head -50 | while read app
+    do
+        app_name=`basename "$app"`
+        echo "=== $app_name ===" 1>> $OUTPUT_DIR/software/verification/app-signatures.txt 2> /dev/null
+        codesign -vvv "$app" 1>> $OUTPUT_DIR/software/verification/app-signatures.txt 2>&1
+        echo "" 1>> $OUTPUT_DIR/software/verification/app-signatures.txt 2> /dev/null
+    done
+    spctl --status 1> $OUTPUT_DIR/software/verification/gatekeeper-status.txt 2> /dev/null
+    spctl --list 1> $OUTPUT_DIR/software/verification/notarized-apps.txt 2> /dev/null
+    
 elif [ $PLATFORM = "hpux" ]
 then
     swlist 1> $OUTPUT_DIR/software/software-swlist.txt 2> /dev/null
     swlist -l fileset -a revision 1> $OUTPUT_DIR/software/hpux-patchlist.txt 2> /dev/null
+    
+    # Package verification for HP-UX
+    echo "  ${COL_ENTRY}>${RESET} Verifying package integrity (HP-UX)"
+    mkdir $OUTPUT_DIR/software/verification 2> /dev/null
+    swverify -x autoselect_dependencies=false \* 1> $OUTPUT_DIR/software/verification/swverify-all.txt 2> /dev/null
+    swverify -x check_permissions=true -x check_requisites=true \* 1> $OUTPUT_DIR/software/verification/swverify-detailed.txt 2> /dev/null
+    
 else
+    # Linux and generic platforms
     cp /etc/redhat-release $OUTPUT_DIR/software/ 2> /dev/null
     rpm -q -a 1> $OUTPUT_DIR/software/software-rpm.txt 2> /dev/null
     rpm -qa --qf '%{NAME}-%{VERSION}-%{RELEASE}|%{EPOCH}\n' > $OUTPUT_DIR/software/rpm-patchlist.txt 2> /dev/null
@@ -1405,8 +1468,99 @@ else
     ls -1 /Library/Receipts/boms /private/var/db/receipts 2>/dev/null | grep '\.bom$' > $OUTPUT_DIR/software/osx-bomlist.txt 2> /dev/null
     emerge -pev world 1> $OUTPUT_DIR/software/software-emerge.txt 2> /dev/null
     pkg_info > $OUTPUT_DIR/software/freebsd-patchlist.txt 2> /dev/null
-    chkconfig --list $OUTPUT_DIR/software/chkconfig--list.txt 2> /dev/null
-	pkg info > $OUTPUT_DIR/software/freebsd-patchlist_pkg_info.txt 2> /dev/null
+    chkconfig --list > $OUTPUT_DIR/software/chkconfig--list.txt 2> /dev/null
+    pkg info > $OUTPUT_DIR/software/freebsd-patchlist_pkg_info.txt 2> /dev/null
+    
+    # Package verification for Linux
+    echo "  ${COL_ENTRY}>${RESET} Verifying package integrity"
+    mkdir $OUTPUT_DIR/software/verification 2> /dev/null
+    
+    # RPM-based verification
+    if [ -x /usr/bin/rpm -o -x /bin/rpm ]; then
+        echo "    Verifying RPM packages (this may take several minutes)..."
+        rpm -Va 1> $OUTPUT_DIR/software/verification/rpm-verify-all.txt 2> /dev/null
+        rpm -V --nofiles --nodigest -a 1> $OUTPUT_DIR/software/verification/rpm-verify-quick.txt 2> /dev/null
+        rpm -Va 2> /dev/null | grep '^..5' 1> $OUTPUT_DIR/software/verification/rpm-modified-configs.txt 2> /dev/null
+        rpm -qa --qf '%{NAME}-%{VERSION}-%{RELEASE} %{SIGPGP:pgpsig}\n' | grep -v 'Key ID' 1> $OUTPUT_DIR/software/verification/rpm-unsigned-packages.txt 2> /dev/null
+        for pkg in kernel glibc systemd openssh openssl sudo pam
+        do
+            rpm -q $pkg > /dev/null 2>&1 && {
+                echo "=== Verifying $pkg packages ===" 1>> $OUTPUT_DIR/software/verification/rpm-critical-packages.txt 2> /dev/null
+                rpm -V $pkg* 1>> $OUTPUT_DIR/software/verification/rpm-critical-packages.txt 2> /dev/null
+                echo "" 1>> $OUTPUT_DIR/software/verification/rpm-critical-packages.txt 2> /dev/null
+            }
+        done
+    fi
+    
+    # Debian-based verification
+    if [ -x /usr/bin/dpkg ]; then
+        echo "    Verifying DEB packages (this may take several minutes)..."
+        dpkg --verify 1> $OUTPUT_DIR/software/verification/dpkg-verify-all.txt 2> /dev/null
+        if [ -x /usr/bin/debsums ]; then
+            debsums -a 1> $OUTPUT_DIR/software/verification/debsums-all.txt 2> /dev/null
+            debsums -c 1> $OUTPUT_DIR/software/verification/debsums-changed.txt 2> /dev/null
+            debsums -l 1> $OUTPUT_DIR/software/verification/debsums-missing.txt 2> /dev/null
+        fi
+        apt-key list 1> $OUTPUT_DIR/software/verification/apt-keys.txt 2> /dev/null
+        dpkg -l | grep '^ii' | awk '{print $2}' | while read pkg
+        do
+            apt-cache show $pkg 2> /dev/null | grep -q "^MD5sum:" || echo $pkg 1>> $OUTPUT_DIR/software/verification/dpkg-no-checksums.txt 2> /dev/null
+        done
+    fi
+    
+    # FreeBSD package verification
+    if [ -x /usr/sbin/pkg ]; then
+        echo "    Verifying FreeBSD packages..."
+        pkg check -sa 1> $OUTPUT_DIR/software/verification/pkg-check-all.txt 2> /dev/null
+        pkg check -d 1> $OUTPUT_DIR/software/verification/pkg-check-dependencies.txt 2> /dev/null
+        pkg check -s 1> $OUTPUT_DIR/software/verification/pkg-check-checksums.txt 2> /dev/null
+    fi
+    
+    # OpenBSD package verification
+    if [ -x /usr/sbin/pkg_check ]; then
+        echo "    Verifying OpenBSD packages..."
+        pkg_check 1> $OUTPUT_DIR/software/verification/pkg_check.txt 2> /dev/null
+        pkg_check -F 1> $OUTPUT_DIR/software/verification/pkg_check-files.txt 2> /dev/null
+    fi
+    
+    # Snap package verification
+    if [ -x /usr/bin/snap ]; then
+        echo "    Checking snap packages..."
+        snap list 1> $OUTPUT_DIR/software/verification/snap-list.txt 2> /dev/null
+        snap changes 1> $OUTPUT_DIR/software/verification/snap-changes.txt 2> /dev/null
+    fi
+    
+    # Flatpak verification
+    if [ -x /usr/bin/flatpak ]; then
+        echo "    Checking flatpak packages..."
+        flatpak list 1> $OUTPUT_DIR/software/verification/flatpak-list.txt 2> /dev/null
+        flatpak remotes 1> $OUTPUT_DIR/software/verification/flatpak-remotes.txt 2> /dev/null
+    fi
+fi
+
+# Create package verification summary
+echo "  ${COL_ENTRY}>${RESET} Creating verification summary"
+echo "=== Package Verification Summary ===" 1> $OUTPUT_DIR/software/verification/summary.txt 2> /dev/null
+echo "Platform: $PLATFORM" 1>> $OUTPUT_DIR/software/verification/summary.txt 2> /dev/null
+echo "Verification Date: `date`" 1>> $OUTPUT_DIR/software/verification/summary.txt 2> /dev/null
+echo "" 1>> $OUTPUT_DIR/software/verification/summary.txt 2> /dev/null
+
+# Count verification issues if files exist
+if [ -f $OUTPUT_DIR/software/verification/rpm-verify-all.txt ]; then
+    RPM_ISSUES=`grep -c '^..5' $OUTPUT_DIR/software/verification/rpm-verify-all.txt 2> /dev/null || echo 0`
+    echo "RPM verification issues: $RPM_ISSUES" 1>> $OUTPUT_DIR/software/verification/summary.txt 2> /dev/null
+fi
+if [ -f $OUTPUT_DIR/software/verification/debsums-changed.txt ]; then
+    DEB_ISSUES=`wc -l < $OUTPUT_DIR/software/verification/debsums-changed.txt 2> /dev/null || echo 0`
+    echo "DEB verification issues: $DEB_ISSUES" 1>> $OUTPUT_DIR/software/verification/summary.txt 2> /dev/null
+fi
+if [ -f $OUTPUT_DIR/software/verification/pkg-verify-errors.txt ]; then
+    SOLARIS_ISSUES=`wc -l < $OUTPUT_DIR/software/verification/pkg-verify-errors.txt 2> /dev/null || echo 0`
+    echo "Solaris pkg verification errors: $SOLARIS_ISSUES" 1>> $OUTPUT_DIR/software/verification/summary.txt 2> /dev/null
+fi
+if [ -f $OUTPUT_DIR/software/verification/lppchk-verify.txt ]; then
+    AIX_ISSUES=`grep -c "PROBLEMS" $OUTPUT_DIR/software/verification/lppchk-verify.txt 2> /dev/null || echo 0`
+    echo "AIX lppchk issues: $AIX_ISSUES" 1>> $OUTPUT_DIR/software/verification/summary.txt 2> /dev/null
 fi
 
 echo "  ${COL_ENTRY}>${RESET} Installed patches"
