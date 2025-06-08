@@ -1563,19 +1563,207 @@ if [ -f $OUTPUT_DIR/software/verification/lppchk-verify.txt ]; then
     echo "AIX lppchk issues: $AIX_ISSUES" 1>> $OUTPUT_DIR/software/verification/summary.txt 2> /dev/null
 fi
 
-echo "  ${COL_ENTRY}>${RESET} Installed patches"
+echo "  ${COL_ENTRY}>${RESET} Installed patches and update history"
+mkdir $OUTPUT_DIR/software/patches 2> /dev/null
+
 if [ $PLATFORM = "solaris" ]
 then
-    showrev -p 1> $OUTPUT_DIR/software/patches-showrev-p.txt 2> /dev/null
-    patchadd -p 1> $OUTPUT_DIR/software/patches-patchadd-p.txt 2> /dev/null
+    showrev -p 1> $OUTPUT_DIR/software/patches/showrev-p.txt 2> /dev/null
+    patchadd -p 1> $OUTPUT_DIR/software/patches/patchadd-p.txt 2> /dev/null
+    # Solaris 11+ uses pkg for patches
+    if [ -x /usr/bin/pkg ]; then
+        pkg history 1> $OUTPUT_DIR/software/patches/pkg-history.txt 2> /dev/null
+        pkg history -l 1> $OUTPUT_DIR/software/patches/pkg-history-long.txt 2> /dev/null
+        pkg list -Hv entire 1> $OUTPUT_DIR/software/patches/pkg-entire-incorporation.txt 2> /dev/null
+    fi
+    # Check patch logs
+    if [ -d /var/sadm/patch ]; then
+        ls -la /var/sadm/patch/ 1> $OUTPUT_DIR/software/patches/patch-directory.txt 2> /dev/null
+    fi
+    
 elif [ $PLATFORM = "mac" ]
 then
-	system_profiler SPInstallHistoryDataType 1> $OUTPUT_DIR/software/patches-SPInstallHistoryDataType.txt 2> /dev/null
-	softwareupdate --history --all 1> $OUTPUT_DIR/software/patches-history.txt 2> /dev/null
-	cp /Library/Receipts/InstallHistory.plist $OUTPUT_DIR/software/ 2> /dev/null
+    system_profiler SPInstallHistoryDataType 1> $OUTPUT_DIR/software/patches/SPInstallHistoryDataType.txt 2> /dev/null
+    softwareupdate --history --all 1> $OUTPUT_DIR/software/patches/softwareupdate-history.txt 2> /dev/null
+    cp /Library/Receipts/InstallHistory.plist $OUTPUT_DIR/software/patches/ 2> /dev/null
+    # Additional macOS update logs
+    if [ -d /var/log/install.log ]; then
+        cp /var/log/install.log $OUTPUT_DIR/software/patches/ 2> /dev/null
+    fi
+    # List available updates
+    softwareupdate -l 1> $OUTPUT_DIR/software/patches/available-updates.txt 2> /dev/null
+    
 elif [ $PLATFORM = "aix" ]
 then
-    instfix -a 1> $OUTPUT_DIR/software/patches-instfix.txt 2> /dev/null
+    instfix -a 1> $OUTPUT_DIR/software/patches/instfix-all.txt 2> /dev/null
+    instfix -i 1> $OUTPUT_DIR/software/patches/instfix-installed.txt 2> /dev/null
+    # List all fixes with dates
+    instfix -icqk 1> $OUTPUT_DIR/software/patches/instfix-detailed.txt 2> /dev/null
+    # Check for specific APAR fixes
+    instfix -ik APAR 1> $OUTPUT_DIR/software/patches/apar-fixes.txt 2> /dev/null
+    # Service pack info
+    oslevel -s 1> $OUTPUT_DIR/software/patches/service-pack.txt 2> /dev/null
+    oslevel -sq 1> $OUTPUT_DIR/software/patches/service-pack-history.txt 2> /dev/null
+    
+elif [ $PLATFORM = "hpux" ]
+then
+    # HP-UX patch information
+    swlist -l patch 1> $OUTPUT_DIR/software/patches/swlist-patches.txt 2> /dev/null
+    swlist -l bundle 1> $OUTPUT_DIR/software/patches/swlist-bundles.txt 2> /dev/null
+    # Show patch details
+    swlist -a patch_state 1> $OUTPUT_DIR/software/patches/patch-states.txt 2> /dev/null
+    # Check for patch bundles
+    swlist -l bundle -a readme 1> $OUTPUT_DIR/software/patches/bundle-readme.txt 2> /dev/null
+    
+elif [ $PLATFORM = "android" ]
+then
+    # Android system updates are different
+    getprop ro.build.version.security_patch 1> $OUTPUT_DIR/software/patches/security-patch-level.txt 2> /dev/null
+    getprop ro.build.version.release 1> $OUTPUT_DIR/software/patches/android-version.txt 2> /dev/null
+    getprop ro.build.date 1> $OUTPUT_DIR/software/patches/build-date.txt 2> /dev/null
+    # OTA update logs if available
+    if [ -f /cache/recovery/last_log ]; then
+        cp /cache/recovery/last_log $OUTPUT_DIR/software/patches/last-ota-log.txt 2> /dev/null
+    fi
+    
+elif [ $PLATFORM = "linux" -o $PLATFORM = "generic" ]
+then
+    # RPM-based systems (Red Hat, CentOS, SUSE, etc.)
+    if [ -x /usr/bin/yum ]; then
+        echo "    Collecting YUM patch history..."
+        yum history 1> $OUTPUT_DIR/software/patches/yum-history.txt 2> /dev/null
+        yum history list all 1> $OUTPUT_DIR/software/patches/yum-history-all.txt 2> /dev/null
+        # Get detailed info for recent transactions
+        yum history list | head -20 | grep -E '^[[:space:]]*[0-9]+' | awk '{print $1}' | while read trans_id
+        do
+            echo "=== Transaction $trans_id ===" 1>> $OUTPUT_DIR/software/patches/yum-history-details.txt 2> /dev/null
+            yum history info $trans_id 1>> $OUTPUT_DIR/software/patches/yum-history-details.txt 2> /dev/null
+            echo "" 1>> $OUTPUT_DIR/software/patches/yum-history-details.txt 2> /dev/null
+        done
+        # List available updates
+        yum check-update 1> $OUTPUT_DIR/software/patches/yum-available-updates.txt 2> /dev/null
+        # Security updates
+        yum list-security 1> $OUTPUT_DIR/software/patches/yum-security-updates.txt 2> /dev/null
+    fi
+    
+    # DNF (Fedora, newer Red Hat)
+    if [ -x /usr/bin/dnf ]; then
+        echo "    Collecting DNF patch history..."
+        dnf history 1> $OUTPUT_DIR/software/patches/dnf-history.txt 2> /dev/null
+        dnf history list all 1> $OUTPUT_DIR/software/patches/dnf-history-all.txt 2> /dev/null
+        # List available updates
+        dnf check-update 1> $OUTPUT_DIR/software/patches/dnf-available-updates.txt 2> /dev/null
+        # Security updates
+        dnf updateinfo list security 1> $OUTPUT_DIR/software/patches/dnf-security-updates.txt 2> /dev/null
+    fi
+    
+    # Zypper (SUSE, openSUSE)
+    if [ -x /usr/bin/zypper ]; then
+        echo "    Collecting Zypper patch history..."
+        zypper patches 1> $OUTPUT_DIR/software/patches/zypper-patches.txt 2> /dev/null
+        zypper list-patches 1> $OUTPUT_DIR/software/patches/zypper-list-patches.txt 2> /dev/null
+        # Patch history
+        if [ -f /var/log/zypp/history ]; then
+            cp /var/log/zypp/history $OUTPUT_DIR/software/patches/zypper-history.txt 2> /dev/null
+        fi
+        # Available updates
+        zypper list-updates 1> $OUTPUT_DIR/software/patches/zypper-available-updates.txt 2> /dev/null
+    fi
+    
+    # APT-based systems (Debian, Ubuntu, etc.)
+    if [ -x /usr/bin/apt -o -x /usr/bin/apt-get ]; then
+        echo "    Collecting APT patch history..."
+        # APT history logs
+        if [ -f /var/log/apt/history.log ]; then
+            cp /var/log/apt/history.log $OUTPUT_DIR/software/patches/apt-history.log 2> /dev/null
+        fi
+        if [ -f /var/log/apt/term.log ]; then
+            cp /var/log/apt/term.log $OUTPUT_DIR/software/patches/apt-term.log 2> /dev/null
+        fi
+        # Rotated logs
+        for aptlog in /var/log/apt/history.log.*
+        do
+            if [ -f "$aptlog" ]; then
+                filename=`basename $aptlog`
+                cp $aptlog $OUTPUT_DIR/software/patches/$filename 2> /dev/null
+            fi
+        done
+        # dpkg log
+        if [ -f /var/log/dpkg.log ]; then
+            cp /var/log/dpkg.log $OUTPUT_DIR/software/patches/ 2> /dev/null
+        fi
+        # List available updates
+        apt list --upgradable 1> $OUTPUT_DIR/software/patches/apt-upgradable.txt 2> /dev/null
+        # Update package info
+        if [ -f /var/lib/apt/periodic/update-success-stamp ]; then
+            ls -la /var/lib/apt/periodic/update-success-stamp 1> $OUTPUT_DIR/software/patches/apt-last-update.txt 2> /dev/null
+        fi
+        # Unattended upgrades log
+        if [ -f /var/log/unattended-upgrades/unattended-upgrades.log ]; then
+            cp /var/log/unattended-upgrades/unattended-upgrades.log $OUTPUT_DIR/software/patches/ 2> /dev/null
+        fi
+    fi
+    
+    # Emerge (Gentoo)
+    if [ -x /usr/bin/emerge ]; then
+        echo "    Collecting Emerge patch history..."
+        if [ -f /var/log/emerge.log ]; then
+            tail -1000 /var/log/emerge.log 1> $OUTPUT_DIR/software/patches/emerge-recent.log 2> /dev/null
+        fi
+        # Security patches
+        glsa-check -l 1> $OUTPUT_DIR/software/patches/glsa-security-patches.txt 2> /dev/null
+    fi
+    
+    # Pacman (Arch Linux)
+    if [ -x /usr/bin/pacman ]; then
+        echo "    Collecting Pacman patch history..."
+        if [ -f /var/log/pacman.log ]; then
+            cp /var/log/pacman.log $OUTPUT_DIR/software/patches/ 2> /dev/null
+        fi
+        # List outdated packages
+        pacman -Qu 1> $OUTPUT_DIR/software/patches/pacman-outdated.txt 2> /dev/null
+    fi
+    
+    # FreeBSD
+    if [ -x /usr/sbin/freebsd-update ]; then
+        echo "    Collecting FreeBSD update history..."
+        freebsd-update fetch 1> $OUTPUT_DIR/software/patches/freebsd-update-check.txt 2> /dev/null
+        # Check installed patches
+        if [ -f /var/db/freebsd-update/tag ]; then
+            cat /var/db/freebsd-update/tag 1> $OUTPUT_DIR/software/patches/freebsd-update-tag.txt 2> /dev/null
+        fi
+        # pkg updating shows available updates
+        pkg updating 1> $OUTPUT_DIR/software/patches/pkg-updating.txt 2> /dev/null
+    fi
+    
+    # OpenBSD
+    if [ -x /usr/sbin/syspatch ]; then
+        echo "    Collecting OpenBSD patch history..."
+        syspatch -l 1> $OUTPUT_DIR/software/patches/syspatch-list.txt 2> /dev/null
+        syspatch -c 1> $OUTPUT_DIR/software/patches/syspatch-check.txt 2> /dev/null
+    fi
+    
+    # Check common update logs
+    if [ -f /var/log/yum.log ]; then
+        cp /var/log/yum.log $OUTPUT_DIR/software/patches/ 2> /dev/null
+    fi
+    if [ -f /var/log/dnf.log ]; then
+        cp /var/log/dnf.log $OUTPUT_DIR/software/patches/ 2> /dev/null
+    fi
+    
+    # Kernel update history
+    if [ -d /boot ]; then
+        ls -la /boot/vmlinuz* 1> $OUTPUT_DIR/software/patches/kernel-versions.txt 2> /dev/null
+        ls -la /boot/initrd* 1>> $OUTPUT_DIR/software/patches/kernel-versions.txt 2> /dev/null
+    fi
+    
+    # Check for automatic update configurations
+    if [ -f /etc/yum/yum-cron.conf ]; then
+        cp /etc/yum/yum-cron.conf $OUTPUT_DIR/software/patches/ 2> /dev/null
+    fi
+    if [ -f /etc/apt/apt.conf.d/50unattended-upgrades ]; then
+        cp /etc/apt/apt.conf.d/50unattended-upgrades $OUTPUT_DIR/software/patches/ 2> /dev/null
+    fi
 fi
 
 echo "  ${COL_ENTRY}>${RESET} Compiler tools (NFS skip)"
