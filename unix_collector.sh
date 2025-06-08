@@ -5728,267 +5728,568 @@ then
 	fi
 	
 	# Check for Proxmox environment
-	if [ -x "$(command -v pct)" ] || [ -x "$(command -v qm)" ] || [ -x "$(command -v pvesh)" ]
+	if [ -x "$(command -v pct)" ] || [ -x "$(command -v qm)" ] || [ -x "$(command -v pvesh)" ] || [ -d /etc/pve ]
 	then
-		echo "  ${COL_ENTRY}>${RESET} Collecting Proxmox environment information"
-		mkdir -p $OUTPUT_DIR/containers/proxmox
-		mkdir -p $OUTPUT_DIR/virtual/proxmox
-		
+		echo "${COL_SECTION}PROXMOX VE INFORMATION:${RESET}"
+		mkdir -p $OUTPUT_DIR/virtual/proxmox/system 2> /dev/null
+		mkdir -p $OUTPUT_DIR/virtual/proxmox/cluster 2> /dev/null
+		mkdir -p $OUTPUT_DIR/virtual/proxmox/nodes 2> /dev/null
+		mkdir -p $OUTPUT_DIR/virtual/proxmox/storage 2> /dev/null
+		mkdir -p $OUTPUT_DIR/virtual/proxmox/network 2> /dev/null
+		mkdir -p $OUTPUT_DIR/virtual/proxmox/backup 2> /dev/null
+		mkdir -p $OUTPUT_DIR/virtual/proxmox/config 2> /dev/null
+		mkdir -p $OUTPUT_DIR/virtual/proxmox/access 2> /dev/null
+		mkdir -p $OUTPUT_DIR/virtual/proxmox/firewall 2> /dev/null
+		mkdir -p $OUTPUT_DIR/virtual/proxmox/ceph 2> /dev/null
+		mkdir -p $OUTPUT_DIR/virtual/proxmox/zfs 2> /dev/null
+		mkdir -p $OUTPUT_DIR/virtual/proxmox/tasks 2> /dev/null
+		mkdir -p $OUTPUT_DIR/virtual/proxmox/vms 2> /dev/null
+		mkdir -p $OUTPUT_DIR/containers/proxmox 2> /dev/null
+		NODENAME=$(hostname)
+		echo "Node name: $NODENAME" > $OUTPUT_DIR/virtual/proxmox/system/node_info.txt
+		echo "Collection date: $(date)" >> $OUTPUT_DIR/virtual/proxmox/system/node_info.txt
 		if [ -x "$(command -v pveversion)" ]; then
-			pveversion --verbose 1> $OUTPUT_DIR/virtual/proxmox/pve_version.txt 2> /dev/null
+			pveversion > $OUTPUT_DIR/virtual/proxmox/system/version.txt 2> /dev/null
+			pveversion --verbose > $OUTPUT_DIR/virtual/proxmox/system/version_verbose.txt 2> /dev/null
 		fi
-		
+		if [ -x "$(command -v pvereport)" ]; then
+			pvereport > $OUTPUT_DIR/virtual/proxmox/system/pvereport_full.txt 2> /dev/null
+		fi
 		if [ -f /etc/pve/subscription ]; then
-			cp /etc/pve/subscription $OUTPUT_DIR/virtual/proxmox/subscription.txt 2> /dev/null
+			cp /etc/pve/subscription $OUTPUT_DIR/virtual/proxmox/system/subscription.txt 2> /dev/null
 		fi
-
+		if [ -x "$(command -v pvesubscription)" ]; then
+			pvesubscription get > $OUTPUT_DIR/virtual/proxmox/system/subscription_status.txt 2> /dev/null
+		fi
 		if [ -x "$(command -v pvecm)" ]; then
-			pvecm status 1> $OUTPUT_DIR/virtual/proxmox/cluster_status.txt 2> /dev/null
-			pvecm nodes 1> $OUTPUT_DIR/virtual/proxmox/cluster_nodes.txt 2> /dev/null
+			pvecm status > $OUTPUT_DIR/virtual/proxmox/cluster/pvecm_status.txt 2> /dev/null
+			pvecm nodes > $OUTPUT_DIR/virtual/proxmox/cluster/pvecm_nodes.txt 2> /dev/null
 		fi
-		
 		if [ -x "$(command -v corosync-cfgtool)" ]; then
-			corosync-cfgtool -s 1> $OUTPUT_DIR/virtual/proxmox/corosync_status.txt 2> /dev/null
+			corosync-cfgtool -s > $OUTPUT_DIR/virtual/proxmox/cluster/corosync_status.txt 2> /dev/null
+			corosync-cmapctl > $OUTPUT_DIR/virtual/proxmox/cluster/corosync_config.txt 2> /dev/null
 		fi
-		
 		if [ -x "$(command -v pvesm)" ]; then
-			echo "  ${COL_ENTRY}>${RESET} Collecting Proxmox storage information"
-			pvesm status 1> $OUTPUT_DIR/virtual/proxmox/storage_status.txt 2> /dev/null
-			pvesm list local 1> $OUTPUT_DIR/virtual/proxmox/storage_list_local.txt 2> /dev/null
-			pvesm status | tail -n +2 | awk '{print $1}' | while read storage; do
-				pvesm list "$storage" 1> $OUTPUT_DIR/virtual/proxmox/storage_content_${storage}.txt 2> /dev/null
+			pvesm status > $OUTPUT_DIR/virtual/proxmox/storage/storage_status.txt 2> /dev/null
+			pvesm list local > $OUTPUT_DIR/virtual/proxmox/storage/storage_list_local.txt 2> /dev/null
+			pvesm status 2>/dev/null | tail -n +2 | awk '{print $1}' | while read storage; do
+				if [ -n "$storage" ]; then
+					pvesm list "$storage" > "$OUTPUT_DIR/virtual/proxmox/storage/content_${storage}.txt" 2> /dev/null
+					if [ -x "$(command -v pvesh)" ]; then
+						pvesh get /storage/$storage --output-format json > "$OUTPUT_DIR/virtual/proxmox/storage/config_${storage}.json" 2> /dev/null
+					fi
+				fi
 			done
 		fi
-	
+		if [ -f /etc/network/interfaces ]; then
+			cp /etc/network/interfaces $OUTPUT_DIR/virtual/proxmox/network/interfaces.txt 2> /dev/null
+		fi
+		if [ -d /etc/pve/nodes ]; then
+			find /etc/pve/nodes -name "network" -type f 2>/dev/null | while read netconf; do
+				node=$(echo "$netconf" | awk -F'/' '{print $(NF-1)}')
+				cp "$netconf" "$OUTPUT_DIR/virtual/proxmox/network/network_${node}.txt" 2> /dev/null
+			done
+		fi
+		brctl show > $OUTPUT_DIR/virtual/proxmox/network/bridges.txt 2> /dev/null
+		ip link show type bridge > $OUTPUT_DIR/virtual/proxmox/network/bridges_ip.txt 2> /dev/null
+		if [ -d /proc/net/bonding ]; then
+			for bond in /proc/net/bonding/*; do
+				if [ -f "$bond" ]; then
+					echo "=== Bond: $(basename $bond) ===" >> $OUTPUT_DIR/virtual/proxmox/network/bonding.txt
+					cat "$bond" >> $OUTPUT_DIR/virtual/proxmox/network/bonding.txt 2> /dev/null
+					echo "" >> $OUTPUT_DIR/virtual/proxmox/network/bonding.txt
+				fi
+			done
+		fi
+		if [ -x "$(command -v ovs-vsctl)" ]; then
+			ovs-vsctl show > $OUTPUT_DIR/virtual/proxmox/network/openvswitch.txt 2> /dev/null
+			ovs-vsctl list-br > $OUTPUT_DIR/virtual/proxmox/network/ovs_bridges.txt 2> /dev/null
+		fi
 		if [ -x "$(command -v pve-firewall)" ]; then
-			pve-firewall compile 1> $OUTPUT_DIR/virtual/proxmox/firewall_rules.txt 2> /dev/null
+			pve-firewall compile > $OUTPUT_DIR/virtual/proxmox/firewall/compiled_rules.txt 2> /dev/null
+			pve-firewall status > $OUTPUT_DIR/virtual/proxmox/firewall/status.txt 2> /dev/null
+		fi
+		if [ -f /etc/pve/vzdump.cron ]; then
+			cp /etc/pve/vzdump.cron $OUTPUT_DIR/virtual/proxmox/backup/vzdump_cron.txt 2> /dev/null
+		fi
+		if [ -f /etc/vzdump.conf ]; then
+			cp /etc/vzdump.conf $OUTPUT_DIR/virtual/proxmox/backup/vzdump_config.txt 2> /dev/null
+		fi
+		if [ -x "$(command -v pct)" ]
+		then
+			pct list > $OUTPUT_DIR/containers/proxmox/container_list.txt 2> /dev/null
+			pct list --format json > $OUTPUT_DIR/containers/proxmox/container_list.json 2> /dev/null
+			pct cpusets > $OUTPUT_DIR/containers/proxmox/cpusets.txt 2> /dev/null
+			pct list 2>/dev/null | sed -e '1d' | awk '{print $1}' > $OUTPUT_DIR/containers/proxmox/container_ids.txt
+			while read -r containerid; do
+				if [ -n "$containerid" ]; then
+					mkdir -p "$OUTPUT_DIR/containers/proxmox/ct_$containerid" 2> /dev/null
+					pct config "$containerid" > "$OUTPUT_DIR/containers/proxmox/ct_$containerid/config.txt" 2> /dev/null
+					pct status "$containerid" > "$OUTPUT_DIR/containers/proxmox/ct_$containerid/status.txt" 2> /dev/null
+					pct pending "$containerid" > "$OUTPUT_DIR/containers/proxmox/ct_$containerid/pending.txt" 2> /dev/null
+					pct listsnapshot "$containerid" > "$OUTPUT_DIR/containers/proxmox/ct_$containerid/snapshots.txt" 2> /dev/null
+					if pct status "$containerid" 2>/dev/null | grep -q "running"; then
+						pct df "$containerid" > "$OUTPUT_DIR/containers/proxmox/ct_$containerid/disk_usage.txt" 2> /dev/null
+					fi
+					if [ -x "$(command -v pvesh)" ]; then
+						pvesh get /nodes/$NODENAME/lxc/$containerid/status/current --output-format json > "$OUTPUT_DIR/containers/proxmox/ct_$containerid/status.json" 2> /dev/null
+						pvesh get /nodes/$NODENAME/lxc/$containerid/config --output-format json > "$OUTPUT_DIR/containers/proxmox/ct_$containerid/config.json" 2> /dev/null
+						pvesh get /nodes/$NODENAME/lxc/$containerid/rrddata --output-format json > "$OUTPUT_DIR/containers/proxmox/ct_$containerid/rrddata.json" 2> /dev/null
+						pvesh get /nodes/$NODENAME/lxc/$containerid/firewall/options > "$OUTPUT_DIR/containers/proxmox/ct_$containerid/firewall_options.txt" 2> /dev/null
+						pvesh get /nodes/$NODENAME/lxc/$containerid/firewall/rules > "$OUTPUT_DIR/containers/proxmox/ct_$containerid/firewall_rules.txt" 2> /dev/null
+					fi
+				fi
+			done < $OUTPUT_DIR/containers/proxmox/container_ids.txt
+		fi
+		if [ -x "$(command -v qm)" ]
+		then
+			qm list > $OUTPUT_DIR/virtual/proxmox/vms/vm_list.txt 2> /dev/null
+			qm list --full > $OUTPUT_DIR/virtual/proxmox/vms/vm_list_full.txt 2> /dev/null
+			qm list 2>/dev/null | sed -e '1d' | awk '{print $1}' > $OUTPUT_DIR/virtual/proxmox/vms/vm_ids.txt
+			while read -r vmid; do
+				if [ -n "$vmid" ]; then
+					mkdir -p "$OUTPUT_DIR/virtual/proxmox/vms/vm_$vmid" 2> /dev/null
+					qm config "$vmid" > "$OUTPUT_DIR/virtual/proxmox/vms/vm_$vmid/config.txt" 2> /dev/null
+					qm status "$vmid" --verbose > "$OUTPUT_DIR/virtual/proxmox/vms/vm_$vmid/status_verbose.txt" 2> /dev/null
+					qm pending "$vmid" > "$OUTPUT_DIR/virtual/proxmox/vms/vm_$vmid/pending.txt" 2> /dev/null
+					qm listsnapshot "$vmid" > "$OUTPUT_DIR/virtual/proxmox/vms/vm_$vmid/snapshots.txt" 2> /dev/null
+					qm cloudinit dump "$vmid" > "$OUTPUT_DIR/virtual/proxmox/vms/vm_$vmid/cloudinit.txt" 2> /dev/null
+					qm agent "$vmid" ping > "$OUTPUT_DIR/virtual/proxmox/vms/vm_$vmid/agent_ping.txt" 2> /dev/null
+					if [ -x "$(command -v pvesh)" ]; then
+						pvesh get /nodes/$NODENAME/qemu/$vmid/status/current --output-format json > "$OUTPUT_DIR/virtual/proxmox/vms/vm_$vmid/status.json" 2> /dev/null
+						pvesh get /nodes/$NODENAME/qemu/$vmid/config --output-format json > "$OUTPUT_DIR/virtual/proxmox/vms/vm_$vmid/config.json" 2> /dev/null
+						pvesh get /nodes/$NODENAME/qemu/$vmid/rrddata --output-format json > "$OUTPUT_DIR/virtual/proxmox/vms/vm_$vmid/rrddata.json" 2> /dev/null
+						pvesh get /nodes/$NODENAME/qemu/$vmid/agent/info > "$OUTPUT_DIR/virtual/proxmox/vms/vm_$vmid/agent_info.txt" 2> /dev/null
+						pvesh get /nodes/$NODENAME/qemu/$vmid/firewall/options > "$OUTPUT_DIR/virtual/proxmox/vms/vm_$vmid/firewall_options.txt" 2> /dev/null
+						pvesh get /nodes/$NODENAME/qemu/$vmid/firewall/rules > "$OUTPUT_DIR/virtual/proxmox/vms/vm_$vmid/firewall_rules.txt" 2> /dev/null
+					fi
+				fi
+			done < $OUTPUT_DIR/virtual/proxmox/vms/vm_ids.txt
 		fi
 
-		if [ -f /etc/pve/vzdump.conf ]; then
-			cp /etc/pve/vzdump.conf $OUTPUT_DIR/virtual/proxmox/vzdump_config.txt 2> /dev/null
+		if [ -x "$(command -v pvesh)" ]
+		then
+			pvesh get /nodes --output-format json > $OUTPUT_DIR/virtual/proxmox/nodes/all_nodes.json 2> /dev/null
+			pvesh get /nodes --noborder > $OUTPUT_DIR/virtual/proxmox/nodes/all_nodes.txt 2> /dev/null
+			pvesh get /nodes/$NODENAME/status --output-format json > $OUTPUT_DIR/virtual/proxmox/nodes/${NODENAME}_status.json 2> /dev/null
+			pvesh get /nodes/$NODENAME/services > $OUTPUT_DIR/virtual/proxmox/nodes/${NODENAME}_services.txt 2> /dev/null
+			pvesh get /nodes/$NODENAME/hardware/pci --noborder > $OUTPUT_DIR/virtual/proxmox/nodes/${NODENAME}_hardware_pci.txt 2> /dev/null
+			pvesh get /nodes/$NODENAME/aplinfo > $OUTPUT_DIR/virtual/proxmox/nodes/${NODENAME}_aplinfo.txt 2> /dev/null
+			pvesh get /nodes/$NODENAME/report > $OUTPUT_DIR/virtual/proxmox/nodes/${NODENAME}_report.txt 2> /dev/null
+			pvesh get /nodes/$NODENAME/certificates/info > $OUTPUT_DIR/virtual/proxmox/nodes/${NODENAME}_certificates.txt 2> /dev/null
+			pvesh get /nodes/$NODENAME/dns > $OUTPUT_DIR/virtual/proxmox/nodes/${NODENAME}_dns.txt 2> /dev/null
+			pvesh get /nodes/$NODENAME/hosts > $OUTPUT_DIR/virtual/proxmox/nodes/${NODENAME}_hosts.txt 2> /dev/null
+			pvesh get /nodes/$NODENAME/time > $OUTPUT_DIR/virtual/proxmox/nodes/${NODENAME}_time.txt 2> /dev/null
+			pvesh get /nodes/$NODENAME/network --output-format json > $OUTPUT_DIR/virtual/proxmox/network/api_network.json 2> /dev/null
+			pvesh get /nodes/$NODENAME/tasks --limit 500 --output-format json > $OUTPUT_DIR/virtual/proxmox/tasks/recent_tasks.json 2> /dev/null
+			pvesh get /nodes/$NODENAME/tasks --limit 100 --noborder > $OUTPUT_DIR/virtual/proxmox/tasks/recent_tasks.txt 2> /dev/null
+			pvesh get /storage --output-format json > $OUTPUT_DIR/virtual/proxmox/storage/api_storage.json 2> /dev/null
+			pvesh get /nodes/$NODENAME/storage --output-format json > $OUTPUT_DIR/virtual/proxmox/storage/node_storage.json 2> /dev/null
+			pvesh get /cluster/status --output-format json > $OUTPUT_DIR/virtual/proxmox/cluster/status.json 2> /dev/null
+			pvesh get /cluster/config/nodes > $OUTPUT_DIR/virtual/proxmox/cluster/config_nodes.txt 2> /dev/null
+			pvesh get /cluster/resources --output-format json > $OUTPUT_DIR/virtual/proxmox/cluster/resources.json 2> /dev/null
+			pvesh get /cluster/options > $OUTPUT_DIR/virtual/proxmox/cluster/options.txt 2> /dev/null
+			pvesh get /cluster/nextid > $OUTPUT_DIR/virtual/proxmox/cluster/nextid.txt 2> /dev/null
+			pvesh get /cluster/ha/status/current > $OUTPUT_DIR/virtual/proxmox/cluster/ha_status_current.txt 2> /dev/null
+			pvesh get /cluster/ha/status/manager_status > $OUTPUT_DIR/virtual/proxmox/cluster/ha_manager_status.txt 2> /dev/null
+			pvesh get /cluster/ha/resources > $OUTPUT_DIR/virtual/proxmox/cluster/ha_resources.txt 2> /dev/null
+			pvesh get /cluster/ha/groups > $OUTPUT_DIR/virtual/proxmox/cluster/ha_groups.txt 2> /dev/null
+			pvesh get /cluster/firewall/options > $OUTPUT_DIR/virtual/proxmox/firewall/cluster_options.txt 2> /dev/null
+			pvesh get /cluster/firewall/groups > $OUTPUT_DIR/virtual/proxmox/firewall/cluster_groups.txt 2> /dev/null
+			pvesh get /cluster/firewall/rules > $OUTPUT_DIR/virtual/proxmox/firewall/cluster_rules.txt 2> /dev/null
+			pvesh get /cluster/firewall/aliases > $OUTPUT_DIR/virtual/proxmox/firewall/cluster_aliases.txt 2> /dev/null
+			pvesh get /cluster/firewall/ipset > $OUTPUT_DIR/virtual/proxmox/firewall/cluster_ipset.txt 2> /dev/null
+			pvesh get /cluster/backup --output-format json > $OUTPUT_DIR/virtual/proxmox/backup/jobs.json 2> /dev/null
+			pvesh get /cluster/backup --noborder > $OUTPUT_DIR/virtual/proxmox/backup/jobs.txt 2> /dev/null
+			pvesh get /cluster/replication --output-format json > $OUTPUT_DIR/virtual/proxmox/backup/replication.json 2> /dev/null
+			pvesh get /access/users --output-format json > $OUTPUT_DIR/virtual/proxmox/access/users.json 2> /dev/null
+			pvesh get /access/groups --output-format json > $OUTPUT_DIR/virtual/proxmox/access/groups.json 2> /dev/null
+			pvesh get /access/roles > $OUTPUT_DIR/virtual/proxmox/access/roles.txt 2> /dev/null
+			pvesh get /access/domains > $OUTPUT_DIR/virtual/proxmox/access/auth_domains.txt 2> /dev/null
+			pvesh get /access/acl > $OUTPUT_DIR/virtual/proxmox/access/acl.txt 2> /dev/null
+			pvesh get /access/permissions > $OUTPUT_DIR/virtual/proxmox/access/permissions.txt 2> /dev/null
+			pvesh get /pools --output-format json > $OUTPUT_DIR/virtual/proxmox/access/pools.json 2> /dev/null
 		fi
 
-		if [ -f /etc/pve/nodes/*/network ]; then
-			cp /etc/pve/nodes/*/network $OUTPUT_DIR/virtual/proxmox/ 2> /dev/null
-		fi
-	fi
-
-	if [ -x "$(command -v pct)" ]
-	then
-		echo "  ${COL_ENTRY}>${RESET} Collecting Proxmox LXC container information"
-
-		pct list 1> $OUTPUT_DIR/containers/proxmox/container_list.txt 2> /dev/null
-		pct cpusets 1> $OUTPUT_DIR/containers/proxmox/cpusets.txt 2> /dev/null
-		pct list | sed -e '1d' | awk '{print $1}' 1> $OUTPUT_DIR/containers/proxmox/container_ids.txt 2> /dev/null
-		
-		while read -r containerid; do
-			echo "  ${COL_ENTRY}>${RESET} Collecting details for container $containerid"
-			mkdir -p $OUTPUT_DIR/containers/proxmox/$containerid
-			pct config "$containerid" 1> $OUTPUT_DIR/containers/proxmox/$containerid/config.txt 2> /dev/null
-			pct status "$containerid" 1> $OUTPUT_DIR/containers/proxmox/$containerid/status.txt 2> /dev/null
-			pct pending "$containerid" 1> $OUTPUT_DIR/containers/proxmox/$containerid/pending.txt 2> /dev/null
-			pct listsnapshot "$containerid" 1> $OUTPUT_DIR/containers/proxmox/$containerid/snapshots.txt 2> /dev/null
-			pct df "$containerid" 1> $OUTPUT_DIR/containers/proxmox/$containerid/disk_usage.txt 2> /dev/null
-			pct mount "$containerid" 1> $OUTPUT_DIR/containers/proxmox/$containerid/mount_attempt.txt 2> /dev/null
-			pct unmount "$containerid" 2> /dev/null
-			if [ -x "$(command -v pvesh)" ]; then
-				pvesh get /nodes/localhost/lxc/$containerid/rrddata 1> $OUTPUT_DIR/containers/proxmox/$containerid/resource_stats.txt 2> /dev/null
+		if [ -d /etc/pve ]
+		then
+			find /etc/pve -type f -readable 2>/dev/null | sort > $OUTPUT_DIR/virtual/proxmox/config/pve_file_listing.txt
+			for config_file in \
+				/etc/pve/corosync.conf \
+				/etc/pve/datacenter.cfg \
+				/etc/pve/storage.cfg \
+				/etc/pve/user.cfg \
+				/etc/pve/domains.cfg \
+				/etc/pve/authkey.pub \
+				/etc/pve/pve-root-ca.pem \
+				/etc/pve/status.cfg \
+				/etc/pve/.version \
+				/etc/pve/.members \
+				/etc/pve/.vmlist
+			do
+				if [ -r "$config_file" ]; then
+					dest_file="$OUTPUT_DIR/virtual/proxmox/config/$(basename $config_file)"
+					cp "$config_file" "$dest_file" 2> /dev/null
+				fi
+			done
+			if [ -d /etc/pve/ha ]; then
+				mkdir -p $OUTPUT_DIR/virtual/proxmox/config/ha 2> /dev/null
+				for ha_file in /etc/pve/ha/*; do
+					if [ -r "$ha_file" ]; then
+						cp "$ha_file" $OUTPUT_DIR/virtual/proxmox/config/ha/ 2> /dev/null
+					fi
+				done
 			fi
-			
-		done < $OUTPUT_DIR/containers/proxmox/container_ids.txt
-	fi
-
-	if [ -x "$(command -v qm)" ]
-	then
-		echo "  ${COL_ENTRY}>${RESET} Collecting Proxmox VM information"
-		qm list 1> $OUTPUT_DIR/virtual/proxmox/vm_list.txt 2> /dev/null
-		qm list | sed -e '1d' | awk '{print $1}' 1> $OUTPUT_DIR/virtual/proxmox/vm_ids.txt 2> /dev/null
-		
-		while read -r vmid; do
-			echo "  ${COL_ENTRY}>${RESET} Collecting details for VM $vmid"
-			mkdir -p $OUTPUT_DIR/virtual/proxmox/$vmid
-			qm config "$vmid" 1> $OUTPUT_DIR/virtual/proxmox/$vmid/config.txt 2> /dev/null
-			qm status "$vmid" --verbose 1> $OUTPUT_DIR/virtual/proxmox/$vmid/status.txt 2> /dev/null
-			qm pending "$vmid" 1> $OUTPUT_DIR/virtual/proxmox/$vmid/pending.txt 2> /dev/null
-			qm listsnapshot "$vmid" 1> $OUTPUT_DIR/virtual/proxmox/$vmid/snapshots.txt 2> /dev/null
-			qm cloudinit dump "$vmid" 1> $OUTPUT_DIR/virtual/proxmox/$vmid/cloudinit.txt 2> /dev/null
-			qm agent "$vmid" ping 1> $OUTPUT_DIR/virtual/proxmox/$vmid/agent_status.txt 2> /dev/null
-			if [ -x "$(command -v pvesh)" ]; then
-				pvesh get /nodes/localhost/qemu/$vmid/rrddata 1> $OUTPUT_DIR/virtual/proxmox/$vmid/resource_stats.txt 2> /dev/null
+			if [ -d /etc/pve/firewall ]; then
+				mkdir -p $OUTPUT_DIR/virtual/proxmox/config/firewall 2> /dev/null
+				find /etc/pve/firewall -type f -readable -exec cp {} $OUTPUT_DIR/virtual/proxmox/config/firewall/ \; 2> /dev/null
 			fi
-			
-		done < $OUTPUT_DIR/virtual/proxmox/vm_ids.txt
-	fi
-
-	if [ -x "$(command -v pvesh)" ]
-	then
-		echo "  ${COL_ENTRY}>${RESET} Collecting Proxmox API information"
-		pvesh get /nodes 1> $OUTPUT_DIR/virtual/proxmox/nodes_info.txt 2> /dev/null
-		NODENAME=$(hostname)
-		pvesh get /nodes/$NODENAME/status 1> $OUTPUT_DIR/virtual/proxmox/node_status.txt 2> /dev/null
-		pvesh get /nodes/$NODENAME/services 1> $OUTPUT_DIR/virtual/proxmox/services_status.txt 2> /dev/null
-		pvesh get /nodes/$NODENAME/tasks --limit 100 1> $OUTPUT_DIR/virtual/proxmox/tasks_history.txt 2> /dev/null
-		pvesh get /storage 1> $OUTPUT_DIR/virtual/proxmox/storage_api.txt 2> /dev/null
-		pvesh get /cluster/backup 1> $OUTPUT_DIR/virtual/proxmox/backup_jobs.txt 2> /dev/null 2> /dev/null
-		pvesh get /cluster/replication 1> $OUTPUT_DIR/virtual/proxmox/replication_jobs.txt 2> /dev/null 2> /dev/null
-		pvesh get /cluster/ha/status/current 1> $OUTPUT_DIR/virtual/proxmox/ha_status.txt 2> /dev/null 2> /dev/null
-		pvesh get /access/users 1> $OUTPUT_DIR/virtual/proxmox/users.txt 2> /dev/null
-		pvesh get /access/groups 1> $OUTPUT_DIR/virtual/proxmox/groups.txt 2> /dev/null
-		pvesh get /access/roles 1> $OUTPUT_DIR/virtual/proxmox/roles.txt 2> /dev/null
-		pvesh get /access/domains 1> $OUTPUT_DIR/virtual/proxmox/auth_domains.txt 2> /dev/null
-	fi
-	if [ -d /var/log/pve ]
-	then
-		echo "  ${COL_ENTRY}>${RESET} Collecting Proxmox logs"
-		mkdir -p $OUTPUT_DIR/logs/proxmox
-		cp -R /var/log/pve/* $OUTPUT_DIR/logs/proxmox/ 2> /dev/null
-	fi
-	
-	if [ -d /etc/pve ]
-	then
-		echo "  ${COL_ENTRY}>${RESET} Collecting Proxmox configuration"
-		# Note: /etc/pve is a FUSE mount, be careful with permissions
-		mkdir -p $OUTPUT_DIR/virtual/proxmox/config
+			if [ -d "/etc/pve/nodes/$NODENAME" ]; then
+				mkdir -p "$OUTPUT_DIR/virtual/proxmox/config/node_$NODENAME" 2> /dev/null
+				find "/etc/pve/nodes/$NODENAME" -type f -readable 2>/dev/null | while read file; do
+					rel_path=$(echo "$file" | sed "s|/etc/pve/nodes/$NODENAME/||")
+					dest_dir="$OUTPUT_DIR/virtual/proxmox/config/node_$NODENAME/$(dirname "$rel_path")"
+					mkdir -p "$dest_dir" 2> /dev/null
+					cp "$file" "$dest_dir/" 2> /dev/null
+				done
+			fi
+		fi
 		
-		# Safely copy readable files
-		find /etc/pve -type f -readable 2>/dev/null | while read file; do
-			dest_dir="$OUTPUT_DIR/virtual/proxmox/config/$(dirname "$file" | sed 's|/etc/pve||')"
-			mkdir -p "$dest_dir"
-			cp "$file" "$dest_dir/" 2>/dev/null
+		for sysconf in \
+			/etc/default/pveproxy \
+			/etc/default/pvedaemon \
+			/etc/default/pve-ha-crm \
+			/etc/default/pve-ha-lrm \
+			/etc/default/qemu-server \
+			/etc/vzdump.conf \
+			/etc/qemu-server.conf
+		do
+			if [ -f "$sysconf" ]; then
+				cp "$sysconf" "$OUTPUT_DIR/virtual/proxmox/config/" 2> /dev/null
+			fi
 		done
+		
+		if [ -x "$(command -v ceph)" ] && [ -f /etc/pve/ceph.conf ]
+		then
+			ceph -s > $OUTPUT_DIR/virtual/proxmox/ceph/status.txt 2> /dev/null
+			ceph health detail > $OUTPUT_DIR/virtual/proxmox/ceph/health_detail.txt 2> /dev/null
+			ceph osd tree > $OUTPUT_DIR/virtual/proxmox/ceph/osd_tree.txt 2> /dev/null
+			ceph osd df > $OUTPUT_DIR/virtual/proxmox/ceph/osd_df.txt 2> /dev/null
+			ceph df > $OUTPUT_DIR/virtual/proxmox/ceph/df.txt 2> /dev/null
+			ceph mon stat > $OUTPUT_DIR/virtual/proxmox/ceph/mon_stat.txt 2> /dev/null
+			ceph pg stat > $OUTPUT_DIR/virtual/proxmox/ceph/pg_stat.txt 2> /dev/null
+			cp /etc/pve/ceph.conf $OUTPUT_DIR/virtual/proxmox/ceph/ceph.conf 2> /dev/null
+	
+			if [ -x "$(command -v pvesh)" ]; then
+				pvesh get /nodes/$NODENAME/ceph/status > $OUTPUT_DIR/virtual/proxmox/ceph/pvesh_status.txt 2> /dev/null
+				pvesh get /nodes/$NODENAME/ceph/pools > $OUTPUT_DIR/virtual/proxmox/ceph/pvesh_pools.txt 2> /dev/null
+			fi
+		fi
+		
+		if [ -x "$(command -v zfs)" ]
+		then
+			zfs list -t all > $OUTPUT_DIR/virtual/proxmox/zfs/list_all.txt 2> /dev/null
+			zpool list -v > $OUTPUT_DIR/virtual/proxmox/zfs/pool_list.txt 2> /dev/null
+			zpool status -v > $OUTPUT_DIR/virtual/proxmox/zfs/pool_status.txt 2> /dev/null
+			zpool history > $OUTPUT_DIR/virtual/proxmox/zfs/pool_history.txt 2> /dev/null
+			zfs get all > $OUTPUT_DIR/virtual/proxmox/zfs/properties_all.txt 2> /dev/null
+		fi
+		
+		if [ -d /var/log/pve ]
+		then
+			mkdir -p $OUTPUT_DIR/logs/proxmox 2> /dev/null
+
+			for logfile in \
+				/var/log/pve/tasks/active \
+				/var/log/pve-firewall.log \
+				/var/log/pveproxy/access.log \
+				/var/log/pvedaemon.log
+			do
+				if [ -f "$logfile" ]; then
+					tail -30000 "$logfile" > "$OUTPUT_DIR/logs/proxmox/$(basename $logfile)_recent.log" 2> /dev/null
+				fi
+			done
+			
+			find /var/log/pve/tasks -type f -mtime -7 -name "UPID*" 2>/dev/null | tail -100 | while read tasklog; do
+				cp "$tasklog" "$OUTPUT_DIR/logs/proxmox/" 2> /dev/null
+			done
+		fi
+		
+		for service in \
+			pve-cluster \
+			pvedaemon \
+			pveproxy \
+			pvestatd \
+			pve-ha-crm \
+			pve-ha-lrm \
+			pve-firewall \
+			corosync \
+			ceph-mon@$NODENAME \
+			ceph-mgr@$NODENAME \
+			ceph-osd
+		do
+			systemctl status $service --no-pager > "$OUTPUT_DIR/virtual/proxmox/system/service_${service}.txt" 2> /dev/null
+		done
+		
+		SUMMARY="$OUTPUT_DIR/virtual/proxmox/SUMMARY.txt"
+		echo "Proxmox VE Collection Summary" > "$SUMMARY"
+		echo "=============================" >> "$SUMMARY"
+		echo "Collection Date: $(date)" >> "$SUMMARY"
+		echo "Node: $NODENAME" >> "$SUMMARY"
+		echo "" >> "$SUMMARY"
+		
+		if [ -f "$OUTPUT_DIR/virtual/proxmox/system/version.txt" ]; then
+			echo "Version:" >> "$SUMMARY"
+			cat "$OUTPUT_DIR/virtual/proxmox/system/version.txt" >> "$SUMMARY"
+			echo "" >> "$SUMMARY"
+		fi
+		
+		if [ -f "$OUTPUT_DIR/virtual/proxmox/vms/vm_ids.txt" ]; then
+			VM_COUNT=$(wc -l < "$OUTPUT_DIR/virtual/proxmox/vms/vm_ids.txt" 2>/dev/null || echo 0)
+			echo "Virtual Machines: $VM_COUNT" >> "$SUMMARY"
+		fi
+		
+		if [ -f "$OUTPUT_DIR/containers/proxmox/container_ids.txt" ]; then
+			CT_COUNT=$(wc -l < "$OUTPUT_DIR/containers/proxmox/container_ids.txt" 2>/dev/null || echo 0)
+			echo "LXC Containers: $CT_COUNT" >> "$SUMMARY"
+		fi
+		
+		if [ -x "$(command -v qm)" ]; then
+			RUNNING_VMS=$(qm list 2>/dev/null | grep -c " running " || echo 0)
+			echo "Running VMs: $RUNNING_VMS" >> "$SUMMARY"
+		fi
+		
+		if [ -x "$(command -v pct)" ]; then
+			RUNNING_CTS=$(pct list 2>/dev/null | grep -c " running " || echo 0)
+			echo "Running Containers: $RUNNING_CTS" >> "$SUMMARY"
+		fi
+		
+		if [ -f "$OUTPUT_DIR/virtual/proxmox/cluster/pvecm_status.txt" ]; then
+			echo "" >> "$SUMMARY"
+			echo "Cluster Status:" >> "$SUMMARY"
+			grep -E "(Cluster information|Nodeid:|Nodes:|Quorum:)" "$OUTPUT_DIR/virtual/proxmox/cluster/pvecm_status.txt" >> "$SUMMARY" 2> /dev/null
+		fi
+		
+		if [ -f "$OUTPUT_DIR/virtual/proxmox/storage/storage_status.txt" ]; then
+			echo "" >> "$SUMMARY"
+			echo "Storage Status:" >> "$SUMMARY"
+			head -20 "$OUTPUT_DIR/virtual/proxmox/storage/storage_status.txt" >> "$SUMMARY" 2> /dev/null
+		fi
+		
+		if [ -f "$OUTPUT_DIR/virtual/proxmox/system/subscription_status.txt" ]; then
+			echo "" >> "$SUMMARY"
+			echo "Subscription:" >> "$SUMMARY"
+			grep -E "(status:|key:)" "$OUTPUT_DIR/virtual/proxmox/system/subscription_status.txt" >> "$SUMMARY" 2> /dev/null
+		fi
 	fi
 
 	# OpenVZ legacy support (if present)
 	if [ -x "$(command -v vzctl)" ]
 	then
 		echo "  ${COL_ENTRY}>${RESET} Collecting OpenVZ information"
-		vzctl list -a 1> $OUTPUT_DIR/containers/openvz_list.txt 2> /dev/null
-		vzlist -a -o ctid,hostname,status,ip,diskspace,physpages 1> $OUTPUT_DIR/containers/openvz_detailed.txt 2> /dev/null
+		mkdir -p $OUTPUT_DIR/containers/openvz 2> /dev/null
+		
+		vzctl list -a > $OUTPUT_DIR/containers/openvz/container_list.txt 2> /dev/null
+		vzlist -a -o ctid,hostname,status,ip,diskspace,physpages > $OUTPUT_DIR/containers/openvz/detailed_list.txt 2> /dev/null
+		
+		vzlist -a -H -o ctid 2>/dev/null | while read ctid; do
+			if [ -n "$ctid" ]; then
+				mkdir -p "$OUTPUT_DIR/containers/openvz/ct_$ctid" 2> /dev/null
+				vzctl status $ctid > "$OUTPUT_DIR/containers/openvz/ct_$ctid/status.txt" 2> /dev/null
+				
+				if [ -f "/etc/vz/conf/${ctid}.conf" ]; then
+					cp "/etc/vz/conf/${ctid}.conf" "$OUTPUT_DIR/containers/openvz/ct_$ctid/config.conf" 2> /dev/null
+				fi
+			fi
+		done
 	fi
-	
+
 	if [ -x "$(command -v podman)" ]
 	then
 		echo "  ${COL_ENTRY}>${RESET} Collecting PODMAN information"
-		podman container ls --all --size 1> $OUTPUT_DIR/containers/podman_container_list.txt 2> /dev/null
-		podman image ls --all 1> $OUTPUT_DIR/containers/podman_image_list.txt 2> /dev/null
-		podman version 1> $OUTPUT_DIR/containers/podman_version.txt 2> /dev/null
-		podman network ls 1> $OUTPUT_DIR/containers/podman_networks.txt 2> /dev/null
-		podman volume ls 1> $OUTPUT_DIR/containers/podman_volumes.txt 2> /dev/null
-		podman info 1> $OUTPUT_DIR/containers/podman_info.txt 2> /dev/null
-		podman system info --format json 1> $OUTPUT_DIR/containers/podman_info_json.txt 2> /dev/null
-		podman system df 1> $OUTPUT_DIR/containers/podman_system_df.txt 2> /dev/null
-		podman pod ls --format json 1> $OUTPUT_DIR/containers/podman_pods_json.txt 2> /dev/null
-		podman pod ls 1> $OUTPUT_DIR/containers/podman_pods.txt 2> /dev/null
-		podman events --since 24h --format json 2>&1 | head -100 > $OUTPUT_DIR/containers/podman_events_24h.txt 2> /dev/null
-		podman secret ls 1> $OUTPUT_DIR/containers/podman_secrets_list.txt 2> /dev/null
+		mkdir -p $OUTPUT_DIR/containers/podman 2> /dev/null
+		mkdir -p $OUTPUT_DIR/containers/podman/system 2> /dev/null
+		mkdir -p $OUTPUT_DIR/containers/podman/containers 2> /dev/null
+		mkdir -p $OUTPUT_DIR/containers/podman/images 2> /dev/null
+		mkdir -p $OUTPUT_DIR/containers/podman/networks 2> /dev/null
+		mkdir -p $OUTPUT_DIR/containers/podman/volumes 2> /dev/null
+		mkdir -p $OUTPUT_DIR/containers/podman/pods 2> /dev/null
+		mkdir -p $OUTPUT_DIR/containers/podman/configs 2> /dev/null
+		mkdir -p $OUTPUT_DIR/containers/podman/logs 2> /dev/null
+		mkdir -p $OUTPUT_DIR/containers/podman/systemd 2> /dev/null
+		
+		podman version > $OUTPUT_DIR/containers/podman/system/version.txt 2> /dev/null
+		podman info > $OUTPUT_DIR/containers/podman/system/info.txt 2> /dev/null
+		podman system info --format json > $OUTPUT_DIR/containers/podman/system/info.json 2> /dev/null
+		podman system df > $OUTPUT_DIR/containers/podman/system/disk_usage.txt 2> /dev/null
+		podman system prune --dry-run > $OUTPUT_DIR/containers/podman/system/prune_dryrun.txt 2> /dev/null
+		
+		timeout 60 podman events --since 72h --format json 2>&1 > $OUTPUT_DIR/containers/podman/system/events_72h.json 2> /dev/null
+		timeout 60 podman events --since 360h --format json 2>&1 > $OUTPUT_DIR/containers/podman/system/events_360h.json 2> /dev/null
+		
 		if podman machine list &>/dev/null; then
-			podman machine list 1> $OUTPUT_DIR/containers/podman_machine_list.txt 2> /dev/null
-			podman machine info 1> $OUTPUT_DIR/containers/podman_machine_info.txt 2> /dev/null
+			podman machine list > $OUTPUT_DIR/containers/podman/system/machine_list.txt 2> /dev/null
+			podman machine info > $OUTPUT_DIR/containers/podman/system/machine_info.txt 2> /dev/null
 		fi
-		podman container ps --all --format "{{.ID}}" 1> $OUTPUT_DIR/containers/podman_container_ids.txt 2> /dev/null
+		
+		if [ "$EUID" -ne 0 ] 2>/dev/null || [ "$(id -u)" -ne 0 ] 2>/dev/null
+		then
+			echo "Running as rootless podman" > $OUTPUT_DIR/containers/podman/system/rootless_info.txt
+			echo "User: $(id -un)" >> $OUTPUT_DIR/containers/podman/system/rootless_info.txt
+			echo "UID: $(id -u)" >> $OUTPUT_DIR/containers/podman/system/rootless_info.txt
+			podman unshare cat /proc/self/uid_map >> $OUTPUT_DIR/containers/podman/system/rootless_info.txt 2> /dev/null
+			podman unshare cat /proc/self/gid_map >> $OUTPUT_DIR/containers/podman/system/rootless_info.txt 2> /dev/null
+		else
+			echo "Running as root" > $OUTPUT_DIR/containers/podman/system/root_info.txt
+		fi
+		
+		podman container ls --all --size > $OUTPUT_DIR/containers/podman/containers/container_list.txt 2> /dev/null
+		podman container ls --all --format json > $OUTPUT_DIR/containers/podman/containers/container_list.json 2> /dev/null
+		podman container ps --all --format "{{.ID}}" > $OUTPUT_DIR/containers/podman/containers/container_ids.txt 2> /dev/null
+		
 		while read -r containerid; do
 			if [ -n "$containerid" ]; then
-				echo "=== Container: $containerid ===" >> $OUTPUT_DIR/containers/podman_container_details.txt
-				echo "--- Logs (last 100 lines) ---" >> $OUTPUT_DIR/containers/podman_container_details.txt
-				podman container logs "$containerid" --tail 100 >> $OUTPUT_DIR/containers/podman_container_details.txt 2> /dev/null
-				echo "--- Inspect ---" >> $OUTPUT_DIR/containers/podman_container_details.txt
-				podman inspect "$containerid" >> $OUTPUT_DIR/containers/podman_container_details.txt 2> /dev/null
-				echo "--- Processes ---" >> $OUTPUT_DIR/containers/podman_container_details.txt
-				podman top "$containerid" >> $OUTPUT_DIR/containers/podman_container_details.txt 2> /dev/null
-				echo "--- Filesystem Diff ---" >> $OUTPUT_DIR/containers/podman_container_details.txt
-				podman diff "$containerid" >> $OUTPUT_DIR/containers/podman_container_details.txt 2> /dev/null
-				echo "--- Stats ---" >> $OUTPUT_DIR/containers/podman_container_details.txt
-				podman stats "$containerid" --no-stream >> $OUTPUT_DIR/containers/podman_container_details.txt 2> /dev/null
-				echo "--- Port Mappings ---" >> $OUTPUT_DIR/containers/podman_container_details.txt
-				podman port "$containerid" >> $OUTPUT_DIR/containers/podman_container_details.txt 2> /dev/null
-				echo "--- Health Check ---" >> $OUTPUT_DIR/containers/podman_container_details.txt
-				podman healthcheck run "$containerid" >> $OUTPUT_DIR/containers/podman_container_details.txt 2> /dev/null
-				echo "--- Mounts ---" >> $OUTPUT_DIR/containers/podman_container_details.txt
-				podman inspect "$containerid" --format "{{json .Mounts}}" >> $OUTPUT_DIR/containers/podman_container_details.txt 2> /dev/null
-				echo "" >> $OUTPUT_DIR/containers/podman_container_details.txt
-				podman logs "$containerid" > "$OUTPUT_DIR/containers/podman_logs_${containerid}.txt" 2> /dev/null
-				podman inspect "$containerid" > "$OUTPUT_DIR/containers/podman_inspect_${containerid}.json" 2> /dev/null
+				mkdir -p "$OUTPUT_DIR/containers/podman/containers/$containerid" 2> /dev/null
+				podman inspect "$containerid" > "$OUTPUT_DIR/containers/podman/containers/$containerid/inspect.json" 2> /dev/null
+				podman top "$containerid" > "$OUTPUT_DIR/containers/podman/containers/$containerid/processes.txt" 2> /dev/null
+				podman stats "$containerid" --no-stream > "$OUTPUT_DIR/containers/podman/containers/$containerid/stats.txt" 2> /dev/null
+				podman port "$containerid" > "$OUTPUT_DIR/containers/podman/containers/$containerid/ports.txt" 2> /dev/null
+				podman logs "$containerid" --tail 5000 > "$OUTPUT_DIR/containers/podman/containers/$containerid/logs_tail.txt" 2> /dev/null
+				podman diff "$containerid" > "$OUTPUT_DIR/containers/podman/containers/$containerid/filesystem_diff.txt" 2> /dev/null
+				podman healthcheck run "$containerid" > "$OUTPUT_DIR/containers/podman/containers/$containerid/healthcheck.txt" 2> /dev/null
+				podman inspect "$containerid" --format "{{json .Mounts}}" > "$OUTPUT_DIR/containers/podman/containers/$containerid/mounts.json" 2> /dev/null
+				podman inspect "$containerid" --format "{{json .Config}}" > "$OUTPUT_DIR/containers/podman/containers/$containerid/config.json" 2> /dev/null
+				podman inspect "$containerid" --format "{{json .HostConfig}}" > "$OUTPUT_DIR/containers/podman/containers/$containerid/hostconfig.json" 2> /dev/null
+				podman inspect "$containerid" --format "{{json .NetworkSettings}}" > "$OUTPUT_DIR/containers/podman/containers/$containerid/network_settings.json" 2> /dev/null
 			fi
-		done < $OUTPUT_DIR/containers/podman_container_ids.txt 2> /dev/null
-
-		podman network ls --format "{{.Name}}" | while read netname; do
-			if [ -n "$netname" ]; then
-				echo "=== Network: $netname ===" >> $OUTPUT_DIR/containers/podman_network_configs.txt
-				podman network inspect "$netname" >> $OUTPUT_DIR/containers/podman_network_configs.txt 2> /dev/null
-				echo "" >> $OUTPUT_DIR/containers/podman_network_configs.txt
-			fi
-		done
-		
-		podman volume ls --format "{{.Name}}" 1> $OUTPUT_DIR/containers/podman_volume_ids.txt 2> /dev/null
-		while read -r volumeid; do
-			if [ -n "$volumeid" ]; then
-				echo "=== Volume: $volumeid ===" >> $OUTPUT_DIR/containers/podman_volume_details.txt
-				podman volume inspect "$volumeid" >> $OUTPUT_DIR/containers/podman_volume_details.txt 2> /dev/null
-				echo "" >> $OUTPUT_DIR/containers/podman_volume_details.txt
-			fi
-		done < $OUTPUT_DIR/containers/podman_volume_ids.txt 2> /dev/null
-
-		podman image ls --format "{{.ID}}" --no-trunc | while read imageid; do
+		done < $OUTPUT_DIR/containers/podman/containers/container_ids.txt 2> /dev/null
+		podman image ls --all > $OUTPUT_DIR/containers/podman/images/image_list.txt 2> /dev/null
+		podman image ls --all --format json > $OUTPUT_DIR/containers/podman/images/image_list.json 2> /dev/null
+		podman image ls --filter dangling=true > $OUTPUT_DIR/containers/podman/images/dangling_images.txt 2> /dev/null
+		podman image ls --format "{{.ID}}" --no-trunc | sort -u > $OUTPUT_DIR/containers/podman/images/image_ids.txt 2> /dev/null
+		while read -r imageid; do
 			if [ -n "$imageid" ]; then
-				echo "=== Image: $imageid ===" >> $OUTPUT_DIR/containers/podman_image_details.txt
-				podman image inspect "$imageid" >> $OUTPUT_DIR/containers/podman_image_details.txt 2> /dev/null
-				podman image history "$imageid" >> $OUTPUT_DIR/containers/podman_image_details.txt 2> /dev/null
-				podman image tree "$imageid" >> $OUTPUT_DIR/containers/podman_image_details.txt 2> /dev/null
-				echo "" >> $OUTPUT_DIR/containers/podman_image_details.txt
+				# Create safe filename (replace : with _)
+				SAFE_ID=$(echo "$imageid" | sed 's/[:]/_/g' | cut -c1-64)
+				mkdir -p "$OUTPUT_DIR/containers/podman/images/$SAFE_ID" 2> /dev/null
+				podman image inspect "$imageid" > "$OUTPUT_DIR/containers/podman/images/$SAFE_ID/inspect.json" 2> /dev/null
+				podman image history "$imageid" > "$OUTPUT_DIR/containers/podman/images/$SAFE_ID/history.txt" 2> /dev/null
+				podman image tree "$imageid" > "$OUTPUT_DIR/containers/podman/images/$SAFE_ID/tree.txt" 2> /dev/null
+			fi
+		done < $OUTPUT_DIR/containers/podman/images/image_ids.txt 2> /dev/null
+		podman network ls > $OUTPUT_DIR/containers/podman/networks/network_list.txt 2> /dev/null
+		podman network ls --format json > $OUTPUT_DIR/containers/podman/networks/network_list.json 2> /dev/null
+		podman network ls --format "{{.Name}}" 2>/dev/null | while read netname; do
+			if [ -n "$netname" ]; then
+				SAFE_NAME=$(echo "$netname" | sed 's/[^a-zA-Z0-9_-]/_/g')
+				podman network inspect "$netname" > "$OUTPUT_DIR/containers/podman/networks/network_${SAFE_NAME}.json" 2> /dev/null
 			fi
 		done
+		podman volume ls > $OUTPUT_DIR/containers/podman/volumes/volume_list.txt 2> /dev/null
+		podman volume ls --format json > $OUTPUT_DIR/containers/podman/volumes/volume_list.json 2> /dev/null
+		podman volume ls --format "{{.Name}}" 2>/dev/null | while read volumeid; do
+			if [ -n "$volumeid" ]; then
+				SAFE_VOL=$(echo "$volumeid" | sed 's/[^a-zA-Z0-9_-]/_/g' | cut -c1-64)
+				podman volume inspect "$volumeid" > "$OUTPUT_DIR/containers/podman/volumes/volume_${SAFE_VOL}.json" 2> /dev/null
+			fi
+		done
+		podman pod ls > $OUTPUT_DIR/containers/podman/pods/pod_list.txt 2> /dev/null
+		podman pod ls --format json > $OUTPUT_DIR/containers/podman/pods/pod_list.json 2> /dev/null
 		
-		podman pod ls --format "{{.ID}}" | while read podid; do
+		podman pod ls --format "{{.ID}}" 2>/dev/null | while read podid; do
 			if [ -n "$podid" ]; then
-				echo "=== Pod: $podid ===" >> $OUTPUT_DIR/containers/podman_pod_details.txt
-				podman pod inspect "$podid" >> $OUTPUT_DIR/containers/podman_pod_details.txt 2> /dev/null
-				podman pod stats "$podid" --no-stream >> $OUTPUT_DIR/containers/podman_pod_details.txt 2> /dev/null
-				podman pod top "$podid" >> $OUTPUT_DIR/containers/podman_pod_details.txt 2> /dev/null
-				echo "" >> $OUTPUT_DIR/containers/podman_pod_details.txt
+				mkdir -p "$OUTPUT_DIR/containers/podman/pods/$podid" 2> /dev/null	
+				podman pod inspect "$podid" > "$OUTPUT_DIR/containers/podman/pods/$podid/inspect.json" 2> /dev/null
+				podman pod stats "$podid" --no-stream > "$OUTPUT_DIR/containers/podman/pods/$podid/stats.txt" 2> /dev/null
+				podman pod top "$podid" > "$OUTPUT_DIR/containers/podman/pods/$podid/processes.txt" 2> /dev/null
+				podman pod ps "$podid" > "$OUTPUT_DIR/containers/podman/pods/$podid/containers.txt" 2> /dev/null
 			fi
 		done
-		
-		podman image ls --filter dangling=true 1> $OUTPUT_DIR/containers/podman_dangling_images.txt 2> /dev/null
-		podman system prune --dry-run 1> $OUTPUT_DIR/containers/podman_prune_dryrun.txt 2> /dev/null
-		
+		podman secret ls > $OUTPUT_DIR/containers/podman/system/secrets_list.txt 2> /dev/null
 		if [ -d "$HOME/.config/containers" ]; then
-			echo "  ${COL_ENTRY}>${RESET} Collecting Podman configuration"
-			ls -la "$HOME/.config/containers/" > $OUTPUT_DIR/containers/podman_config_listing.txt 2> /dev/null
-			# Copy non-sensitive configs
-			for conf in storage.conf containers.conf registries.conf; do
+			ls -la "$HOME/.config/containers/" > $OUTPUT_DIR/containers/podman/configs/user_config_listing.txt 2> /dev/null
+			for conf in storage.conf containers.conf registries.conf mounts.conf
+			do
 				if [ -f "$HOME/.config/containers/$conf" ]; then
-					cp "$HOME/.config/containers/$conf" "$OUTPUT_DIR/containers/podman_$conf" 2> /dev/null
+					cp "$HOME/.config/containers/$conf" "$OUTPUT_DIR/containers/podman/configs/user_$conf" 2> /dev/null
 				fi
 			done
 		fi
-		
 		if [ -d "/etc/containers" ]; then
-			ls -la /etc/containers/ > $OUTPUT_DIR/containers/podman_etc_config_listing.txt 2> /dev/null
-			for conf in storage.conf containers.conf registries.conf policy.json; do
+			ls -la /etc/containers/ > $OUTPUT_DIR/containers/podman/configs/system_config_listing.txt 2> /dev/null
+			for conf in storage.conf containers.conf registries.conf policy.json mounts.conf
+			do
 				if [ -f "/etc/containers/$conf" ]; then
-					cp "/etc/containers/$conf" "$OUTPUT_DIR/containers/podman_etc_$conf" 2> /dev/null
+					cp "/etc/containers/$conf" "$OUTPUT_DIR/containers/podman/configs/system_$conf" 2> /dev/null
 				fi
 			done
+			if [ -d "/etc/containers/registries.d" ]; then
+				cp -r "/etc/containers/registries.d" "$OUTPUT_DIR/containers/podman/configs/" 2> /dev/null
+			fi
 		fi
-		
-		if [ "$EUID" -ne 0 ]; then
-			echo "Running as rootless podman" > $OUTPUT_DIR/containers/podman_rootless.txt
-			podman unshare cat /proc/self/uid_map >> $OUTPUT_DIR/containers/podman_rootless.txt 2> /dev/null
-			podman unshare cat /proc/self/gid_map >> $OUTPUT_DIR/containers/podman_rootless.txt 2> /dev/null
-		fi
-		
-		if [ -d "$HOME/.config/systemd/user" ]; then
-			find "$HOME/.config/systemd/user" -name "*podman*" -o -name "*container*" 2>/dev/null > $OUTPUT_DIR/containers/podman_systemd_units.txt
-		fi
-	
-		podman container ls --format "{{.Names}}" | while read cname; do
-			if [ -n "$cname" ]; then
-				echo "=== Container: $cname ===" >> $OUTPUT_DIR/containers/podman_systemd_generate.txt
-				podman generate systemd "$cname" >> $OUTPUT_DIR/containers/podman_systemd_generate.txt 2> /dev/null
-				echo "" >> $OUTPUT_DIR/containers/podman_systemd_generate.txt
+		for cni_dir in /etc/cni/net.d "$HOME/.config/cni/net.d"
+		do
+			if [ -d "$cni_dir" ]; then
+				echo "Found CNI config: $cni_dir" >> $OUTPUT_DIR/containers/podman/configs/cni_locations.txt
+				ls -la "$cni_dir" >> $OUTPUT_DIR/containers/podman/configs/cni_locations.txt 2> /dev/null
 			fi
 		done
+		if [ -d "$HOME/.config/systemd/user" ]; then
+			find "$HOME/.config/systemd/user" -name "*podman*" -o -name "*container*" -ls > $OUTPUT_DIR/containers/podman/systemd/user_units.txt 2>/dev/null
+			find "$HOME/.config/systemd/user" \( -name "*podman*.service" -o -name "*container*.service" \) -exec cp {} $OUTPUT_DIR/containers/podman/systemd/ \; 2>/dev/null
+		fi
+		for systemd_dir in /etc/systemd/system /lib/systemd/system /usr/lib/systemd/system
+		do
+			if [ -d "$systemd_dir" ]; then
+				find "$systemd_dir" -name "*podman*" -o -name "*container*" -ls >> $OUTPUT_DIR/containers/podman/systemd/system_units.txt 2>/dev/null
+			fi
+		done
+		podman container ls --format "{{.Names}}" 2>/dev/null | while read cname; do
+			if [ -n "$cname" ]; then
+				SAFE_CNAME=$(echo "$cname" | sed 's/[^a-zA-Z0-9_-]/_/g')
+				podman generate systemd "$cname" > "$OUTPUT_DIR/containers/podman/systemd/generated_${SAFE_CNAME}.service" 2> /dev/null
+			fi
+		done
+		STORAGE_INFO="$OUTPUT_DIR/containers/podman/system/storage_info.txt"
+		podman info --format "{{.Store.GraphRoot}}" > "$STORAGE_INFO" 2> /dev/null
+		podman info --format "{{.Store.RunRoot}}" >> "$STORAGE_INFO" 2> /dev/null
+		for storage_dir in "$HOME/.local/share/containers/storage" "/var/lib/containers/storage"
+		do
+			if [ -d "$storage_dir" ]; then
+				echo "" >> "$STORAGE_INFO"
+				echo "Storage directory: $storage_dir" >> "$STORAGE_INFO"
+				du -sh "$storage_dir" >> "$STORAGE_INFO" 2> /dev/null
+				ls -la "$storage_dir" >> "$STORAGE_INFO" 2> /dev/null
+			fi
+		done
+		SUMMARY="$OUTPUT_DIR/containers/podman/SUMMARY.txt"
+		echo "Podman Collection Summary" > "$SUMMARY"
+		echo "========================" >> "$SUMMARY"
+		echo "Collection Date: $(date)" >> "$SUMMARY"
+		echo "" >> "$SUMMARY"
+		podman version --format "Version: {{.Client.Version}}" >> "$SUMMARY" 2> /dev/null
+		echo "" >> "$SUMMARY"
+		CONTAINER_COUNT=$(wc -l < $OUTPUT_DIR/containers/podman/containers/container_ids.txt 2>/dev/null || echo 0)
+		RUNNING_COUNT=$(podman ps -q | wc -l 2>/dev/null || echo 0)
+		IMAGE_COUNT=$(wc -l < $OUTPUT_DIR/containers/podman/images/image_ids.txt 2>/dev/null || echo 0)
+		NETWORK_COUNT=$(podman network ls -q | wc -l 2>/dev/null || echo 0)
+		VOLUME_COUNT=$(podman volume ls -q | wc -l 2>/dev/null || echo 0)
+		POD_COUNT=$(podman pod ls -q 2>/dev/null | wc -l || echo 0)
+		echo "Resources:" >> "$SUMMARY"
+		echo "  Total containers: $CONTAINER_COUNT (Running: $RUNNING_COUNT)" >> "$SUMMARY"
+		echo "  Total images: $IMAGE_COUNT" >> "$SUMMARY"
+		echo "  Networks: $NETWORK_COUNT" >> "$SUMMARY"
+		echo "  Volumes: $VOLUME_COUNT" >> "$SUMMARY"
+		echo "  Pods: $POD_COUNT" >> "$SUMMARY"
+		if [ -f "$OUTPUT_DIR/containers/podman/system/disk_usage.txt" ]; then
+			echo "" >> "$SUMMARY"
+			echo "Disk Usage:" >> "$SUMMARY"
+			grep -E "^(Images|Containers|Volumes|Total)" "$OUTPUT_DIR/containers/podman/system/disk_usage.txt" >> "$SUMMARY" 2> /dev/null
+		fi
+		echo "" >> "$SUMMARY"
+		echo "Collection completed. Check subdirectories for detailed information." >> "$SUMMARY"
 	fi
+
 fi
 
 # --------------------------------
