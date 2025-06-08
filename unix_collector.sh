@@ -362,7 +362,7 @@ fi
 echo "  ${COL_ENTRY}>${RESET} SSH settings"
 sshd -T 1> $OUTPUT_DIR/general/sshd-t.txt 2> /dev/null
 
-echo "  ${COL_ENTRY}>${RESET} File timeline and bodyfile generation"
+echo "  ${COL_ENTRY}>${RESET} Generating file timeline in multiple formats"
 mkdir -p $OUTPUT_DIR/general/timeline 2> /dev/null
 TIMELINE_START=$(date)
 echo "Timeline generation started: $TIMELINE_START" > $OUTPUT_DIR/general/timeline/timeline_info.txt
@@ -383,8 +383,6 @@ then
 fi
 
 echo "Stat type detected: $STAT_TYPE" >> $OUTPUT_DIR/general/timeline/timeline_info.txt
-echo "  ${COL_ENTRY}>${RESET} Generating timeline in multiple formats"
-
 # Standard bodyfile format (Sleuthkit 3.0+ format)
 # MD5|name|inode|mode_as_string|UID|GID|size|atime|mtime|ctime|crtime
 echo "# Sleuthkit 3.0+ bodyfile format" > $OUTPUT_DIR/general/timeline/bodyfile.txt
@@ -396,7 +394,6 @@ echo "Inode,Hard Link Count,Full Path,Last Access,Last Modification,Last Status 
 # Platform-specific timeline generation
 case $PLATFORM in
     "linux"|"android"|"generic")
-        echo "  ${COL_ENTRY}>${RESET} Generating Linux timeline"
         # Generate bodyfile format
         find / -xdev -type f -o -type d -o -type l 2>/dev/null | while read filepath
         do
@@ -415,13 +412,11 @@ case $PLATFORM in
         # Alternative method using find -printf if stat fails
         if [ ! -s "$OUTPUT_DIR/general/timeline/bodyfile.txt" ] || [ $(wc -l < $OUTPUT_DIR/general/timeline/bodyfile.txt) -lt 10 ]
         then
-            echo "  ${COL_ENTRY}>${RESET} Using find -printf method"
             find / -xdev \( -type f -o -type d -o -type l \) -printf "0|%p|%i|%M|%u|%g|%s|%A@|%T@|%C@|0\n" 2>/dev/null >> $OUTPUT_DIR/general/timeline/bodyfile_find.txt
         fi
         ;;
         
     "mac")
-        echo "  ${COL_ENTRY}>${RESET} Generating macOS timeline"    
         # macOS uses BSD stat with different format
         find / -xdev -type f -o -type d -o -type l 2>/dev/null | while read filepath
         do
@@ -444,7 +439,6 @@ case $PLATFORM in
         find / -xdev -print0 2>/dev/null | xargs -0 stat -L > $OUTPUT_DIR/general/timeline/timeline_mac_native.txt 2>/dev/null
         ;;
     "solaris")
-        echo "  ${COL_ENTRY}>${RESET} Generating Solaris timeline"
         if [ "$STAT_TYPE" = "gnu" ]
         then
             find / -xdev -type f -o -type d -o -type l 2>/dev/null | while read filepath
@@ -466,7 +460,6 @@ case $PLATFORM in
         fi
         ;;
     "aix")
-        echo "  ${COL_ENTRY}>${RESET} Generating AIX timeline"
         # AIX using perl method (most reliable)
         find / -xdev 2>/dev/null | perl -ne 'chomp;
             $_ =~ s/\x0a//g; $_ =~ s/\x0d//g;
@@ -481,7 +474,6 @@ case $PLATFORM in
         find / -xdev 2>/dev/null | perl -n -e '$_ =~ s/\x0a//g; $_ =~ s/\x0d//g;print $_ . "," . join(",", stat($_)) . "\n";' >> $OUTPUT_DIR/general/timeline/timeline.csv 2>/dev/null
         ;;
     *)
-        echo "  ${COL_ENTRY}>${RESET} Using generic method"
         if command -v stat >/dev/null 2>&1
         then
             find / -xdev -type f -o -type d -o -type l 2>/dev/null | while read filepath
