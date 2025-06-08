@@ -55,7 +55,7 @@
 # ---------------------------
 # Global Variables
 # ---------------------------
-VERSION="1.9"
+VERSION="2.0"
 HOSTNAME=`hostname`
 PLATFORM="none"
 SHORT_DATE=`date +%B" "%Y`
@@ -287,38 +287,279 @@ uname -s 1> $OUTPUT_DIR/general/kernel.txt 2> /dev/null
 echo "  ${COL_ENTRY}>${RESET} Version"
 uname -v 1> $OUTPUT_DIR/general/version.txt 2> /dev/null
 
-echo "  ${COL_ENTRY}>${RESET} Check for tainted kernel"
-# Based on amazing work by Craig Rowland - https://twitter.com/CraigHRowland/status/1628883826738077696
-cat /proc/sys/kernel/tainted 1> $OUTPUT_DIR/general/tainted_kernel.txt 2> /dev/null
-for i in $(seq 18); do echo $(($i-1)) $(($(cat /proc/sys/kernel/tainted)>>($i-1)&1));done 1>> $OUTPUT_DIR/general/tainted_bitmap.txt 2> /dev/null
+echo "  ${COL_ENTRY}>${RESET} Kernel integrity and taint checks"
+mkdir -p $OUTPUT_DIR/general/kernel_integrity 2> /dev/null
+
+# Linux kernel taint check
+if [ -f /proc/sys/kernel/tainted ]
+then
+    # Get the taint value
+    TAINT_VALUE=$(cat /proc/sys/kernel/tainted 2> /dev/null)
+    echo $TAINT_VALUE > $OUTPUT_DIR/general/kernel_integrity/tainted_kernel_value.txt
+    
+    # Decode taint flags with descriptions
+    echo "Kernel Taint Analysis" > $OUTPUT_DIR/general/kernel_integrity/taint_analysis.txt
+    echo "===================" >> $OUTPUT_DIR/general/kernel_integrity/taint_analysis.txt
+    echo "Taint value: $TAINT_VALUE" >> $OUTPUT_DIR/general/kernel_integrity/taint_analysis.txt
+    echo "" >> $OUTPUT_DIR/general/kernel_integrity/taint_analysis.txt
+    
+    if [ "$TAINT_VALUE" = "0" ]
+    then
+        echo "Kernel is NOT tainted" >> $OUTPUT_DIR/general/kernel_integrity/taint_analysis.txt
+    else
+        echo "Kernel IS tainted with the following flags:" >> $OUTPUT_DIR/general/kernel_integrity/taint_analysis.txt
+        echo "" >> $OUTPUT_DIR/general/kernel_integrity/taint_analysis.txt
+        
+        # Taint flag descriptions
+        echo "Bit Value Meaning" > $OUTPUT_DIR/general/kernel_integrity/taint_flags.txt
+        echo "--- ----- -------" >> $OUTPUT_DIR/general/kernel_integrity/taint_flags.txt
+        
+        # Define taint flags (up to bit 18 as of Linux 5.x)
+        i=0
+        for FLAG in \
+            "0:G:Proprietary module loaded" \
+            "1:F:Module forced load" \
+            "2:S:SMP kernel on non-SMP processor" \
+            "3:R:Module force unloaded" \
+            "4:M:Machine check exception" \
+            "5:B:Bad page referenced" \
+            "6:U:User requested taint" \
+            "7:D:Kernel died recently (OOPS/BUG)" \
+            "8:A:ACPI table overridden" \
+            "9:W:Warning issued by kernel" \
+            "10:C:Staging driver loaded" \
+            "11:I:Platform firmware bug workaround" \
+            "12:O:Out-of-tree module loaded" \
+            "13:E:Unsigned module loaded" \
+            "14:L:Soft lockup occurred" \
+            "15:K:Kernel live patched" \
+            "16:X:Auxiliary taint (distro-specific)" \
+            "17:T:Kernel built with struct randomization"
+        do
+            BIT_NUM=$(echo $FLAG | cut -d: -f1)
+            FLAG_CHAR=$(echo $FLAG | cut -d: -f2)
+            FLAG_DESC=$(echo $FLAG | cut -d: -f3)
+            
+            # Check if bit is set
+            if [ $(((TAINT_VALUE >> BIT_NUM) & 1)) -eq 1 ]
+            then
+                echo "$BIT_NUM   $FLAG_CHAR     $FLAG_DESC" >> $OUTPUT_DIR/general/kernel_integrity/taint_flags.txt
+                echo "  [$FLAG_CHAR] $FLAG_DESC" >> $OUTPUT_DIR/general/kernel_integrity/taint_analysis.txt
+            fi
+            
+            i=$((i + 1))
+        done
+    fi
+    
+    # Original bitmap for compatibility
+    echo "Taint bitmap (bit position : value):" >> $OUTPUT_DIR/general/kernel_integrity/taint_analysis.txt
+    for i in $(seq 0 17); do 
+        BIT_VAL=$(((TAINT_VALUE >> i) & 1))
+        echo "$i:$BIT_VAL" >> $OUTPUT_DIR/general/kernel_integrity/taint_bitmap.txt
+    done
+fi
 
 echo "  ${COL_ENTRY}>${RESET} SSH settings"
 sshd -T 1> $OUTPUT_DIR/general/sshd-t.txt 2> /dev/null
 
-echo "  ${COL_ENTRY}>${RESET} File timeline"
-if [ $PLATFORM = "solaris" ]
+echo "  ${COL_ENTRY}>${RESET} File timeline and bodyfile generation"
+mkdir -p $OUTPUT_DIR/general/timeline 2> /dev/null
+TIMELINE_START=$(date)
+echo "Timeline generation started: $TIMELINE_START" > $OUTPUT_DIR/general/timeline/timeline_info.txt
+STAT_TYPE="unknown"
+STAT_CMD=""
+if stat --version 2>/dev/null | grep -q "GNU coreutils"
 then
-    echo "Inode,Hard Link Count,Full Path,Last Access,Last Modification,Last Status Change,File Creation,User,Group,File Permissions,File Size(bytes)" > $OUTPUT_DIR/general/timeline.csv
-    find / -xdev -print0 2>/dev/null | xargs -0 stat --printf="%i,%h,%n,%x,%y,%z,%w,%U,%G,%A,%s\n" 1>> $OUTPUT_DIR/general/timeline.csv 2>/dev/null
-elif [ $PLATFORM = "linux" ]
+    STAT_TYPE="gnu"
+    STAT_CMD="stat"
+elif stat -f "%N" / >/dev/null 2>&1
 then
-    echo "Inode,Hard Link Count,Full Path,Last Access,Last Modification,Last Status Change,File Creation,User,Group,File Permissions,File Size(bytes)" > $OUTPUT_DIR/general/timeline.csv
-    find / -xdev -print0 2>/dev/null | xargs -0 stat --printf="%i,%h,%n,%x,%y,%z,%w,%U,%G,%A,%s\n" 1>> $OUTPUT_DIR/general/timeline.csv 2>/dev/null
-elif [ $PLATFORM = "android" ]
+    STAT_TYPE="bsd"
+    STAT_CMD="stat"
+elif [ -x /usr/bin/stat ] && /usr/bin/stat --version 2>&1 | grep -q "stat"
 then
-    echo "Inode,Hard Link Count,Full Path,Last Access,Last Modification,Last Status Change,File Creation,User,Group,File Permissions,File Size(bytes)" > $OUTPUT_DIR/general/timeline.csv
-    find / -xdev -print0 2>/dev/null | xargs -0 stat --printf="%i,%h,%n,%x,%y,%z,%w,%U,%G,%A,%s\n" 1>> $OUTPUT_DIR/general/timeline.csv 2>/dev/null
-elif [ $PLATFORM = "mac" ]
+    STAT_TYPE="solaris"
+    STAT_CMD="/usr/bin/stat"
+fi
+
+echo "Stat type detected: $STAT_TYPE" >> $OUTPUT_DIR/general/timeline/timeline_info.txt
+echo "  ${COL_ENTRY}>${RESET} Generating timeline in multiple formats"
+
+# Standard bodyfile format (Sleuthkit 3.0+ format)
+# MD5|name|inode|mode_as_string|UID|GID|size|atime|mtime|ctime|crtime
+echo "# Sleuthkit 3.0+ bodyfile format" > $OUTPUT_DIR/general/timeline/bodyfile.txt
+echo "# MD5|name|inode|mode_as_string|UID|GID|size|atime|mtime|ctime|crtime" >> $OUTPUT_DIR/general/timeline/bodyfile.txt
+
+# CSV format with headers
+echo "Inode,Hard Link Count,Full Path,Last Access,Last Modification,Last Status Change,File Creation,User,Group,File Permissions,File Size(bytes),File Type,MD5" > $OUTPUT_DIR/general/timeline/timeline.csv
+
+# Platform-specific timeline generation
+case $PLATFORM in
+    "linux"|"android"|"generic")
+        echo "  ${COL_ENTRY}>${RESET} Generating Linux timeline"
+        # Generate bodyfile format
+        find / -xdev -type f -o -type d -o -type l 2>/dev/null | while read filepath
+        do
+            # Skip if file doesn't exist (race condition)
+            [ -e "$filepath" ] || continue
+            # Get file stats
+            if [ "$STAT_TYPE" = "gnu" ]
+            then
+                # GNU stat with all needed fields
+                stat -c "0|%n|%i|%A|%u|%g|%s|%X|%Y|%Z|%W" "$filepath" 2>/dev/null >> $OUTPUT_DIR/general/timeline/bodyfile.txt
+                # CSV format with human-readable times
+                stat -c "%i,%h,%n,%x,%y,%z,%w,%U,%G,%A,%s,%F" "$filepath" 2>/dev/null | sed 's/|/,/g' >> $OUTPUT_DIR/general/timeline/timeline.csv
+            fi
+        done
+        
+        # Alternative method using find -printf if stat fails
+        if [ ! -s "$OUTPUT_DIR/general/timeline/bodyfile.txt" ] || [ $(wc -l < $OUTPUT_DIR/general/timeline/bodyfile.txt) -lt 10 ]
+        then
+            echo "  ${COL_ENTRY}>${RESET} Using find -printf method"
+            find / -xdev \( -type f -o -type d -o -type l \) -printf "0|%p|%i|%M|%u|%g|%s|%A@|%T@|%C@|0\n" 2>/dev/null >> $OUTPUT_DIR/general/timeline/bodyfile_find.txt
+        fi
+        ;;
+        
+    "mac")
+        echo "  ${COL_ENTRY}>${RESET} Generating macOS timeline"    
+        # macOS uses BSD stat with different format
+        find / -xdev -type f -o -type d -o -type l 2>/dev/null | while read filepath
+        do
+            [ -e "$filepath" ] || continue  
+            # BSD stat format for bodyfile
+            # Get numeric permissions, times as epoch
+            INODE=$(stat -f "%i" "$filepath" 2>/dev/null)
+            MODE=$(stat -f "%Mp%Lp" "$filepath" 2>/dev/null)
+            UID=$(stat -f "%u" "$filepath" 2>/dev/null)
+            GID=$(stat -f "%g" "$filepath" 2>/dev/null)
+            SIZE=$(stat -f "%z" "$filepath" 2>/dev/null)
+            ATIME=$(stat -f "%a" "$filepath" 2>/dev/null)
+            MTIME=$(stat -f "%m" "$filepath" 2>/dev/null)
+            CTIME=$(stat -f "%c" "$filepath" 2>/dev/null)
+            BTIME=$(stat -f "%B" "$filepath" 2>/dev/null)  # Birth time on macOS
+            echo "0|$filepath|$INODE|$MODE|$UID|$GID|$SIZE|$ATIME|$MTIME|$CTIME|$BTIME" >> $OUTPUT_DIR/general/timeline/bodyfile.txt
+            # Human readable format
+            stat -f "%i,%l,%N,%Sa,%Sm,%Sc,%SB,%Su,%Sg,%Sp,%z,%HT" "$filepath" 2>/dev/null >> $OUTPUT_DIR/general/timeline/timeline.csv
+        done
+        find / -xdev -print0 2>/dev/null | xargs -0 stat -L > $OUTPUT_DIR/general/timeline/timeline_mac_native.txt 2>/dev/null
+        ;;
+    "solaris")
+        echo "  ${COL_ENTRY}>${RESET} Generating Solaris timeline"
+        if [ "$STAT_TYPE" = "gnu" ]
+        then
+            find / -xdev -type f -o -type d -o -type l 2>/dev/null | while read filepath
+            do
+                [ -e "$filepath" ] || continue
+                stat -c "0|%n|%i|%A|%u|%g|%s|%X|%Y|%Z|%W" "$filepath" 2>/dev/null >> $OUTPUT_DIR/general/timeline/bodyfile.txt
+                stat -c "%i,%h,%n,%x,%y,%z,%w,%U,%G,%A,%s,%F" "$filepath" 2>/dev/null >> $OUTPUT_DIR/general/timeline/timeline.csv
+            done
+        else
+            # Fallback to ls and perl for Solaris
+            echo "  ${COL_ENTRY}>${RESET} Using perl method for Solaris"
+            find / -xdev 2>/dev/null | perl -ne 'chomp; 
+                @s=stat($_); 
+                next unless @s; 
+                ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,$mtime,$ctime,$blksize,$blocks)=@s;
+                $mode_str = sprintf("%04o", $mode & 07777);
+                print "0|$_|$ino|$mode_str|$uid|$gid|$size|$atime|$mtime|$ctime|0\n";
+            ' >> $OUTPUT_DIR/general/timeline/bodyfile.txt 2>/dev/null
+        fi
+        ;;
+    "aix")
+        echo "  ${COL_ENTRY}>${RESET} Generating AIX timeline"
+        # AIX using perl method (most reliable)
+        find / -xdev 2>/dev/null | perl -ne 'chomp;
+            $_ =~ s/\x0a//g; $_ =~ s/\x0d//g;
+            @s = stat($_);
+            next unless @s;
+            ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,$mtime,$ctime,$blksize,$blocks) = @s;
+            # Bodyfile format
+            $mode_str = sprintf("%04o", $mode & 07777);
+            print "0|$_|$ino|$mode_str|$uid|$gid|$size|$atime|$mtime|$ctime|0\n";
+        ' > $OUTPUT_DIR/general/timeline/bodyfile.txt 2>/dev/null
+        echo "device number,inode,file name,nlink,uid,gid,rdev,size,access time,modified time,inode change time,io size,block size" > $OUTPUT_DIR/general/timeline/timeline.csv
+        find / -xdev 2>/dev/null | perl -n -e '$_ =~ s/\x0a//g; $_ =~ s/\x0d//g;print $_ . "," . join(",", stat($_)) . "\n";' >> $OUTPUT_DIR/general/timeline/timeline.csv 2>/dev/null
+        ;;
+    *)
+        echo "  ${COL_ENTRY}>${RESET} Using generic method"
+        if command -v stat >/dev/null 2>&1
+        then
+            find / -xdev -type f -o -type d -o -type l 2>/dev/null | while read filepath
+            do
+                [ -e "$filepath" ] || continue
+                stat -c "0|%n|%i|%A|%u|%g|%s|%X|%Y|%Z|%W" "$filepath" 2>/dev/null >> $OUTPUT_DIR/general/timeline/bodyfile.txt || \
+                stat "$filepath" >> $OUTPUT_DIR/general/timeline/timeline_native.txt 2>/dev/null
+            done
+        fi
+        ;;
+esac
+
+# Generate timeline for specific forensically interesting directories
+echo "  ${COL_ENTRY}>${RESET} Generating focused timelines"
+# Recently modified files (last 14 days)
+echo "# Recently modified files (last 14 days)" > $OUTPUT_DIR/general/timeline/recent_files.txt
+find / -xdev -type f -mtime -14 -ls 2>/dev/null >> $OUTPUT_DIR/general/timeline/recent_files.txt
+# Recently accessed files (last 14 days)  
+echo "# Recently accessed files (last 14 days)" > $OUTPUT_DIR/general/timeline/recent_accessed.txt
+find / -xdev -type f -atime -14 -ls 2>/dev/null >> $OUTPUT_DIR/general/timeline/recent_accessed.txt
+# SUID/SGID files timeline
+echo "# SUID/SGID files" > $OUTPUT_DIR/general/timeline/suid_sgid_timeline.txt
+find / -xdev \( -perm -4000 -o -perm -2000 \) -type f -ls 2>/dev/null >> $OUTPUT_DIR/general/timeline/suid_sgid_timeline.txt
+# Timeline for critical directories
+for dir in /etc /var/log /root /tmp /var/tmp /home /opt
+do
+    if [ -d "$dir" ]
+    then
+        echo "  ${COL_ENTRY}>${RESET} Timeline for $dir"
+        DIR_NAME=$(echo $dir | tr '/' '_' | sed 's/^_//')
+        # Quick timeline for critical directories
+        find "$dir" -xdev -type f -ls 2>/dev/null | \
+            awk '{print $3" "$11" "$7" "$8" "$9" "$10" "$NF}' | \
+            sort -k4,5 > "$OUTPUT_DIR/general/timeline/timeline_${DIR_NAME}.txt" 2>/dev/null
+    fi
+done
+
+# Count total files
+TOTAL_FILES=$(wc -l < $OUTPUT_DIR/general/timeline/bodyfile.txt 2>/dev/null || echo 0)
+# Find files modified in last 24 hours
+if [ "$PLATFORM" != "aix" ]
 then
-    find / -xdev -print0 2>/dev/null | xargs -0 stat -L 1>> $OUTPUT_DIR/general/timeline.txt 2>/dev/null
-elif [ $PLATFORM = "generic" ]
+    RECENT_24H=$(find / -xdev -type f -mtime -1 2>/dev/null | wc -l)
+else
+    RECENT_24H="N/A"
+fi
+
+# Create summary
+echo "Timeline Generation Summary" > $OUTPUT_DIR/general/timeline/TIMELINE_SUMMARY.txt
+echo "==========================" >> $OUTPUT_DIR/general/timeline/TIMELINE_SUMMARY.txt
+echo "Platform: $PLATFORM" >> $OUTPUT_DIR/general/timeline/TIMELINE_SUMMARY.txt
+echo "Stat type used: $STAT_TYPE" >> $OUTPUT_DIR/general/timeline/TIMELINE_SUMMARY.txt
+echo "Start time: $TIMELINE_START" >> $OUTPUT_DIR/general/timeline/TIMELINE_SUMMARY.txt
+echo "End time: $(date)" >> $OUTPUT_DIR/general/timeline/TIMELINE_SUMMARY.txt
+echo "" >> $OUTPUT_DIR/general/timeline/TIMELINE_SUMMARY.txt
+echo "Statistics:" >> $OUTPUT_DIR/general/timeline/TIMELINE_SUMMARY.txt
+echo "Total files in timeline: $TOTAL_FILES" >> $OUTPUT_DIR/general/timeline/TIMELINE_SUMMARY.txt
+echo "Files modified in last 24h: $RECENT_24H" >> $OUTPUT_DIR/general/timeline/TIMELINE_SUMMARY.txt
+echo "" >> $OUTPUT_DIR/general/timeline/TIMELINE_SUMMARY.txt
+echo "Files generated:" >> $OUTPUT_DIR/general/timeline/TIMELINE_SUMMARY.txt
+echo "- bodyfile.txt: Sleuthkit 3.0+ bodyfile format" >> $OUTPUT_DIR/general/timeline/TIMELINE_SUMMARY.txt
+echo "- timeline.csv: CSV format with headers" >> $OUTPUT_DIR/general/timeline/TIMELINE_SUMMARY.txt
+echo "- recent_*.txt: Recently modified/accessed files" >> $OUTPUT_DIR/general/timeline/TIMELINE_SUMMARY.txt
+echo "- timeline_*.txt: Per-directory timelines" >> $OUTPUT_DIR/general/timeline/TIMELINE_SUMMARY.txt
+
+if command -v perl >/dev/null 2>&1 && [ -s "$OUTPUT_DIR/general/timeline/bodyfile.txt" ]
 then
-    echo "Inode,Hard Link Count,Full Path,Last Access,Last Modification,Last Status Change,File Creation,User,Group,File Permissions,File Size(bytes)" > $OUTPUT_DIR/general/timeline.csv
-    find / -xdev -print0 2>/dev/null | xargs -0 stat --printf="%i,%h,%n,%x,%y,%z,%w,%U,%G,%A,%s\n" 1>> $OUTPUT_DIR/general/timeline.csv 2>/dev/null
-elif [ $PLATFORM = "aix" ]
-then
-	echo "device number,inode,file name,nlink,uid,gid,rdev,size,access time,modified time,inode change time,io size,block size" > timeline.csv
-	find / -xdev 2>/dev/null | perl -n -e '$_ =~ s/\x0a//g; $_ =~ s/\x0d//g;print $_ . "," . join(",", stat($_)) . "\n";' 1>> timeline.csv 2>/dev/null
+    echo "  ${COL_ENTRY}>${RESET} Converting to mactime format"
+    # Simple mactime conversion (without the actual mactime tool)
+    perl -ne '
+        chomp;
+        next if /^#/;
+        @f = split /\|/;
+        next unless @f >= 11;
+        ($md5,$name,$inode,$mode,$uid,$gid,$size,$atime,$mtime,$ctime,$crtime) = @f;
+        print "NOTE: This is a simplified mactime format\n" if $. == 1;
+        print scalar(localtime($mtime)) . " | m | $mode | $uid | $gid | $size | $name\n" if $mtime > 0;
+    ' < $OUTPUT_DIR/general/timeline/bodyfile.txt > $OUTPUT_DIR/general/timeline/mactime_mtime.txt 2>/dev/null
 fi
 
 echo "  ${COL_ENTRY}>${RESET} Release"
@@ -1367,10 +1608,8 @@ do
     if [ -d "$shm_dir" ]
     then
         DIR_NAME=$(echo $shm_dir | tr '/' '_' | sed 's/^_//')
-        
         # List contents
         ls -la $shm_dir/ > $OUTPUT_DIR/general/shared_memory/${DIR_NAME}_listing.txt 2> /dev/null
-        
         # Copy small files only to avoid filling disk
         find $shm_dir -type f -size -10M 2>/dev/null | while read file
         do
