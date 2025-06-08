@@ -1766,7 +1766,162 @@ then
     fi
 fi
 
-echo "  ${COL_ENTRY}>${RESET} Compiler tools (NFS skip)"
+echo "  ${COL_ENTRY}>${RESET} Compiler and development tools detection"
+mkdir $OUTPUT_DIR/software/development_tools 2> /dev/null
+
+# First, check common locations and PATH for known compilers/interpreters
+echo "    Checking PATH for development tools..."
+echo "=== Development Tools Found in PATH ===" > $OUTPUT_DIR/software/development_tools/tools_in_path.txt
+
+# List of common development tools to check
+DEV_TOOLS="gcc g++ cc c++ clang clang++ icc icpc pgcc xlc xlC javac java python python2 python3 perl perl5 ruby irb php node nodejs npm go gccgo rustc cargo swift swiftc kotlin kotlinc scala scalac ghc ocaml fpc gfortran f77 f90 f95 nasm yasm tclsh wish lua R julia dart mono mcs dotnet make gmake cmake qmake automake ant maven gradle rake pip pip3 gem npm yarn composer"
+
+for tool in $DEV_TOOLS
+do
+    if command -v $tool > /dev/null 2>&1; then
+        tool_path=`command -v $tool 2>/dev/null`
+        echo "" >> $OUTPUT_DIR/software/development_tools/tools_in_path.txt
+        echo "=== $tool ===" >> $OUTPUT_DIR/software/development_tools/tools_in_path.txt
+        echo "Path: $tool_path" >> $OUTPUT_DIR/software/development_tools/tools_in_path.txt
+        ls -la "$tool_path" >> $OUTPUT_DIR/software/development_tools/tools_in_path.txt 2>/dev/null
+        
+        # Get version info if possible
+        echo "Version:" >> $OUTPUT_DIR/software/development_tools/tools_in_path.txt
+        case $tool in
+            gcc|g++|clang|clang++|gfortran)
+                $tool --version 2>/dev/null | head -1 >> $OUTPUT_DIR/software/development_tools/tools_in_path.txt
+                ;;
+            javac|java)
+                $tool -version 2>&1 | head -1 >> $OUTPUT_DIR/software/development_tools/tools_in_path.txt
+                ;;
+            python*|perl*|ruby|php|node|nodejs)
+                $tool --version 2>&1 | head -1 >> $OUTPUT_DIR/software/development_tools/tools_in_path.txt
+                ;;
+            go|rustc|swift|kotlin*|scala*)
+                $tool version 2>&1 | head -1 >> $OUTPUT_DIR/software/development_tools/tools_in_path.txt
+                ;;
+            *)
+                $tool --version 2>&1 | head -1 >> $OUTPUT_DIR/software/development_tools/tools_in_path.txt || echo "Version unknown" >> $OUTPUT_DIR/software/development_tools/tools_in_path.txt
+                ;;
+        esac
+        
+        # Get file hash
+        if [ -x /usr/bin/sha256sum ]; then
+            sha256sum "$tool_path" >> $OUTPUT_DIR/software/development_tools/tools_in_path.txt 2>/dev/null
+        elif [ -x /usr/bin/sha1sum ]; then
+            sha1sum "$tool_path" >> $OUTPUT_DIR/software/development_tools/tools_in_path.txt 2>/dev/null
+        elif [ -x /usr/bin/shasum ]; then
+            shasum -a 256 "$tool_path" >> $OUTPUT_DIR/software/development_tools/tools_in_path.txt 2>/dev/null
+        fi
+    fi
+done
+
+# Check package manager for installed development packages
+echo "    Checking installed development packages..."
+
+if [ $PLATFORM = "linux" -o $PLATFORM = "generic" ]; then
+    # RPM-based systems
+    if [ -x /usr/bin/rpm -o -x /bin/rpm ]; then
+        echo "=== RPM Development Packages ===" > $OUTPUT_DIR/software/development_tools/rpm_dev_packages.txt
+        rpm -qa | grep -E 'gcc|clang|java|jdk|python|perl|ruby|nodejs|golang|rust|compiler|devel|sdk' | sort >> $OUTPUT_DIR/software/development_tools/rpm_dev_packages.txt 2>/dev/null
+    fi
+    
+    # Debian-based systems
+    if [ -x /usr/bin/dpkg ]; then
+        echo "=== DEB Development Packages ===" > $OUTPUT_DIR/software/development_tools/deb_dev_packages.txt
+        dpkg -l | grep -E 'gcc|clang|java|jdk|python|perl|ruby|nodejs|golang|rust|compiler|dev|sdk' | grep '^ii' >> $OUTPUT_DIR/software/development_tools/deb_dev_packages.txt 2>/dev/null
+    fi
+elif [ $PLATFORM = "mac" ]; then
+    # Check Xcode and command line tools
+    echo "=== Xcode Information ===" > $OUTPUT_DIR/software/development_tools/xcode_info.txt
+    xcode-select -p >> $OUTPUT_DIR/software/development_tools/xcode_info.txt 2>&1
+    xcodebuild -version >> $OUTPUT_DIR/software/development_tools/xcode_info.txt 2>&1
+    pkgutil --pkg-info=com.apple.pkg.CLTools_Executables >> $OUTPUT_DIR/software/development_tools/xcode_info.txt 2>&1
+    
+    # Check Homebrew packages
+    if [ -x /usr/local/bin/brew -o -x /opt/homebrew/bin/brew ]; then
+        echo "=== Homebrew Development Packages ===" > $OUTPUT_DIR/software/development_tools/brew_dev_packages.txt
+        brew list | grep -E 'gcc|llvm|java|python|perl|ruby|node|go|rust' >> $OUTPUT_DIR/software/development_tools/brew_dev_packages.txt 2>/dev/null
+    fi
+elif [ $PLATFORM = "solaris" ]; then
+    if [ -x /usr/bin/pkg ]; then
+        echo "=== Solaris Development Packages ===" > $OUTPUT_DIR/software/development_tools/solaris_dev_packages.txt
+        pkg list | grep -E 'gcc|java|jdk|python|perl|ruby|developer|compiler' >> $OUTPUT_DIR/software/development_tools/solaris_dev_packages.txt 2>/dev/null
+    fi
+fi
+
+# Check standard development directories
+echo "    Checking standard development directories..."
+echo "=== Development Tools in Standard Locations ===" > $OUTPUT_DIR/software/development_tools/standard_locations.txt
+
+# Common directories to check (much faster than full filesystem scan)
+DEV_DIRS="/usr/bin /usr/local/bin /opt/*/bin /usr/lib/jvm/*/bin /usr/lib64/jvm/*/bin /opt/rh/*/root/usr/bin /usr/local/go/bin /usr/local/rust/bin /usr/local/node*/bin /Applications/Xcode.app/Contents/Developer/usr/bin /Developer/usr/bin"
+
+for dir in $DEV_DIRS
+do
+    if [ -d "$dir" ]; then
+        echo "" >> $OUTPUT_DIR/software/development_tools/standard_locations.txt
+        echo "=== Directory: $dir ===" >> $OUTPUT_DIR/software/development_tools/standard_locations.txt
+        ls -la $dir 2>/dev/null | grep -E 'gcc|g\+\+|clang|javac|java|python|perl|ruby|node|go|rustc|swift' >> $OUTPUT_DIR/software/development_tools/standard_locations.txt 2>/dev/null
+    fi
+done
+
+# Check for development environments and build tools
+echo "    Checking build environments..."
+echo "=== Build Tools and Environments ===" > $OUTPUT_DIR/software/development_tools/build_environments.txt
+
+# Check for build tool configurations
+for config in /etc/alternatives/java* /etc/alternatives/python* /etc/alternatives/gcc* /usr/lib/jvm/default-java /etc/java* /etc/python* /etc/perl* /etc/ruby*
+do
+    if [ -e "$config" ]; then
+        echo "" >> $OUTPUT_DIR/software/development_tools/build_environments.txt
+        echo "Config: $config" >> $OUTPUT_DIR/software/development_tools/build_environments.txt
+        ls -la "$config" >> $OUTPUT_DIR/software/development_tools/build_environments.txt 2>/dev/null
+    fi
+done
+
+# Check environment variables
+echo "" >> $OUTPUT_DIR/software/development_tools/build_environments.txt
+echo "=== Development Environment Variables ===" >> $OUTPUT_DIR/software/development_tools/build_environments.txt
+env | grep -E 'JAVA_HOME|PYTHON_HOME|PERL5LIB|RUBY|GCC|GOPATH|GOROOT|CARGO_HOME|NODE_PATH|PATH' | sort >> $OUTPUT_DIR/software/development_tools/build_environments.txt 2>/dev/null
+
+# Platform specific checks
+if [ $PLATFORM = "android" ]; then
+    echo "    Checking Android development tools..."
+    echo "=== Android Development Tools ===" > $OUTPUT_DIR/software/development_tools/android_dev_tools.txt
+    
+    # Check for Android SDK/NDK
+    find /opt /usr/local -name "android-sdk*" -o -name "android-ndk*" 2>/dev/null | head -20 >> $OUTPUT_DIR/software/development_tools/android_dev_tools.txt
+    
+    # Check dalvikvm
+    if command -v dalvikvm > /dev/null 2>&1; then
+        dalvikvm -version >> $OUTPUT_DIR/software/development_tools/android_dev_tools.txt 2>&1
+    fi
+fi
+echo "    Performing targeted filesystem scan..."
+echo "=== Compilers Found in Non-Standard Locations ===" > $OUTPUT_DIR/software/development_tools/nonstandard_compilers.txt
+
+SEARCH_DIRS="/opt /usr/local /home /root"
+for search_dir in $SEARCH_DIRS
+do
+    if [ -d "$search_dir" ]; then
+        find $search_dir -maxdepth 4 -type f \( -name 'gcc' -o -name 'g++' -o -name 'clang' -o -name 'javac' -o -name 'python' -o -name 'python[23]' -o -name 'perl' -o -name 'ruby' -o -name 'go' -o -name 'rustc' -o -name 'node' \) -executable 2>/dev/null | head -50 | while read compiler
+        do
+            echo "" >> $OUTPUT_DIR/software/development_tools/nonstandard_compilers.txt
+            echo "Found: $compiler" >> $OUTPUT_DIR/software/development_tools/nonstandard_compilers.txt
+            ls -la "$compiler" >> $OUTPUT_DIR/software/development_tools/nonstandard_compilers.txt 2>/dev/null
+        done
+    fi
+done
+
+echo "    Creating development tools summary..."
+echo "=== Development Tools Summary ===" > $OUTPUT_DIR/software/development_tools/summary.txt
+echo "Platform: $PLATFORM" >> $OUTPUT_DIR/software/development_tools/summary.txt
+echo "Collection Date: `date`" >> $OUTPUT_DIR/software/development_tools/summary.txt
+echo "" >> $OUTPUT_DIR/software/development_tools/summary.txt
+
+# Legacy compatibility - create the original simple list
+echo "  ${COL_ENTRY}>${RESET} Creating legacy compiler list (NFS skip)"
 find / -fstype nfs -prune -o \( -name 'gcc*' -o -name 'javac*' -o -name 'java*' -o -name 'perl*' -o -name 'tclsh*' -o -name 'python*' -o -name 'ruby*' \) -ls 1> $OUTPUT_DIR/software/compiler.txt 2> /dev/null
 
 # ------------------------------------
