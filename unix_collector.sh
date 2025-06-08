@@ -1125,9 +1125,9 @@ fi
 if [ $PLATFORM = "linux" ]; then
     # SystemD journal logs for user sessions
     if [ -x /usr/bin/journalctl ]; then
-        journalctl _COMM=sshd --since "7 days ago" 1> $OUTPUT_DIR/user_activity/journalctl-sshd-7days.txt 2> /dev/null
-        journalctl _COMM=sudo --since "7 days ago" 1> $OUTPUT_DIR/user_activity/journalctl-sudo-7days.txt 2> /dev/null
-        journalctl _COMM=su --since "7 days ago" 1> $OUTPUT_DIR/user_activity/journalctl-su-7days.txt 2> /dev/null
+        journalctl _COMM=sshd --since "90 days ago" 1> $OUTPUT_DIR/user_activity/journalctl-sshd-90.txt 2> /dev/null
+        journalctl _COMM=sudo --since "90 days ago" 1> $OUTPUT_DIR/user_activity/journalctl-sudo-90days.txt 2> /dev/null
+        journalctl _COMM=su --since "90 days ago" 1> $OUTPUT_DIR/user_activity/journalctl-su-90days.txt 2> /dev/null
         loginctl list-sessions 1> $OUTPUT_DIR/user_activity/loginctl-sessions.txt 2> /dev/null
         loginctl list-users 1> $OUTPUT_DIR/user_activity/loginctl-users.txt 2> /dev/null
     fi
