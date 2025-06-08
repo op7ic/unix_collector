@@ -2108,105 +2108,241 @@ if [ -x "$(command -v esxcli)" -o -x "$(command -v VBoxManage)" -o -x "$(command
 then
     echo "${COL_SECTION}VIRTUAL SYSTEMS INFORMATION [95% ]:${RESET}"
     mkdir $OUTPUT_DIR/virtual
-	# VMWARE
-	if [ -x "$(command -v esxcli)" -o -x "$(command -v vm-support)" ]
+	# VMware ESXi
+	if [ -x "$(command -v esxcli)" ] || [ -x "$(command -v vim-cmd)" ] || [ -x "$(command -v vm-support)" ]
 	then
 		echo "  ${COL_ENTRY}>${RESET} Collecting VMware ESXi information"
-		esxcli system version get 1> $OUTPUT_DIR/virtual/esxi_version.txt 2> /dev/null
-		esxcli system hostname get 1> $OUTPUT_DIR/virtual/esxi_hostname.txt 2> /dev/null
-		esxcli system stats installtime get 1> $OUTPUT_DIR/virtual/esxi_installtime.txt 2> /dev/null
-		esxcli system account list 1> $OUTPUT_DIR/virtual/esxi_account_list.txt 2> /dev/null
-		esxcli network firewall get 1> $OUTPUT_DIR/virtual/esxi_firewall_status.txt 2> /dev/null
-		esxcli software vib list 1> $OUTPUT_DIR/virtual/esxi_software_vib_list.txt 2> /dev/null
-		esxcli network firewall ruleset list 1> $OUTPUT_DIR/virtual/esxi_firewall_ruleset.txt 2> /dev/null
-		esxcli network ip interface ipv4 get 1> $OUTPUT_DIR/virtual/esxi_ip4.txt 2> /dev/null
-		esxcli network vm list 1> $OUTPUT_DIR/virtual/esxi_vm_network_vm_list.txt 2> /dev/null
-		esxcli vm process list 1> $OUTPUT_DIR/virtual/esxi_vm_process_list.txt 2> /dev/null
-		esxcli storage vmfs extent list 1> $OUTPUT_DIR/virtual/esxi_vmfs_list.txt 2> /dev/null
-		esxcli storage filesystem list 1> $OUTPUT_DIR/virtual/esxi_volumes_list.txt 2> /dev/null
-		esxcli network ip connection list 1> $OUTPUT_DIR/virtual/esxi_network_connection_list.txt 2> /dev/null
-		esxcli hardware cpu list 1> $OUTPUT_DIR/virtual/esxi_hardware_cpu_list.txt 2> /dev/null
-		esxcli hardware usb passthrough device list 1> $OUTPUT_DIR/virtual/esxi_hardware_usb_passthrough_list.txt 2> /dev/null
-		esxcli hardware bootdevice list 1> $OUTPUT_DIR/virtual/esxi_hardware_bootdevice_list.txt 2> /dev/null
-		esxcli hardware clock get 1> $OUTPUT_DIR/virtual/esxi_hardware_clock_list.txt 2> /dev/null
-		esxcli hardware memory get 1> $OUTPUT_DIR/virtual/esxi_hardware_memory_list.txt 2> /dev/null
-		esxcli hardware pci list 1> $OUTPUT_DIR/virtual/esxi_hardware_pci_list.txt 2> /dev/null
-		esxcli hardware platform get 1> $OUTPUT_DIR/virtual/esxi_hardware_platform_details.txt 2> /dev/null
-		esxcli hardware trustedboot get 1> $OUTPUT_DIR/virtual/esxi_hardware_trustedboot_details.txt 2> /dev/null
-		vmware -vl 1> $OUTPUT_DIR/virtual/esxi_version2.txt 2> /dev/null
-		vmkchdev -l 1> $OUTPUT_DIR/virtual/esxi_devices.txt 2> /dev/null
-		esxcli system process list 1> $OUTPUT_DIR/virtual/esxi_system_process_list.txt 2> /dev/null
-		vm-support -V 1> $OUTPUT_DIR/virtual/esxi_vm_support.txt 2> /dev/null
-		esxcli storage nfs list 1> $OUTPUT_DIR/virtual/esxi_nfs_storage_list.txt 2> /dev/null
-		esxcli storage nfs41 list 1> $OUTPUT_DIR/virtual/esxi_nfs4.1_storage_list.txt 2> /dev/null
-		esxcli system settings advanced list 1> $OUTPUT_DIR/virtual/esxi_advanced_settings.txt 2> /dev/null
-		esxcli system settings kernel list 1> $OUTPUT_DIR/virtual/esxi_kernel_settings.txt 2> /dev/null
-		esxcli system module list 1> $OUTPUT_DIR/virtual/esxi_kernel_modules.txt 2> /dev/null
-		esxcli system module get -m vmkernel 1> $OUTPUT_DIR/virtual/esxi_vmkernel_info.txt 2> /dev/null
-		esxcli system security certificatestore list 1> $OUTPUT_DIR/virtual/esxi_certificates.txt 2> /dev/null
-		esxcli software acceptance get 1> $OUTPUT_DIR/virtual/esxi_software_acceptance.txt 2> /dev/null
-		esxcli system maintenanceMode get 1> $OUTPUT_DIR/virtual/esxi_maintenance_mode.txt 2> /dev/null
-		esxcli hardware power policy list 1> $OUTPUT_DIR/virtual/esxi_power_policy.txt 2> /dev/null
-		esxcli hardware power policy get 1> $OUTPUT_DIR/virtual/esxi_current_power_policy.txt 2> /dev/null
-		esxcli system time get 1> $OUTPUT_DIR/virtual/esxi_time_config.txt 2> /dev/null
-		esxcli system ntp get 1> $OUTPUT_DIR/virtual/esxi_ntp_config.txt 2> /dev/null
-		esxcli system syslog config get 1> $OUTPUT_DIR/virtual/esxi_syslog_config.txt 2> /dev/null
-		esxcli system syslog config logger list 1> $OUTPUT_DIR/virtual/esxi_syslog_loggers.txt 2> /dev/null
-		esxcli network vswitch standard list 1> $OUTPUT_DIR/virtual/esxi_vswitch_standard_list.txt 2> /dev/null
-		esxcli network vswitch dvs vmware list 1> $OUTPUT_DIR/virtual/esxi_vswitch_dvs_list.txt 2> /dev/null
-		esxcli network vswitch standard portgroup list 1> $OUTPUT_DIR/virtual/esxi_portgroup_list.txt 2> /dev/null
-		for vswitch in $(esxcli network vswitch standard list 2>/dev/null | grep "^   " | awk '{print $1}'); do
-			echo "=== vSwitch: $vswitch ===" >> $OUTPUT_DIR/virtual/esxi_vswitch_policies.txt
-			esxcli network vswitch standard policy security get -v "$vswitch" >> $OUTPUT_DIR/virtual/esxi_vswitch_policies.txt 2> /dev/null
-			esxcli network vswitch standard policy failover get -v "$vswitch" >> $OUTPUT_DIR/virtual/esxi_vswitch_policies.txt 2> /dev/null
-			esxcli network vswitch standard policy shaping get -v "$vswitch" >> $OUTPUT_DIR/virtual/esxi_vswitch_policies.txt 2> /dev/null
-			echo "" >> $OUTPUT_DIR/virtual/esxi_vswitch_policies.txt
-		done
-		esxcli network nic list 1> $OUTPUT_DIR/virtual/esxi_network_nic_list.txt 2> /dev/null
-		esxcli network ip interface list 1> $OUTPUT_DIR/virtual/esxi_ip_interface_list.txt 2> /dev/null
-		esxcli network ip interface ipv6 get 1> $OUTPUT_DIR/virtual/esxi_ipv6.txt 2> /dev/null
-		esxcli storage core adapter list 1> $OUTPUT_DIR/virtual/esxi_storage_adapters.txt 2> /dev/null
-		esxcli storage core device list 1> $OUTPUT_DIR/virtual/esxi_storage_devices.txt 2> /dev/null
-		esxcli storage core path list 1> $OUTPUT_DIR/virtual/esxi_storage_paths.txt 2> /dev/null
-		esxcli storage core plugin list 1> $OUTPUT_DIR/virtual/esxi_storage_plugins.txt 2> /dev/null
-		esxcli iscsi adapter list 1> $OUTPUT_DIR/virtual/esxi_iscsi_adapters.txt 2> /dev/null
-		esxcli iscsi session list 1> $OUTPUT_DIR/virtual/esxi_iscsi_sessions.txt 2> /dev/null
-		esxcli iscsi ibftboot get 1> $OUTPUT_DIR/virtual/esxi_iscsi_boot.txt 2> /dev/null
-		esxcli vsan cluster get 1> $OUTPUT_DIR/virtual/esxi_vsan_cluster.txt 2> /dev/null
-		esxcli vsan network list 1> $OUTPUT_DIR/virtual/esxi_vsan_network.txt 2> /dev/null
-		esxcli vsan storage list 1> $OUTPUT_DIR/virtual/esxi_vsan_storage.txt 2> /dev/null
-		esxcli vsan policy getdefault 1> $OUTPUT_DIR/virtual/esxi_vsan_policy.txt 2> /dev/null
+		mkdir -p $OUTPUT_DIR/virtual/esxi
+		mkdir -p $OUTPUT_DIR/virtual/esxi/system
+		mkdir -p $OUTPUT_DIR/virtual/esxi/hardware
+		mkdir -p $OUTPUT_DIR/virtual/esxi/network
+		mkdir -p $OUTPUT_DIR/virtual/esxi/network/vswitches
+		mkdir -p $OUTPUT_DIR/virtual/esxi/network/portgroups
+		mkdir -p $OUTPUT_DIR/virtual/esxi/network/nics
+		mkdir -p $OUTPUT_DIR/virtual/esxi/storage
+		mkdir -p $OUTPUT_DIR/virtual/esxi/storage/adapters
+		mkdir -p $OUTPUT_DIR/virtual/esxi/storage/devices
+		mkdir -p $OUTPUT_DIR/virtual/esxi/storage/datastores
+		mkdir -p $OUTPUT_DIR/virtual/esxi/storage/iscsi
+		mkdir -p $OUTPUT_DIR/virtual/esxi/storage/vsan
+		mkdir -p $OUTPUT_DIR/virtual/esxi/vms
+		mkdir -p $OUTPUT_DIR/virtual/esxi/security
+		mkdir -p $OUTPUT_DIR/virtual/esxi/config
+		mkdir -p $OUTPUT_DIR/virtual/esxi/services
+		mkdir -p $OUTPUT_DIR/virtual/esxi/logs
+		mkdir -p $OUTPUT_DIR/virtual/esxi/logs/var_log
+		mkdir -p $OUTPUT_DIR/virtual/esxi/logs/scratch_log
+		mkdir -p $OUTPUT_DIR/virtual/esxi/performance
+		mkdir -p $OUTPUT_DIR/virtual/esxi/cluster
+		mkdir -p $OUTPUT_DIR/virtual/esxi/software
+		echo "  ${COL_ENTRY}>${RESET} Collecting ESXi system information"
+		esxcli system version get 1> $OUTPUT_DIR/virtual/esxi/system/version.txt 2> /dev/null
+		vmware -vl 1> $OUTPUT_DIR/virtual/esxi/system/version_detailed.txt 2> /dev/null
+		esxcli system hostname get 1> $OUTPUT_DIR/virtual/esxi/system/hostname.txt 2> /dev/null
+		esxcli system stats installtime get 1> $OUTPUT_DIR/virtual/esxi/system/installtime.txt 2> /dev/null
+		esxcli system time get 1> $OUTPUT_DIR/virtual/esxi/system/time.txt 2> /dev/null
+		esxcli system ntp get 1> $OUTPUT_DIR/virtual/esxi/system/ntp_config.txt 2> /dev/null
+		esxcli system maintenanceMode get 1> $OUTPUT_DIR/virtual/esxi/system/maintenance_mode.txt 2> /dev/null
+		esxcli system uuid get 1> $OUTPUT_DIR/virtual/esxi/system/uuid.txt 2> /dev/null
+		esxcli system welcomemsg get 1> $OUTPUT_DIR/virtual/esxi/system/welcome_message.txt 2> /dev/null
+		esxcli system boot device get 1> $OUTPUT_DIR/virtual/esxi/system/boot_device.txt 2> /dev/null
+		esxcli system visorfs ramdisk list 1> $OUTPUT_DIR/virtual/esxi/system/ramdisk_list.txt 2> /dev/null
+		echo "  ${COL_ENTRY}>${RESET} Collecting ESXi hardware information"
+		esxcli hardware platform get 1> $OUTPUT_DIR/virtual/esxi/hardware/platform.txt 2> /dev/null
+		esxcli hardware cpu list 1> $OUTPUT_DIR/virtual/esxi/hardware/cpu_list.txt 2> /dev/null
+		esxcli hardware cpu global get 1> $OUTPUT_DIR/virtual/esxi/hardware/cpu_global.txt 2> /dev/null
+		esxcli hardware memory get 1> $OUTPUT_DIR/virtual/esxi/hardware/memory.txt 2> /dev/null
+		esxcli hardware pci list 1> $OUTPUT_DIR/virtual/esxi/hardware/pci_devices.txt 2> /dev/null
+		esxcli hardware clock get 1> $OUTPUT_DIR/virtual/esxi/hardware/clock.txt 2> /dev/null
+		esxcli hardware bootdevice list 1> $OUTPUT_DIR/virtual/esxi/hardware/bootdevice.txt 2> /dev/null
+		esxcli hardware trustedboot get 1> $OUTPUT_DIR/virtual/esxi/hardware/trustedboot.txt 2> /dev/null
+		esxcli hardware usb passthrough device list 1> $OUTPUT_DIR/virtual/esxi/hardware/usb_passthrough.txt 2> /dev/null
+		esxcli hardware power policy list 1> $OUTPUT_DIR/virtual/esxi/hardware/power_policies.txt 2> /dev/null
+		esxcli hardware power policy get 1> $OUTPUT_DIR/virtual/esxi/hardware/current_power_policy.txt 2> /dev/null
+		esxcli hardware ipmi sdr list 1> $OUTPUT_DIR/virtual/esxi/hardware/ipmi_sensors.txt 2> /dev/null
+		esxcli hardware ipmi bmc get 1> $OUTPUT_DIR/virtual/esxi/hardware/ipmi_bmc.txt 2> /dev/null
+		vmkchdev -l 1> $OUTPUT_DIR/virtual/esxi/hardware/vmkchdev_list.txt 2> /dev/null
+	
 		if [ -x "$(command -v vim-cmd)" ]; then
-			echo "  ${COL_ENTRY}>${RESET} Collecting detailed VM information"
-			vim-cmd vmsvc/getallvms 1> $OUTPUT_DIR/virtual/esxi_vim_all_vms.txt 2> /dev/null
-			vim-cmd vmsvc/getallvms 2>/dev/null | awk 'NR>1 {print $1}' | while read vmid; do
-				if [ -n "$vmid" ] && [ "$vmid" -eq "$vmid" ] 2>/dev/null; then
-					echo "=== VM ID: $vmid ===" >> $OUTPUT_DIR/virtual/esxi_vm_details.txt
-					vim-cmd vmsvc/get.summary $vmid >> $OUTPUT_DIR/virtual/esxi_vm_details.txt 2> /dev/null
-					vim-cmd vmsvc/get.config $vmid >> $OUTPUT_DIR/virtual/esxi_vm_details.txt 2> /dev/null
-					vim-cmd vmsvc/get.runtime $vmid >> $OUTPUT_DIR/virtual/esxi_vm_details.txt 2> /dev/null
-					vim-cmd vmsvc/get.guest $vmid >> $OUTPUT_DIR/virtual/esxi_vm_details.txt 2> /dev/null
-					vim-cmd vmsvc/get.datastores $vmid >> $OUTPUT_DIR/virtual/esxi_vm_details.txt 2> /dev/null
-					vim-cmd vmsvc/get.networks $vmid >> $OUTPUT_DIR/virtual/esxi_vm_details.txt 2> /dev/null
-					vim-cmd vmsvc/get.snapshot $vmid >> $OUTPUT_DIR/virtual/esxi_vm_details.txt 2> /dev/null
-					vim-cmd vmsvc/device.getdevices $vmid >> $OUTPUT_DIR/virtual/esxi_vm_details.txt 2> /dev/null
-					echo "" >> $OUTPUT_DIR/virtual/esxi_vm_details.txt
-				fi
-			done
-			vim-cmd hostsvc/hosthardware > $OUTPUT_DIR/virtual/esxi_host_hardware.txt 2> /dev/null
-			vim-cmd hostsvc/hostsummary > $OUTPUT_DIR/virtual/esxi_host_summary.txt 2> /dev/null
-			vim-cmd hostsvc/datastore/listsummary > $OUTPUT_DIR/virtual/esxi_datastore_summary.txt 2> /dev/null
+			vim-cmd hostsvc/hosthardware > $OUTPUT_DIR/virtual/esxi/hardware/host_hardware_detailed.txt 2> /dev/null
+			vim-cmd hostsvc/hostsummary > $OUTPUT_DIR/virtual/esxi/hardware/host_summary.txt 2> /dev/null
 		fi
 		
-		esxtop -b -n 1 > $OUTPUT_DIR/virtual/esxi_esxtop_snapshot.txt 2> /dev/null
-		vmkerrcode -l > $OUTPUT_DIR/virtual/esxi_error_codes.txt 2> /dev/null
-		vmkload_mod -l > $OUTPUT_DIR/virtual/esxi_loaded_modules.txt 2> /dev/null
-		vmkping -I vmk0 -c 1 localhost > $OUTPUT_DIR/virtual/esxi_vmkping_test.txt 2> /dev/null
-		ls -la /var/log/ > $OUTPUT_DIR/virtual/esxi_log_listing.txt 2> /dev/null
-		ls -la /scratch/log/ > $OUTPUT_DIR/virtual/esxi_scratch_log_listing.txt 2> /dev/null
-		cp -R /scratch/log/ $OUTPUT_DIR/virtual/scratch_log/ 2> /dev/null
-		cp -R /var/log/ $OUTPUT_DIR/virtual/esxi_var_log/
-		vim-cmd vimsvc/license --show > $OUTPUT_DIR/virtual/esxi_license.txt 2> /dev/null
+		echo "  ${COL_ENTRY}>${RESET} Collecting ESXi network configuration"
+
+		esxcli network ip interface list 1> $OUTPUT_DIR/virtual/esxi/network/ip_interfaces.txt 2> /dev/null
+		esxcli network ip interface ipv4 get 1> $OUTPUT_DIR/virtual/esxi/network/ipv4_config.txt 2> /dev/null
+		esxcli network ip interface ipv6 get 1> $OUTPUT_DIR/virtual/esxi/network/ipv6_config.txt 2> /dev/null
+		esxcli network ip connection list 1> $OUTPUT_DIR/virtual/esxi/network/connections.txt 2> /dev/null
+		esxcli network ip neighbor list 1> $OUTPUT_DIR/virtual/esxi/network/arp_table.txt 2> /dev/null
+		esxcli network ip route ipv4 list 1> $OUTPUT_DIR/virtual/esxi/network/ipv4_routes.txt 2> /dev/null
+		esxcli network ip route ipv6 list 1> $OUTPUT_DIR/virtual/esxi/network/ipv6_routes.txt 2> /dev/null
+		esxcli network ip dns server list 1> $OUTPUT_DIR/virtual/esxi/network/dns_servers.txt 2> /dev/null
+		esxcli network ip dns search list 1> $OUTPUT_DIR/virtual/esxi/network/dns_search.txt 2> /dev/null
+		
+		esxcli network nic list 1> $OUTPUT_DIR/virtual/esxi/network/nics/nic_list.txt 2> /dev/null
+		esxcli network nic get -n vmnic0 1> $OUTPUT_DIR/virtual/esxi/network/nics/vmnic0_details.txt 2> /dev/null
+		esxcli network nic stats get -n vmnic0 1> $OUTPUT_DIR/virtual/esxi/network/nics/vmnic0_stats.txt 2> /dev/null
+	
+		esxcli network nic list 2>/dev/null | grep -E "^vmnic" | awk '{print $1}' | while read nic; do
+			[ -n "$nic" ] && {
+				esxcli network nic get -n "$nic" > "$OUTPUT_DIR/virtual/esxi/network/nics/${nic}_details.txt" 2> /dev/null
+				esxcli network nic stats get -n "$nic" > "$OUTPUT_DIR/virtual/esxi/network/nics/${nic}_stats.txt" 2> /dev/null
+			}
+		done
+		esxcli network vswitch standard list 1> $OUTPUT_DIR/virtual/esxi/network/vswitches/standard_list.txt 2> /dev/null
+		esxcli network vswitch dvs vmware list 1> $OUTPUT_DIR/virtual/esxi/network/vswitches/dvs_list.txt 2> /dev/null
+		esxcli network vswitch standard list 2>/dev/null | grep "^   " | awk '{print $1}' | while read vswitch; do
+			[ -n "$vswitch" ] && {
+				mkdir -p "$OUTPUT_DIR/virtual/esxi/network/vswitches/$vswitch"
+				esxcli network vswitch standard get -v "$vswitch" > "$OUTPUT_DIR/virtual/esxi/network/vswitches/$vswitch/config.txt" 2> /dev/null
+				esxcli network vswitch standard policy security get -v "$vswitch" > "$OUTPUT_DIR/virtual/esxi/network/vswitches/$vswitch/security_policy.txt" 2> /dev/null
+				esxcli network vswitch standard policy failover get -v "$vswitch" > "$OUTPUT_DIR/virtual/esxi/network/vswitches/$vswitch/failover_policy.txt" 2> /dev/null
+				esxcli network vswitch standard policy shaping get -v "$vswitch" > "$OUTPUT_DIR/virtual/esxi/network/vswitches/$vswitch/shaping_policy.txt" 2> /dev/null
+				esxcli network vswitch standard portgroup list -v "$vswitch" > "$OUTPUT_DIR/virtual/esxi/network/vswitches/$vswitch/portgroups.txt" 2> /dev/null
+			}
+		done
+		esxcli network vswitch standard portgroup list 1> $OUTPUT_DIR/virtual/esxi/network/portgroups/all_portgroups.txt 2> /dev/null
+		esxcli network vm list 1> $OUTPUT_DIR/virtual/esxi/network/vm_networks.txt 2> /dev/null
+		echo "  ${COL_ENTRY}>${RESET} Collecting ESXi storage configuration"
+		esxcli storage filesystem list 1> $OUTPUT_DIR/virtual/esxi/storage/filesystems.txt 2> /dev/null
+		esxcli storage vmfs extent list 1> $OUTPUT_DIR/virtual/esxi/storage/vmfs_extents.txt 2> /dev/null
+		esxcli storage vmfs snapshot list 1> $OUTPUT_DIR/virtual/esxi/storage/vmfs_snapshots.txt 2> /dev/null
+		esxcli storage core adapter list 1> $OUTPUT_DIR/virtual/esxi/storage/adapters/list.txt 2> /dev/null
+		esxcli storage core adapter stats get 1> $OUTPUT_DIR/virtual/esxi/storage/adapters/stats.txt 2> /dev/null
+		esxcli storage core device list 1> $OUTPUT_DIR/virtual/esxi/storage/devices/list.txt 2> /dev/null
+		esxcli storage core device stats get 1> $OUTPUT_DIR/virtual/esxi/storage/devices/stats.txt 2> /dev/null
+		esxcli storage core device partition list 1> $OUTPUT_DIR/virtual/esxi/storage/devices/partitions.txt 2> /dev/null
+		esxcli storage core device vaai status get 1> $OUTPUT_DIR/virtual/esxi/storage/devices/vaai_status.txt 2> /dev/null
+		esxcli storage core path list 1> $OUTPUT_DIR/virtual/esxi/storage/paths.txt 2> /dev/null
+		esxcli storage core path stats get 1> $OUTPUT_DIR/virtual/esxi/storage/path_stats.txt 2> /dev/null
+		esxcli storage core plugin list 1> $OUTPUT_DIR/virtual/esxi/storage/plugins.txt 2> /dev/null
+		esxcli storage nfs list 1> $OUTPUT_DIR/virtual/esxi/storage/nfs_list.txt 2> /dev/null
+		esxcli storage nfs41 list 1> $OUTPUT_DIR/virtual/esxi/storage/nfs41_list.txt 2> /dev/null
+		esxcli iscsi adapter list 1> $OUTPUT_DIR/virtual/esxi/storage/iscsi/adapters.txt 2> /dev/null
+		esxcli iscsi session list 1> $OUTPUT_DIR/virtual/esxi/storage/iscsi/sessions.txt 2> /dev/null
+		esxcli iscsi connection list 1> $OUTPUT_DIR/virtual/esxi/storage/iscsi/connections.txt 2> /dev/null
+		esxcli iscsi ibftboot get 1> $OUTPUT_DIR/virtual/esxi/storage/iscsi/boot_config.txt 2> /dev/null
+		esxcli iscsi networkportal list 1> $OUTPUT_DIR/virtual/esxi/storage/iscsi/network_portals.txt 2> /dev/null
+		esxcli iscsi physicalnetworkportal list 1> $OUTPUT_DIR/virtual/esxi/storage/iscsi/physical_portals.txt 2> /dev/null
+		esxcli iscsi plugin list 1> $OUTPUT_DIR/virtual/esxi/storage/iscsi/plugins.txt 2> /dev/null
+		esxcli iscsi software get 1> $OUTPUT_DIR/virtual/esxi/storage/iscsi/software_iscsi.txt 2> /dev/null
+		esxcli vsan cluster get 1> $OUTPUT_DIR/virtual/esxi/storage/vsan/cluster.txt 2> /dev/null
+		esxcli vsan network list 1> $OUTPUT_DIR/virtual/esxi/storage/vsan/network.txt 2> /dev/null
+		esxcli vsan storage list 1> $OUTPUT_DIR/virtual/esxi/storage/vsan/storage.txt 2> /dev/null
+		esxcli vsan policy getdefault 1> $OUTPUT_DIR/virtual/esxi/storage/vsan/default_policy.txt 2> /dev/null
+		esxcli vsan health cluster list 1> $OUTPUT_DIR/virtual/esxi/storage/vsan/health.txt 2> /dev/null
+		esxcli vsan datastore list 1> $OUTPUT_DIR/virtual/esxi/storage/vsan/datastores.txt 2> /dev/null
+		esxcli vsan trace get 1> $OUTPUT_DIR/virtual/esxi/storage/vsan/trace_config.txt 2> /dev/null
+
+		if [ -x "$(command -v vim-cmd)" ]; then
+			vim-cmd hostsvc/datastore/listsummary > $OUTPUT_DIR/virtual/esxi/storage/datastores/summary.txt 2> /dev/null
+			vim-cmd hostsvc/datastore/list > $OUTPUT_DIR/virtual/esxi/storage/datastores/list.txt 2> /dev/null
+
+			vim-cmd hostsvc/datastore/list 2>/dev/null | grep -E "url.*\"" | sed 's/.*"\(.*\)".*/\1/' | while read ds_path; do
+				if [ -n "$ds_path" ]; then
+					DS_NAME=$(basename "$ds_path")
+					vim-cmd hostsvc/datastore/info "$ds_path" > "$OUTPUT_DIR/virtual/esxi/storage/datastores/${DS_NAME}_info.txt" 2> /dev/null
+				fi
+			done
+		fi
+
+		echo "  ${COL_ENTRY}>${RESET} Collecting ESXi virtual machine information"
+		esxcli vm process list 1> $OUTPUT_DIR/virtual/esxi/vms/process_list.txt 2> /dev/null
+		
+		if [ -x "$(command -v vim-cmd)" ]; then
+			vim-cmd vmsvc/getallvms 1> $OUTPUT_DIR/virtual/esxi/vms/all_vms.txt 2> /dev/null
+			
+			vim-cmd vmsvc/getallvms 2>/dev/null | awk 'NR>1 {print $1}' | while read vmid; do
+				if [ -n "$vmid" ] && [ "$vmid" -eq "$vmid" ] 2>/dev/null; then
+					echo "  ${COL_ENTRY}>${RESET} Processing VM ID: $vmid"
+					
+					# Get VM name for directory
+					VM_NAME=$(vim-cmd vmsvc/get.summary $vmid 2>/dev/null | grep -E "name = " | head -1 | sed 's/.*= "\(.*\)".*/\1/' | sed 's/[^a-zA-Z0-9._-]/_/g')
+					[ -z "$VM_NAME" ] && VM_NAME="vm_$vmid"
+					
+					mkdir -p "$OUTPUT_DIR/virtual/esxi/vms/$VM_NAME"
+					vim-cmd vmsvc/get.summary $vmid > "$OUTPUT_DIR/virtual/esxi/vms/$VM_NAME/summary.txt" 2> /dev/null
+					vim-cmd vmsvc/get.config $vmid > "$OUTPUT_DIR/virtual/esxi/vms/$VM_NAME/config.txt" 2> /dev/null
+					vim-cmd vmsvc/get.runtime $vmid > "$OUTPUT_DIR/virtual/esxi/vms/$VM_NAME/runtime.txt" 2> /dev/null
+					vim-cmd vmsvc/get.guest $vmid > "$OUTPUT_DIR/virtual/esxi/vms/$VM_NAME/guest.txt" 2> /dev/null
+					vim-cmd vmsvc/get.datastores $vmid > "$OUTPUT_DIR/virtual/esxi/vms/$VM_NAME/datastores.txt" 2> /dev/null
+					vim-cmd vmsvc/get.networks $vmid > "$OUTPUT_DIR/virtual/esxi/vms/$VM_NAME/networks.txt" 2> /dev/null
+					vim-cmd vmsvc/get.snapshot $vmid > "$OUTPUT_DIR/virtual/esxi/vms/$VM_NAME/snapshots.txt" 2> /dev/null
+					vim-cmd vmsvc/device.getdevices $vmid > "$OUTPUT_DIR/virtual/esxi/vms/$VM_NAME/devices.txt" 2> /dev/null
+					vim-cmd vmsvc/get.tasklist $vmid > "$OUTPUT_DIR/virtual/esxi/vms/$VM_NAME/tasks.txt" 2> /dev/null
+					vim-cmd vmsvc/get.filelayout $vmid > "$OUTPUT_DIR/virtual/esxi/vms/$VM_NAME/filelayout.txt" 2> /dev/null
+					vim-cmd vmsvc/guestinfo $vmid > "$OUTPUT_DIR/virtual/esxi/vms/$VM_NAME/guestinfo.txt" 2> /dev/null
+					vim-cmd vmsvc/message $vmid > "$OUTPUT_DIR/virtual/esxi/vms/$VM_NAME/messages.txt" 2> /dev/null
+					vim-cmd vmsvc/get.environment $vmid > "$OUTPUT_DIR/virtual/esxi/vms/$VM_NAME/environment.txt" 2> /dev/null
+				fi
+			done
+		fi
+
+		echo "  ${COL_ENTRY}>${RESET} Collecting ESXi security configuration"
+		esxcli network firewall get 1> $OUTPUT_DIR/virtual/esxi/security/firewall_status.txt 2> /dev/null
+		esxcli network firewall ruleset list 1> $OUTPUT_DIR/virtual/esxi/security/firewall_rulesets.txt 2> /dev/null
+		esxcli network firewall ruleset rule list 1> $OUTPUT_DIR/virtual/esxi/security/firewall_rules.txt 2> /dev/null
+		esxcli network firewall ruleset allowedip list 1> $OUTPUT_DIR/virtual/esxi/security/firewall_allowed_ips.txt 2> /dev/null
+		esxcli system account list 1> $OUTPUT_DIR/virtual/esxi/security/accounts.txt 2> /dev/null
+		esxcli system permission list 1> $OUTPUT_DIR/virtual/esxi/security/permissions.txt 2> /dev/null
+		esxcli system security certificatestore list 1> $OUTPUT_DIR/virtual/esxi/security/certificates.txt 2> /dev/null
+		esxcli software acceptance get 1> $OUTPUT_DIR/virtual/esxi/security/software_acceptance.txt 2> /dev/null
+		echo "  ${COL_ENTRY}>${RESET} Collecting ESXi advanced configuration"
+		esxcli system settings advanced list 1> $OUTPUT_DIR/virtual/esxi/config/advanced_settings.txt 2> /dev/null
+		esxcli system settings kernel list 1> $OUTPUT_DIR/virtual/esxi/config/kernel_settings.txt 2> /dev/null
+		esxcli system syslog config get 1> $OUTPUT_DIR/virtual/esxi/config/syslog_config.txt 2> /dev/null
+		esxcli system syslog config logger list 1> $OUTPUT_DIR/virtual/esxi/config/syslog_loggers.txt 2> /dev/null
+		esxcli system coredump file list 1> $OUTPUT_DIR/virtual/esxi/config/coredump_files.txt 2> /dev/null
+		esxcli system coredump file get 1> $OUTPUT_DIR/virtual/esxi/config/coredump_active.txt 2> /dev/null
+		esxcli system coredump network get 1> $OUTPUT_DIR/virtual/esxi/config/coredump_network.txt 2> /dev/null
+		esxcli system coredump partition list 1> $OUTPUT_DIR/virtual/esxi/config/coredump_partitions.txt 2> /dev/null
+		echo "  ${COL_ENTRY}>${RESET} Collecting ESXi services information"
+		esxcli system process list 1> $OUTPUT_DIR/virtual/esxi/services/process_list.txt 2> /dev/null
+		esxcli system process stats load get 1> $OUTPUT_DIR/virtual/esxi/services/process_load.txt 2> /dev/null
+		esxcli system module list 1> $OUTPUT_DIR/virtual/esxi/services/kernel_modules.txt 2> /dev/null
+		esxcli system module get -m vmkernel 1> $OUTPUT_DIR/virtual/esxi/services/vmkernel_info.txt 2> /dev/null
+		vmkload_mod -l 1> $OUTPUT_DIR/virtual/esxi/services/loaded_modules.txt 2> /dev/null
+		vmkload_mod -s 1> $OUTPUT_DIR/virtual/esxi/services/module_stats.txt 2> /dev/null
+		echo "  ${COL_ENTRY}>${RESET} Collecting ESXi software information"
+		esxcli software vib list 1> $OUTPUT_DIR/virtual/esxi/software/vib_list.txt 2> /dev/null
+		esxcli software vib get 1> $OUTPUT_DIR/virtual/esxi/software/vib_details.txt 2> /dev/null
+		esxcli software profile get 1> $OUTPUT_DIR/virtual/esxi/software/profile.txt 2> /dev/null
+		esxcli software sources profile list 1> $OUTPUT_DIR/virtual/esxi/software/available_profiles.txt 2> /dev/null
+
+		# Performance Data
+		echo "  ${COL_ENTRY}>${RESET} Collecting ESXi performance data"
+		esxtop -b -n 1 > $OUTPUT_DIR/virtual/esxi/performance/esxtop_snapshot.csv 2> /dev/null
+		esxcli system stats uptime get 1> $OUTPUT_DIR/virtual/esxi/performance/uptime.txt 2> /dev/null
+		esxcli hardware cpu usage get 1> $OUTPUT_DIR/virtual/esxi/performance/cpu_usage.txt 2> /dev/null
+		esxcli hardware memory stats get 1> $OUTPUT_DIR/virtual/esxi/performance/memory_stats.txt 2> /dev/null
+		
+		echo "  ${COL_ENTRY}>${RESET} Collecting cluster information"
+		esxcli system stats installtime get 1> $OUTPUT_DIR/virtual/esxi/cluster/install_time.txt 2> /dev/null
+		
+		echo "  ${COL_ENTRY}>${RESET} Collecting ESXi logs"
+		
+		ls -la /var/log/ > $OUTPUT_DIR/virtual/esxi/logs/var_log_listing.txt 2> /dev/null
+		ls -la /scratch/log/ > $OUTPUT_DIR/virtual/esxi/logs/scratch_log_listing.txt 2> /dev/null
+		
+		for logfile in /var/log/vmkernel.log /var/log/vmkwarning.log /var/log/hostd.log /var/log/vpxa.log /var/log/fdm.log /var/log/shell.log /var/log/auth.log /var/log/esxi*.log; do
+			if [ -f "$logfile" ]; then
+				LOGNAME=$(basename "$logfile")
+				tail -n 40000 "$logfile" > "$OUTPUT_DIR/virtual/esxi/logs/var_log/${LOGNAME}_tail10k.txt" 2> /dev/null
+			fi
+		done
+		
+		for logfile in /scratch/log/vmkernel.log /scratch/log/vmkwarning.log /scratch/log/hostd.log /scratch/log/vpxa.log; do
+			if [ -f "$logfile" ]; then
+				LOGNAME=$(basename "$logfile")
+				tail -n 40000 "$logfile" > "$OUTPUT_DIR/virtual/esxi/logs/scratch_log/${LOGNAME}_tail10k.txt" 2> /dev/null
+			fi
+		done
+		
+		echo "  ${COL_ENTRY}>${RESET} Collecting additional diagnostic information"
+		vmkerrcode -l > $OUTPUT_DIR/virtual/esxi/system/error_codes.txt 2> /dev/null
+		vmkping -I vmk0 -c 1 localhost > $OUTPUT_DIR/virtual/esxi/network/vmkping_test.txt 2> /dev/null
+		vm-support -V 1> $OUTPUT_DIR/virtual/esxi/system/vm_support_version.txt 2> /dev/null
 	fi
     #VBox
 	if [ -x "$(command -v VBoxManage)" ]
@@ -2428,11 +2564,126 @@ if [ -x "$(command -v containerd)" -o -x "$(command -v docker)" -o -x "$(command
 then
     echo "${COL_SECTION}CONTAINER INFORMATION [96% ]:${RESET}"
 	mkdir $OUTPUT_DIR/containers
-    if [ -x "$(command -v containerd)" ]
+
+	if [ -x "$(command -v containerd)" ] || [ -x "$(command -v ctr)" ]
 	then
-	    echo "  ${COL_ENTRY}>${RESET} Collecting containerd config"
-		containerd config dump 1> $OUTPUT_DIR/containers/containerd_config_all.txt 2> /dev/null
-		containerd -v 1> $OUTPUT_DIR/containers/containerd_config_all.txt 2> /dev/null
+		echo "  ${COL_ENTRY}>${RESET} Collecting containerd information"
+		mkdir -p $OUTPUT_DIR/containers/containerd
+		mkdir -p $OUTPUT_DIR/containers/containerd/config
+		mkdir -p $OUTPUT_DIR/containers/containerd/namespaces
+		mkdir -p $OUTPUT_DIR/containers/containerd/images
+		mkdir -p $OUTPUT_DIR/containers/containerd/containers
+		mkdir -p $OUTPUT_DIR/containers/containerd/snapshots
+		mkdir -p $OUTPUT_DIR/containers/containerd/tasks
+		mkdir -p $OUTPUT_DIR/containers/containerd/plugins
+		mkdir -p $OUTPUT_DIR/containers/containerd/content
+		mkdir -p $OUTPUT_DIR/containers/containerd/events
+		mkdir -p $OUTPUT_DIR/containers/containerd/logs
+		echo "  ${COL_ENTRY}>${RESET} Collecting containerd version and config"
+		containerd --version 1> $OUTPUT_DIR/containers/containerd/version.txt 2> /dev/null
+		containerd -v 1> $OUTPUT_DIR/containers/containerd/version_verbose.txt 2> /dev/null
+		containerd config dump 1> $OUTPUT_DIR/containers/containerd/config/config_dump.txt 2> /dev/null
+		if [ -f /etc/containerd/config.toml ]; then
+			cp /etc/containerd/config.toml $OUTPUT_DIR/containers/containerd/config/config.toml 2> /dev/null
+		fi
+		systemctl status containerd --no-pager 1> $OUTPUT_DIR/containers/containerd/service_status.txt 2> /dev/null
+		ls -la /run/containerd/ 1> $OUTPUT_DIR/containers/containerd/socket_info.txt 2> /dev/null
+		if [ -x "$(command -v ctr)" ]
+		then
+			echo "  ${COL_ENTRY}>${RESET} Collecting detailed containerd runtime information"
+			DEFAULT_NS="default"
+			ctr namespace ls 1> $OUTPUT_DIR/containers/containerd/namespaces/list.txt 2> /dev/null
+			ctr namespace ls -q 2>/dev/null | while read namespace; do
+				[ -z "$namespace" ] && continue
+				echo "  ${COL_ENTRY}>${RESET} Processing namespace: $namespace"
+				mkdir -p $OUTPUT_DIR/containers/containerd/namespaces/$namespace
+				ctr -n $namespace namespace stats 1> $OUTPUT_DIR/containers/containerd/namespaces/$namespace/stats.txt 2> /dev/null
+				echo "  ${COL_ENTRY}>${RESET} Collecting images in namespace $namespace"
+				ctr -n $namespace images ls 1> $OUTPUT_DIR/containers/containerd/namespaces/$namespace/images_list.txt 2> /dev/null
+				ctr -n $namespace images ls -q 2>/dev/null | while read image; do
+					[ -z "$image" ] && continue
+					# Sanitize image name for filename
+					safe_image=$(echo "$image" | sed 's/[^a-zA-Z0-9._-]/_/g')
+					ctr -n $namespace images info $image 1> $OUTPUT_DIR/containers/containerd/images/${namespace}_${safe_image}_info.json 2> /dev/null
+				done
+				echo "  ${COL_ENTRY}>${RESET} Collecting containers in namespace $namespace"
+				ctr -n $namespace containers ls 1> $OUTPUT_DIR/containers/containerd/namespaces/$namespace/containers_list.txt 2> /dev/null
+				ctr -n $namespace containers ls -q 2>/dev/null | while read container; do
+					[ -z "$container" ] && continue
+					mkdir -p $OUTPUT_DIR/containers/containerd/containers/$namespace
+					ctr -n $namespace containers info $container 1> $OUTPUT_DIR/containers/containerd/containers/$namespace/${container}_info.json 2> /dev/null
+					ctr -n $namespace containers label $container 1> $OUTPUT_DIR/containers/containerd/containers/$namespace/${container}_labels.txt 2> /dev/null
+				done
+				echo "  ${COL_ENTRY}>${RESET} Collecting tasks in namespace $namespace"
+				ctr -n $namespace tasks ls 1> $OUTPUT_DIR/containers/containerd/namespaces/$namespace/tasks_list.txt 2> /dev/null
+				ctr -n $namespace tasks ls -q 2>/dev/null | while read task; do
+					[ -z "$task" ] && continue
+					mkdir -p $OUTPUT_DIR/containers/containerd/tasks/$namespace
+					ctr -n $namespace tasks ps $task 1> $OUTPUT_DIR/containers/containerd/tasks/$namespace/${task}_processes.txt 2> /dev/null
+					ctr -n $namespace tasks metrics $task 1> $OUTPUT_DIR/containers/containerd/tasks/$namespace/${task}_metrics.json 2> /dev/null
+				done
+				echo "  ${COL_ENTRY}>${RESET} Collecting snapshots in namespace $namespace"
+				ctr -n $namespace snapshots ls 1> $OUTPUT_DIR/containers/containerd/namespaces/$namespace/snapshots_list.txt 2> /dev/null
+				ctr -n $namespace content ls 1> $OUTPUT_DIR/containers/containerd/namespaces/$namespace/content_list.txt 2> /dev/null
+				ctr -n $namespace leases ls 1> $OUTPUT_DIR/containers/containerd/namespaces/$namespace/leases_list.txt 2> /dev/null
+			done
+			echo "  ${COL_ENTRY}>${RESET} Collecting plugin information"
+			ctr plugins ls 1> $OUTPUT_DIR/containers/containerd/plugins/list.txt 2> /dev/null
+			ctr version 1> $OUTPUT_DIR/containers/containerd/version_detailed.txt 2> /dev/null
+			echo "  ${COL_ENTRY}>${RESET} Collecting recent containerd events"
+			timeout 5s ctr events 2>/dev/null | head -n 100 > $OUTPUT_DIR/containers/containerd/events/recent_events.txt 2> /dev/null
+			ctr content ls 1> $OUTPUT_DIR/containers/containerd/content/global_content.txt 2> /dev/null
+		fi
+		echo "  ${COL_ENTRY}>${RESET} Collecting containerd logs"
+		if [ -x "$(command -v journalctl)" ]; then
+			journalctl -u containerd --no-pager -n 1000 1> $OUTPUT_DIR/containers/containerd/logs/journal_containerd.txt 2> /dev/null
+			journalctl -u containerd --no-pager --since "24 hours ago" 1> $OUTPUT_DIR/containers/containerd/logs/journal_containerd_24h.txt 2> /dev/null
+		fi
+		for log in /var/log/containerd.log /var/log/containerd/*.log; do
+			[ -f "$log" ] && cp "$log" $OUTPUT_DIR/containers/containerd/logs/ 2> /dev/null
+		done
+		echo "  ${COL_ENTRY}>${RESET} Collecting runtime information"
+		for runtime_dir in /run/containerd /var/run/containerd; do
+			if [ -d "$runtime_dir" ]; then
+				ls -laR "$runtime_dir" 1> $OUTPUT_DIR/containers/containerd/runtime_directory_${runtime_dir##*/}.txt 2> /dev/null
+			fi
+		done
+		if [ -d /var/lib/containerd ]; then
+			echo "  ${COL_ENTRY}>${RESET} Collecting state directory information"
+			find /var/lib/containerd -type d 2>/dev/null | head -1000 > $OUTPUT_DIR/containers/containerd/state_directory_structure.txt
+			du -sh /var/lib/containerd/* 2>/dev/null > $OUTPUT_DIR/containers/containerd/state_directory_sizes.txt
+		fi
+		if [ -d /etc/cni/net.d ]; then
+			echo "  ${COL_ENTRY}>${RESET} Collecting CNI network configuration"
+			mkdir -p $OUTPUT_DIR/containers/containerd/network
+			cp -r /etc/cni/net.d $OUTPUT_DIR/containers/containerd/network/ 2> /dev/null
+		fi
+		if [ -S /run/containerd/containerd.sock ]; then
+			echo "  ${COL_ENTRY}>${RESET} Checking CRI integration"
+			if [ -x "$(command -v crictl)" ]; then
+				export CONTAINER_RUNTIME_ENDPOINT=unix:///run/containerd/containerd.sock
+				mkdir -p $OUTPUT_DIR/containers/containerd/cri
+				crictl version 1> $OUTPUT_DIR/containers/containerd/cri/version.txt 2> /dev/null
+				crictl info 1> $OUTPUT_DIR/containers/containerd/cri/info.json 2> /dev/null
+				crictl images 1> $OUTPUT_DIR/containers/containerd/cri/images.txt 2> /dev/null
+				crictl pods 1> $OUTPUT_DIR/containers/containerd/cri/pods.txt 2> /dev/null
+				crictl ps -a 1> $OUTPUT_DIR/containers/containerd/cri/containers.txt 2> /dev/null
+				crictl stats --all 1> $OUTPUT_DIR/containers/containerd/cri/stats.txt 2> /dev/null
+			fi
+		fi
+		echo "  ${COL_ENTRY}>${RESET} Collecting containerd-shim information"
+		ps aux | grep -E "containerd-shim|shim.v[12]" | grep -v grep 1> $OUTPUT_DIR/containers/containerd/shim_processes.txt 2> /dev/null
+		mount | grep containerd 1> $OUTPUT_DIR/containers/containerd/mounts.txt 2> /dev/null
+		if [ "$EUID" -eq 0 ]; then
+			ss -xlnp | grep containerd 1> $OUTPUT_DIR/containers/containerd/socket_connections.txt 2> /dev/null
+		fi
+	fi
+	if [ -x "$(command -v ctr)" ] && [ ! -x "$(command -v containerd)" ]; then
+		echo "  ${COL_ENTRY}>${RESET} Found ctr without containerd daemon - collecting available information"
+		mkdir -p $OUTPUT_DIR/containers/containerd_standalone
+		ctr version 1> $OUTPUT_DIR/containers/containerd_standalone/ctr_version.txt 2> /dev/null
+		ctr namespace ls 1> $OUTPUT_DIR/containers/containerd_standalone/namespaces.txt 2> /dev/null
+		ctr plugins ls 1> $OUTPUT_DIR/containers/containerd_standalone/plugins.txt 2> /dev/null
 	fi
 	
 	if [ -x "$(command -v docker)" ]
