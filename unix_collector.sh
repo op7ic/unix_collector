@@ -370,8 +370,319 @@ then
     eeprom 1> $OUTPUT_DIR/general/eeprom.txt 2> /dev/null
 fi
 
+echo "  ${COL_ENTRY}>${RESET} Boot and startup information"
+mkdir $OUTPUT_DIR/boot_startup 2> /dev/null
 
-echo "  ${COL_ENTRY}>${RESET} Stroage Info"
+# Boot logs collection
+mkdir $OUTPUT_DIR/boot_startup/boot_logs 2> /dev/null
+
+if [ $PLATFORM = "linux" -o $PLATFORM = "generic" ]
+then
+    # SystemD boot logs (newer systems)
+    if [ -x /usr/bin/journalctl ]; then
+        journalctl -b 0 1> $OUTPUT_DIR/boot_startup/boot_logs/journalctl-current-boot.txt 2> /dev/null
+        journalctl -b -1 1> $OUTPUT_DIR/boot_startup/boot_logs/journalctl-previous-boot.txt 2> /dev/null
+        journalctl --list-boots 1> $OUTPUT_DIR/boot_startup/boot_logs/journalctl-boot-list.txt 2> /dev/null
+        # Get boot process timing
+        systemd-analyze 1> $OUTPUT_DIR/boot_startup/boot_logs/systemd-analyze.txt 2> /dev/null
+        systemd-analyze blame 1> $OUTPUT_DIR/boot_startup/boot_logs/systemd-analyze-blame.txt 2> /dev/null
+        systemd-analyze critical-chain 1> $OUTPUT_DIR/boot_startup/boot_logs/systemd-analyze-critical-chain.txt 2> /dev/null
+    fi
+    
+    # Traditional boot logs
+    if [ -f /var/log/boot.log ]; then
+        cp /var/log/boot.log $OUTPUT_DIR/boot_startup/boot_logs/ 2> /dev/null
+    fi
+    if [ -f /var/log/boot ]; then
+        cp /var/log/boot $OUTPUT_DIR/boot_startup/boot_logs/boot 2> /dev/null
+    fi
+    # Older systems might have boot.msg
+    if [ -f /var/log/boot.msg ]; then
+        cp /var/log/boot.msg $OUTPUT_DIR/boot_startup/boot_logs/ 2> /dev/null
+    fi
+    
+    # Kernel ring buffer
+    dmesg 1> $OUTPUT_DIR/boot_startup/boot_logs/dmesg.txt 2> /dev/null
+    if [ -f /var/log/dmesg ]; then
+        cp /var/log/dmesg $OUTPUT_DIR/boot_startup/boot_logs/dmesg.log 2> /dev/null
+    fi
+    
+    # GRUB/bootloader logs
+    if [ -d /boot/grub ]; then
+        ls -la /boot/grub/ 1> $OUTPUT_DIR/boot_startup/boot_logs/grub-directory.txt 2> /dev/null
+        if [ -f /boot/grub/grub.cfg ]; then
+            cp /boot/grub/grub.cfg $OUTPUT_DIR/boot_startup/boot_logs/ 2> /dev/null
+        fi
+        if [ -f /boot/grub/grub.conf ]; then
+            cp /boot/grub/grub.conf $OUTPUT_DIR/boot_startup/boot_logs/ 2> /dev/null
+        fi
+    fi
+    if [ -d /boot/grub2 ]; then
+        ls -la /boot/grub2/ 1> $OUTPUT_DIR/boot_startup/boot_logs/grub2-directory.txt 2> /dev/null
+        if [ -f /boot/grub2/grub.cfg ]; then
+            cp /boot/grub2/grub.cfg $OUTPUT_DIR/boot_startup/boot_logs/grub2.cfg 2> /dev/null
+        fi
+    fi
+    
+elif [ $PLATFORM = "solaris" ]
+then
+    # Solaris boot logs
+    if [ -f /var/adm/messages ]; then
+        grep -i boot /var/adm/messages | tail -500 1> $OUTPUT_DIR/boot_startup/boot_logs/boot-messages.txt 2> /dev/null
+    fi
+    # Service Management Facility logs
+    svcs -x 1> $OUTPUT_DIR/boot_startup/boot_logs/svcs-failed-services.txt 2> /dev/null
+    if [ -d /var/svc/log ]; then
+        ls -la /var/svc/log/ 1> $OUTPUT_DIR/boot_startup/boot_logs/svc-logs-list.txt 2> /dev/null
+        # Copy recent service logs
+        find /var/svc/log -name "*.log" -mtime -7 -exec cp {} $OUTPUT_DIR/boot_startup/boot_logs/ \; 2> /dev/null
+    fi
+    # Boot archive
+    bootadm list-archive 1> $OUTPUT_DIR/boot_startup/boot_logs/bootadm-list-archive.txt 2> /dev/null
+    
+elif [ $PLATFORM = "aix" ]
+then
+    # AIX boot logs
+    alog -o -t boot 1> $OUTPUT_DIR/boot_startup/boot_logs/alog-boot.txt 2> /dev/null
+    alog -o -t bosinst 1> $OUTPUT_DIR/boot_startup/boot_logs/alog-bosinst.txt 2> /dev/null
+    # Boot list
+    bootlist -m normal -o 1> $OUTPUT_DIR/boot_startup/boot_logs/bootlist-normal.txt 2> /dev/null
+    bootlist -m service -o 1> $OUTPUT_DIR/boot_startup/boot_logs/bootlist-service.txt 2> /dev/null
+    # Error report
+    errpt | head -100 1> $OUTPUT_DIR/boot_startup/boot_logs/errpt-recent.txt 2> /dev/null
+    
+elif [ $PLATFORM = "mac" ]
+then
+    # macOS boot logs
+    log show --predicate 'process == "kernel"' --last boot 1> $OUTPUT_DIR/boot_startup/boot_logs/kernel-boot-log.txt 2> /dev/null
+    log show --predicate 'eventMessage contains "boot"' --last 1d 1> $OUTPUT_DIR/boot_startup/boot_logs/boot-events-1day.txt 2> /dev/null
+    # System logs
+    if [ -f /var/log/system.log ]; then
+        grep -i boot /var/log/system.log | 1> $OUTPUT_DIR/boot_startup/boot_logs/system-boot-logs.txt 2> /dev/null
+    fi
+    # Boot plist
+    if [ -f /Library/Preferences/SystemConfiguration/com.apple.Boot.plist ]; then
+        cp /Library/Preferences/SystemConfiguration/com.apple.Boot.plist $OUTPUT_DIR/boot_startup/boot_logs/ 2> /dev/null
+    fi
+    
+elif [ $PLATFORM = "hpux" ]
+then
+    # HP-UX boot logs
+    if [ -f /var/adm/syslog/syslog.log ]; then
+        grep -i boot /var/adm/syslog/syslog.log | tail -500 1> $OUTPUT_DIR/boot_startup/boot_logs/syslog-boot.txt 2> /dev/null
+    fi
+    # Show boot messages
+    dmesg 1> $OUTPUT_DIR/boot_startup/boot_logs/dmesg.txt 2> /dev/null
+    
+elif [ $PLATFORM = "android" ]
+then
+    # Android boot logs
+    logcat -b events -d | grep -i boot 1> $OUTPUT_DIR/boot_startup/boot_logs/logcat-boot-events.txt 2> /dev/null
+    # Boot properties
+    getprop | grep -E "boot|init" 1> $OUTPUT_DIR/boot_startup/boot_logs/boot-properties.txt 2> /dev/null
+    # Kernel logs
+    if [ -f /proc/last_kmsg ]; then
+        cp /proc/last_kmsg $OUTPUT_DIR/boot_startup/boot_logs/ 2> /dev/null
+    fi
+fi
+
+# Init system detection and collection
+mkdir $OUTPUT_DIR/boot_startup/init_system 2> /dev/null
+INIT_SYSTEM="unknown"
+if [ -d /run/systemd/system ]; then
+    INIT_SYSTEM="systemd"
+elif [ -f /sbin/upstart-udev-bridge ]; then
+    INIT_SYSTEM="upstart"
+elif [ -f /etc/inittab ]; then
+    INIT_SYSTEM="sysvinit"
+elif [ $PLATFORM = "mac" ]; then
+    INIT_SYSTEM="launchd"
+elif [ $PLATFORM = "solaris" ]; then
+    INIT_SYSTEM="smf"
+elif [ $PLATFORM = "aix" ]; then
+    INIT_SYSTEM="src"
+fi
+echo "Init System: $INIT_SYSTEM" > $OUTPUT_DIR/boot_startup/init_system/detected.txt
+
+if [ "$INIT_SYSTEM" = "systemd" ]; then
+    # SystemD units
+    systemctl list-unit-files 1> $OUTPUT_DIR/boot_startup/init_system/systemd-unit-files.txt 2> /dev/null
+    systemctl list-units 1> $OUTPUT_DIR/boot_startup/init_system/systemd-units.txt 2> /dev/null
+    systemctl list-dependencies 1> $OUTPUT_DIR/boot_startup/init_system/systemd-dependencies.txt 2> /dev/null
+    # Default target
+    systemctl get-default 1> $OUTPUT_DIR/boot_startup/init_system/systemd-default-target.txt 2> /dev/null
+    # Failed units
+    systemctl --failed 1> $OUTPUT_DIR/boot_startup/init_system/systemd-failed.txt 2> /dev/null
+    # Copy unit files
+    mkdir $OUTPUT_DIR/boot_startup/init_system/systemd_units 2> /dev/null
+    for unit_dir in /etc/systemd/system /lib/systemd/system /usr/lib/systemd/system
+    do
+        if [ -d "$unit_dir" ]; then
+            find "$unit_dir" -name "*.service" -o -name "*.target" | head -50 | while read unit_file
+            do
+                cp "$unit_file" $OUTPUT_DIR/boot_startup/init_system/systemd_units/ 2> /dev/null
+            done
+        fi
+    done
+    
+elif [ "$INIT_SYSTEM" = "sysvinit" ] || [ "$INIT_SYSTEM" = "unknown" ]; then
+    # inittab
+    if [ -f /etc/inittab ]; then
+        cp /etc/inittab $OUTPUT_DIR/boot_startup/init_system/ 2> /dev/null
+    fi
+    # RC scripts
+    mkdir $OUTPUT_DIR/boot_startup/init_system/rc_scripts 2> /dev/null
+    for rc_dir in /etc/rc.d /etc/init.d /etc/rc.d/init.d
+    do
+        if [ -d "$rc_dir" ]; then
+            ls -la "$rc_dir" 1> $OUTPUT_DIR/boot_startup/init_system/rc_scripts/`basename $rc_dir`-listing.txt 2> /dev/null
+            # Copy key scripts
+            for script in S* K* rc rc.local rc.sysinit
+            do
+                if [ -f "$rc_dir/$script" ]; then
+                    cp "$rc_dir/$script" $OUTPUT_DIR/boot_startup/init_system/rc_scripts/ 2> /dev/null
+                fi
+            done
+        fi
+    done
+    # Runlevel symlinks
+    for level in 0 1 2 3 4 5 6 S
+    do
+        if [ -d /etc/rc${level}.d ]; then
+            ls -la /etc/rc${level}.d/ 1> $OUTPUT_DIR/boot_startup/init_system/rc${level}.d-listing.txt 2> /dev/null
+        elif [ -d /etc/rc.d/rc${level}.d ]; then
+            ls -la /etc/rc.d/rc${level}.d/ 1> $OUTPUT_DIR/boot_startup/init_system/rc${level}.d-listing.txt 2> /dev/null
+        fi
+    done
+    # chkconfig/update-rc.d info
+    if [ -x /sbin/chkconfig ]; then
+        chkconfig --list 1> $OUTPUT_DIR/boot_startup/init_system/chkconfig-list.txt 2> /dev/null
+    fi
+    if [ -x /usr/sbin/update-rc.d ]; then
+        ls -la /etc/rc*.d/ 1> $OUTPUT_DIR/boot_startup/init_system/update-rc.d-status.txt 2> /dev/null
+    fi
+    
+elif [ "$INIT_SYSTEM" = "upstart" ]; then
+    # Upstart jobs
+    if [ -d /etc/init ]; then
+        mkdir $OUTPUT_DIR/boot_startup/init_system/upstart_jobs 2> /dev/null
+        cp /etc/init/*.conf $OUTPUT_DIR/boot_startup/init_system/upstart_jobs/ 2> /dev/null
+    fi
+    # List jobs
+    if [ -x /sbin/initctl ]; then
+        initctl list 1> $OUTPUT_DIR/boot_startup/init_system/upstart-jobs-list.txt 2> /dev/null
+    fi
+fi
+
+# Common startup files across platforms
+mkdir $OUTPUT_DIR/boot_startup/startup_files 2> /dev/null
+
+# RC files
+for rc_file in /etc/rc.local /etc/rc.common /etc/rc /etc/rc.conf /etc/rc.config
+do
+    if [ -f "$rc_file" ]; then
+        cp "$rc_file" $OUTPUT_DIR/boot_startup/startup_files/ 2> /dev/null
+    fi
+done
+
+# Profile files (system-wide)
+for profile in /etc/profile /etc/bash.bashrc /etc/bashrc /etc/zsh/zshrc /etc/csh.cshrc /etc/csh.login
+do
+    if [ -f "$profile" ]; then
+        cp "$profile" $OUTPUT_DIR/boot_startup/startup_files/ 2> /dev/null
+    fi
+done
+
+# Environment files
+if [ -d /etc/profile.d ]; then
+    mkdir $OUTPUT_DIR/boot_startup/startup_files/profile.d 2> /dev/null
+    cp /etc/profile.d/* $OUTPUT_DIR/boot_startup/startup_files/profile.d/ 2> /dev/null
+fi
+if [ -d /etc/env.d ]; then
+    mkdir $OUTPUT_DIR/boot_startup/startup_files/env.d 2> /dev/null
+    cp /etc/env.d/* $OUTPUT_DIR/boot_startup/startup_files/env.d/ 2> /dev/null
+fi
+
+# Message of the day
+for motd in /etc/motd /etc/motd.tail /etc/issue /etc/issue.net
+do
+    if [ -f "$motd" ]; then
+        cp "$motd" $OUTPUT_DIR/boot_startup/startup_files/ 2> /dev/null
+    fi
+done
+
+# Boot configuration files
+mkdir $OUTPUT_DIR/boot_startup/boot_config 2> /dev/null
+
+# Kernel parameters
+if [ -f /proc/cmdline ]; then
+    cp /proc/cmdline $OUTPUT_DIR/boot_startup/boot_config/ 2> /dev/null
+fi
+
+# Boot loader configs
+for bootcfg in /etc/lilo.conf /boot/grub/menu.lst /etc/grub.conf /etc/default/grub /etc/yaboot.conf /boot/loader.conf
+do
+    if [ -f "$bootcfg" ]; then
+        cp "$bootcfg" $OUTPUT_DIR/boot_startup/boot_config/ 2> /dev/null
+    fi
+done
+
+# EFI boot entries
+if [ -x /usr/sbin/efibootmgr ]; then
+    efibootmgr -v 1> $OUTPUT_DIR/boot_startup/boot_config/efibootmgr.txt 2> /dev/null
+fi
+
+# Platform specific startup
+if [ $PLATFORM = "mac" ]; then
+    # LaunchDaemons and LaunchAgents
+    mkdir $OUTPUT_DIR/boot_startup/startup_files/launch_items 2> /dev/null
+    for launch_dir in /System/Library/LaunchDaemons /Library/LaunchDaemons /System/Library/LaunchAgents /Library/LaunchAgents
+    do
+        if [ -d "$launch_dir" ]; then
+            ls -la "$launch_dir" 1> $OUTPUT_DIR/boot_startup/startup_files/launch_items/`basename $launch_dir`-listing.txt 2> /dev/null
+        fi
+    done
+    # StartupItems (legacy)
+    for startup_dir in /System/Library/StartupItems /Library/StartupItems
+    do
+        if [ -d "$startup_dir" ]; then
+            ls -la "$startup_dir" 1> $OUTPUT_DIR/boot_startup/startup_files/`basename $startup_dir`-listing.txt 2> /dev/null
+        fi
+    done
+    
+elif [ $PLATFORM = "solaris" ]; then
+    # SMF manifests
+    if [ -d /var/svc/manifest ]; then
+        find /var/svc/manifest -name "*.xml" | head -50 > $OUTPUT_DIR/boot_startup/startup_files/smf-manifests.txt 2> /dev/null
+    fi
+    # Boot properties
+    if [ -x /usr/sbin/eeprom ]; then
+        eeprom 1> $OUTPUT_DIR/boot_startup/boot_config/eeprom.txt 2> /dev/null
+    fi
+    
+elif [ $PLATFORM = "aix" ]; then
+    # Inittab entries
+    lsitab -a 1> $OUTPUT_DIR/boot_startup/startup_files/lsitab.txt 2> /dev/null
+    # RC scripts
+    if [ -f /etc/rc ]; then
+        cp /etc/rc $OUTPUT_DIR/boot_startup/startup_files/ 2> /dev/null
+    fi
+fi
+
+if [ -x /sbin/runlevel ]; then
+    echo "Current Runlevel: `runlevel`" >> $OUTPUT_DIR/boot_startup/summary.txt
+elif [ -x /usr/bin/systemctl ]; then
+    echo "Current Target: `systemctl get-default 2>/dev/null`" >> $OUTPUT_DIR/boot_startup/summary.txt
+fi
+
+if [ -x /usr/bin/uptime ]; then
+    echo "System Uptime: `uptime`" >> $OUTPUT_DIR/boot_startup/summary.txt
+fi
+if [ -x /usr/bin/who ]; then
+    who -b 1>> $OUTPUT_DIR/boot_startup/summary.txt 2> /dev/null
+fi
+
+echo "  ${COL_ENTRY}>${RESET} Storage Info"
 arcstat 1> $OUTPUT_DIR/general/storage_arcstat.txt 2> /dev/null
 blkid 1> $OUTPUT_DIR/general/storage_blkid.txt 2> /dev/null
 df 1> $OUTPUT_DIR/general/storage_df.txt 2> /dev/null
