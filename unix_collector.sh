@@ -10,7 +10,7 @@
 # GNU General Public License for more details.
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-# Copyright (C) 2022  Jerzy 'Yuri' Kramarz (op7ic) 
+# Copyright (C)  Jerzy 'Yuri' Kramarz (op7ic) 
 # --------------------------------------------------
 # A live forensic collection script for UNIX-like systems.
 # Author: Jerzy 'Yuri' Kramarz (op7ic) 
