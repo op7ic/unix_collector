@@ -5623,107 +5623,304 @@ then
 	
 	if [ -x "$(command -v lxc)" ]
 	then
-		echo "  ${COL_ENTRY}>${RESET} Collecting LXC information"
-		lxc list --all-projects --format compact 1> $OUTPUT_DIR/containers/lxc_all_containers_and_vms.txt 2> /dev/null
-		lxc image list --format compact 1> $OUTPUT_DIR/containers/lxc_images.txt 2> /dev/null
-		lxc info 1> $OUTPUT_DIR/containers/lxc_info.txt 2> /dev/null
-		lxc profile list --format compact 1> $OUTPUT_DIR/containers/lxc_profiles.txt 2> /dev/null
-		lxc storage list --format compact 1> $OUTPUT_DIR/containers/lxc_storage.txt 2> /dev/null
-		lxc warning list --format compact 1> $OUTPUT_DIR/containers/lxc_warnings.txt 2> /dev/null
-		lxc version 1> $OUTPUT_DIR/containers/lxc_version.txt 2> /dev/null
-		lxc list --all-projects --format json 1> $OUTPUT_DIR/containers/lxc_all_containers_json.txt 2> /dev/null
-		lxc list --all-projects --format yaml 1> $OUTPUT_DIR/containers/lxc_all_containers_yaml.txt 2> /dev/null
-		lxc network list 1> $OUTPUT_DIR/containers/lxc_network_list.txt 2> /dev/null
-		lxc network list --format yaml 1> $OUTPUT_DIR/containers/lxc_network_list_yaml.txt 2> /dev/null
-		lxc remote list 1> $OUTPUT_DIR/containers/lxc_remote_list.txt 2> /dev/null
-		lxc cluster list 2>/dev/null 1> $OUTPUT_DIR/containers/lxc_cluster_list.txt
-		lxc cluster show 2>/dev/null 1> $OUTPUT_DIR/containers/lxc_cluster_info.txt
-		lxc operation list 1> $OUTPUT_DIR/containers/lxc_operations.txt 2> /dev/null
-		lxc config trust list 1> $OUTPUT_DIR/containers/lxc_certificates.txt 2> /dev/null
-		lxc alias list 1> $OUTPUT_DIR/containers/lxc_aliases.txt 2> /dev/null
-		lxc list --all-projects --format compact | sed 1d | awk '{print $1"|"$2}' | while IFS='|' read -r name project; do
-			if [ -n "$name" ]; then
-				echo "$name" >> $OUTPUT_DIR/containers/lxc_container_ids.txt
+		echo "  ${COL_ENTRY}>${RESET} Collecting LXC/LXD information"
+		mkdir -p $OUTPUT_DIR/containers/lxc 2> /dev/null
+		mkdir -p $OUTPUT_DIR/containers/lxc/system 2> /dev/null
+		mkdir -p $OUTPUT_DIR/containers/lxc/containers 2> /dev/null
+		mkdir -p $OUTPUT_DIR/containers/lxc/images 2> /dev/null
+		mkdir -p $OUTPUT_DIR/containers/lxc/networks 2> /dev/null
+		mkdir -p $OUTPUT_DIR/containers/lxc/storage 2> /dev/null
+		mkdir -p $OUTPUT_DIR/containers/lxc/profiles 2> /dev/null
+		mkdir -p $OUTPUT_DIR/containers/lxc/cluster 2> /dev/null
+		mkdir -p $OUTPUT_DIR/containers/lxc/config 2> /dev/null
+		mkdir -p $OUTPUT_DIR/containers/lxc/logs 2> /dev/null
+		mkdir -p $OUTPUT_DIR/containers/lxc/security 2> /dev/null
+		
+		lxc version > $OUTPUT_DIR/containers/lxc/system/version.txt 2> /dev/null
+		lxc info > $OUTPUT_DIR/containers/lxc/system/info.txt 2> /dev/null
+		lxc info --resources > $OUTPUT_DIR/containers/lxc/system/resources.txt 2> /dev/null
+		lxc warning list --format compact > $OUTPUT_DIR/containers/lxc/system/warnings.txt 2> /dev/null
+		lxc warning list --format yaml > $OUTPUT_DIR/containers/lxc/system/warnings.yaml 2> /dev/null
+		
+		# Global configuration
+		lxc config show > $OUTPUT_DIR/containers/lxc/config/global_config.yaml 2> /dev/null
+		
+		# Remotes and authentication
+		lxc remote list > $OUTPUT_DIR/containers/lxc/system/remote_list.txt 2> /dev/null
+		lxc config trust list > $OUTPUT_DIR/containers/lxc/security/certificates.txt 2> /dev/null
+		lxc config trust list --format yaml > $OUTPUT_DIR/containers/lxc/security/certificates.yaml 2> /dev/null
+		
+		# Aliases
+		lxc alias list > $OUTPUT_DIR/containers/lxc/config/aliases.txt 2> /dev/null
+		
+		# Operations
+		lxc operation list > $OUTPUT_DIR/containers/lxc/system/operations.txt 2> /dev/null
+		lxc operation list --format yaml > $OUTPUT_DIR/containers/lxc/system/operations.yaml 2> /dev/null
+		
+		# Monitor sample (with timeout to prevent hanging)
+		timeout 5 lxc monitor --type=lifecycle --pretty > $OUTPUT_DIR/containers/lxc/system/monitor_sample.txt 2>&1
+		
+		# Cluster information (if clustered)
+		if lxc cluster list >/dev/null 2>&1; then
+			lxc cluster list > $OUTPUT_DIR/containers/lxc/cluster/cluster_list.txt 2> /dev/null
+			lxc cluster list --format yaml > $OUTPUT_DIR/containers/lxc/cluster/cluster_list.yaml 2> /dev/null
+			lxc cluster show > $OUTPUT_DIR/containers/lxc/cluster/cluster_info.txt 2> /dev/null
+		else
+			echo "Not clustered" > $OUTPUT_DIR/containers/lxc/cluster/not_clustered.txt
+		fi
+		
+		lxc list --all-projects --format compact > $OUTPUT_DIR/containers/lxc/containers/all_instances.txt 2> /dev/null
+		lxc list --all-projects --format json > $OUTPUT_DIR/containers/lxc/containers/all_instances.json 2> /dev/null
+		lxc list --all-projects --format yaml > $OUTPUT_DIR/containers/lxc/containers/all_instances.yaml 2> /dev/null
+		
+		lxc list --all-projects --format compact 2>/dev/null | sed 1d | awk '{print $1"|"$2}' > $OUTPUT_DIR/containers/lxc/containers/instance_list.txt
+		
+		# Process each container/VM
+		while IFS='|' read -r name project; do
+			if [ -n "$name" ] && [ "$name" != "NAME" ]; then
+				
+				# Create safe directory name
+				SAFE_NAME=$(echo "$name" | sed 's/[^a-zA-Z0-9_-]/_/g')
+				INSTANCE_DIR="$OUTPUT_DIR/containers/lxc/containers/${SAFE_NAME}"
+				mkdir -p "$INSTANCE_DIR" 2> /dev/null
+				
+				# Set project context if needed
+				if [ -n "$project" ] && [ "$project" != "default" ]; then
+					PROJECT_FLAG="--project=$project"
+				else
+					PROJECT_FLAG=""
+				fi
+				
+				# Basic information
+				lxc info $PROJECT_FLAG "$name" > "$INSTANCE_DIR/info.txt" 2> /dev/null
+				lxc info $PROJECT_FLAG "$name" --show-log > "$INSTANCE_DIR/info_with_log.txt" 2> /dev/null
+				lxc info $PROJECT_FLAG "$name" --resources > "$INSTANCE_DIR/resources.txt" 2> /dev/null
+				
+				# Configuration
+				lxc config show $PROJECT_FLAG "$name" > "$INSTANCE_DIR/config.yaml" 2> /dev/null
+				lxc config show $PROJECT_FLAG "$name" --expanded > "$INSTANCE_DIR/config_expanded.yaml" 2> /dev/null
+				
+				# Metadata
+				lxc config metadata show $PROJECT_FLAG "$name" > "$INSTANCE_DIR/metadata.yaml" 2> /dev/null
+				
+				# Devices
+				lxc config device list $PROJECT_FLAG "$name" > "$INSTANCE_DIR/devices.txt" 2> /dev/null
+				lxc config device show $PROJECT_FLAG "$name" > "$INSTANCE_DIR/devices_detail.yaml" 2> /dev/null
+				
+				# Snapshots
+				lxc snapshot list $PROJECT_FLAG "$name" > "$INSTANCE_DIR/snapshots.txt" 2> /dev/null
+				lxc info $PROJECT_FLAG "$name" 2>/dev/null | grep -A 50 "Snapshots:" > "$INSTANCE_DIR/snapshots_detail.txt" 2> /dev/null
+				
+				# If running, get additional info
+				if lxc info $PROJECT_FLAG "$name" 2>/dev/null | grep -q "Status: Running"; then
+					# Process information
+					lxc info $PROJECT_FLAG "$name" 2>/dev/null | grep -A 20 "Processes:" > "$INSTANCE_DIR/processes.txt" 2> /dev/null
+					
+					# Try to get /etc/passwd for user enumeration (if container)
+					lxc file pull $PROJECT_FLAG "$name/etc/passwd" - > "$INSTANCE_DIR/passwd.txt" 2> /dev/null
+					
+					# Network information from inside
+					lxc exec $PROJECT_FLAG "$name" -- ip addr show > "$INSTANCE_DIR/ip_addr.txt" 2> /dev/null
+					lxc exec $PROJECT_FLAG "$name" -- netstat -tlnp > "$INSTANCE_DIR/netstat.txt" 2> /dev/null
+				fi
+				
+				# State information
+				echo "Project: ${project:-default}" > "$INSTANCE_DIR/state.txt"
+				lxc info $PROJECT_FLAG "$name" 2>/dev/null | grep -E "^(Name|Location|Remote|Architecture|Created|Status|Type|Profiles|Description):" >> "$INSTANCE_DIR/state.txt"
 			fi
-		done
-		while read -r containerid; do
-			if [ -n "$containerid" ]; then
-				echo "=== Container/VM: $containerid ===" >> $OUTPUT_DIR/containers/lxc_container_details.txt
-				lxc info "$containerid" --show-log >> $OUTPUT_DIR/containers/lxc_container_details.txt 2> /dev/null
-				echo "--- Configuration ---" >> $OUTPUT_DIR/containers/lxc_container_details.txt
-				lxc config show "$containerid" >> $OUTPUT_DIR/containers/lxc_container_details.txt 2> /dev/null
-				echo "--- Devices ---" >> $OUTPUT_DIR/containers/lxc_container_details.txt
-				lxc config device list "$containerid" >> $OUTPUT_DIR/containers/lxc_container_details.txt 2> /dev/null
-				echo "--- Resources ---" >> $OUTPUT_DIR/containers/lxc_container_details.txt
-				lxc info "$containerid" --resources >> $OUTPUT_DIR/containers/lxc_container_details.txt 2> /dev/null
-				echo "--- Snapshots ---" >> $OUTPUT_DIR/containers/lxc_container_details.txt
-				lxc info "$containerid" | grep -A 50 "Snapshots:" >> $OUTPUT_DIR/containers/lxc_container_details.txt 2> /dev/null
-				echo "--- Processes ---" >> $OUTPUT_DIR/containers/lxc_container_details.txt
-				lxc info "$containerid" | grep -A 20 "Processes:" >> $OUTPUT_DIR/containers/lxc_container_details.txt 2> /dev/null
-				echo "" >> $OUTPUT_DIR/containers/lxc_container_details.txt
-				lxc config show "$containerid" --expanded > "$OUTPUT_DIR/containers/lxc_config_expanded_${containerid}.yaml" 2> /dev/null
-				lxc info "$containerid" --show-log > "$OUTPUT_DIR/containers/lxc_info_log_${containerid}.txt" 2> /dev/null
-				lxc file pull "$containerid/etc/passwd" - > "$OUTPUT_DIR/containers/lxc_${containerid}_passwd.txt" 2> /dev/null
-				lxc snapshot list "$containerid" > "$OUTPUT_DIR/containers/lxc_snapshots_${containerid}.txt" 2> /dev/null
-				lxc config metadata show "$containerid" > "$OUTPUT_DIR/containers/lxc_metadata_${containerid}.yaml" 2> /dev/null
-			fi
-		done < $OUTPUT_DIR/containers/lxc_container_ids.txt 2> /dev/null
-		lxc network list --format compact | sed 1d | awk '{print $1}' | while read netname; do
-			if [ -n "$netname" ]; then
-				echo "=== Network: $netname ===" >> $OUTPUT_DIR/containers/lxc_network_configs.txt
-				lxc network show "$netname" >> $OUTPUT_DIR/containers/lxc_network_configs.txt 2> /dev/null
-				lxc network info "$netname" >> $OUTPUT_DIR/containers/lxc_network_configs.txt 2> /dev/null
-				lxc network list-leases "$netname" >> $OUTPUT_DIR/containers/lxc_network_configs.txt 2> /dev/null
-				echo "" >> $OUTPUT_DIR/containers/lxc_network_configs.txt
-			fi
-		done
-		lxc profile list --format compact | sed 1d | awk '{print $1}' | while read profile; do
-			if [ -n "$profile" ]; then
-				echo "=== Profile: $profile ===" >> $OUTPUT_DIR/containers/lxc_profile_configs.txt
-				lxc profile show "$profile" >> $OUTPUT_DIR/containers/lxc_profile_configs.txt 2> /dev/null
-				echo "" >> $OUTPUT_DIR/containers/lxc_profile_configs.txt
-			fi
-		done
-		lxc storage list --format compact | sed 1d | awk '{print $1}' 1> $OUTPUT_DIR/containers/lxc_storage_ids.txt 2> /dev/null
-		while read -r storageid; do
-			if [ -n "$storageid" ]; then
-				echo "=== Storage: $storageid ===" >> $OUTPUT_DIR/containers/lxc_storage_details.txt
-				lxc storage show "$storageid" >> $OUTPUT_DIR/containers/lxc_storage_details.txt 2> /dev/null
-				lxc storage info "$storageid" >> $OUTPUT_DIR/containers/lxc_storage_details.txt 2> /dev/null
-				lxc storage volume list "$storageid" >> $OUTPUT_DIR/containers/lxc_storage_details.txt 2> /dev/null
-				echo "" >> $OUTPUT_DIR/containers/lxc_storage_details.txt
-			fi
-		done < $OUTPUT_DIR/containers/lxc_storage_ids.txt 2> /dev/null
-		lxc image list --format compact | sed 1d | awk '{print $2}' | while read imageid; do
+		done < $OUTPUT_DIR/containers/lxc/containers/instance_list.txt
+		
+		lxc image list --format compact > $OUTPUT_DIR/containers/lxc/images/image_list.txt 2> /dev/null
+		lxc image list --format json > $OUTPUT_DIR/containers/lxc/images/image_list.json 2> /dev/null
+		lxc image list --format yaml > $OUTPUT_DIR/containers/lxc/images/image_list.yaml 2> /dev/null
+		
+		lxc image list --format compact 2>/dev/null | sed 1d | awk '{print $2}' | while read imageid; do
 			if [ -n "$imageid" ]; then
-				echo "=== Image: $imageid ===" >> $OUTPUT_DIR/containers/lxc_image_details.txt
-				lxc image info "$imageid" >> $OUTPUT_DIR/containers/lxc_image_details.txt 2> /dev/null
-				lxc image show "$imageid" >> $OUTPUT_DIR/containers/lxc_image_details.txt 2> /dev/null
-				echo "" >> $OUTPUT_DIR/containers/lxc_image_details.txt
+				echo "    Processing image: $imageid"
+				SAFE_IMAGE=$(echo "$imageid" | sed 's/[^a-zA-Z0-9_-]/_/g' | cut -c1-64)
+				
+				lxc image info "$imageid" > "$OUTPUT_DIR/containers/lxc/images/info_${SAFE_IMAGE}.txt" 2> /dev/null
+				lxc image show "$imageid" > "$OUTPUT_DIR/containers/lxc/images/show_${SAFE_IMAGE}.yaml" 2> /dev/null
 			fi
 		done
-		lxc config show 1> $OUTPUT_DIR/containers/lxc_global_config.txt 2> /dev/null
-		lxc monitor --type=lifecycle --pretty 2>&1 | timeout 2 cat > $OUTPUT_DIR/containers/lxc_monitor_sample.txt 2> /dev/null
-		if [ -d "/var/lib/lxd" ]; then
-			ls -la /var/lib/lxd/ > $OUTPUT_DIR/containers/lxc_var_lib_listing.txt 2> /dev/null
-			find /var/lib/lxd/logs -name "*.log" -type f -mtime -7 2>/dev/null | head -50 > $OUTPUT_DIR/containers/lxc_recent_logs.txt
-		fi
-		if [ -d "/var/log/lxd" ]; then
-			ls -la /var/log/lxd/ > $OUTPUT_DIR/containers/lxc_log_listing.txt 2> /dev/null
-		fi
-		# Legacy LXC check (non-LXD)
-		if [ -x "$(command -v lxc-ls)" ]; then
-			echo "  ${COL_ENTRY}>${RESET} Collecting legacy LXC information"
-			lxc-ls -f 1> $OUTPUT_DIR/containers/legacy_lxc_list.txt 2> /dev/null
-			lxc-checkconfig 1> $OUTPUT_DIR/containers/legacy_lxc_checkconfig.txt 2> /dev/null
-			if [ -d "/var/lib/lxc" ]; then
-				ls -la /var/lib/lxc/ > $OUTPUT_DIR/containers/legacy_lxc_containers.txt 2> /dev/null
-				find /var/lib/lxc -name "config" -type f 2>/dev/null | while read cfg; do
-					echo "=== Config: $cfg ===" >> $OUTPUT_DIR/containers/legacy_lxc_configs.txt
-					cat "$cfg" >> $OUTPUT_DIR/containers/legacy_lxc_configs.txt 2> /dev/null
-					echo "" >> $OUTPUT_DIR/containers/legacy_lxc_configs.txt
-				done
+		
+		lxc network list > $OUTPUT_DIR/containers/lxc/networks/network_list.txt 2> /dev/null
+		lxc network list --format yaml > $OUTPUT_DIR/containers/lxc/networks/network_list.yaml 2> /dev/null
+		
+		lxc network list --format compact 2>/dev/null | sed 1d | awk '{print $1}' | while read netname; do
+			if [ -n "$netname" ]; then
+				echo "    Processing network: $netname"
+				SAFE_NET=$(echo "$netname" | sed 's/[^a-zA-Z0-9_-]/_/g')
+				mkdir -p "$OUTPUT_DIR/containers/lxc/networks/$SAFE_NET" 2> /dev/null
+				
+				lxc network show "$netname" > "$OUTPUT_DIR/containers/lxc/networks/$SAFE_NET/config.yaml" 2> /dev/null
+				lxc network info "$netname" > "$OUTPUT_DIR/containers/lxc/networks/$SAFE_NET/info.txt" 2> /dev/null
+				lxc network list-leases "$netname" > "$OUTPUT_DIR/containers/lxc/networks/$SAFE_NET/leases.txt" 2> /dev/null
 			fi
+		done
+		
+		lxc storage list --format compact > $OUTPUT_DIR/containers/lxc/storage/storage_list.txt 2> /dev/null
+		lxc storage list --format yaml > $OUTPUT_DIR/containers/lxc/storage/storage_list.yaml 2> /dev/null
+		
+		lxc storage list --format compact 2>/dev/null | sed 1d | awk '{print $1}' | while read storageid; do
+			if [ -n "$storageid" ]; then
+				echo "    Processing storage: $storageid"
+				SAFE_STORAGE=$(echo "$storageid" | sed 's/[^a-zA-Z0-9_-]/_/g')
+				mkdir -p "$OUTPUT_DIR/containers/lxc/storage/$SAFE_STORAGE" 2> /dev/null
+				
+				lxc storage show "$storageid" > "$OUTPUT_DIR/containers/lxc/storage/$SAFE_STORAGE/config.yaml" 2> /dev/null
+				lxc storage info "$storageid" > "$OUTPUT_DIR/containers/lxc/storage/$SAFE_STORAGE/info.txt" 2> /dev/null
+				lxc storage volume list "$storageid" > "$OUTPUT_DIR/containers/lxc/storage/$SAFE_STORAGE/volumes.txt" 2> /dev/null
+				lxc storage volume list "$storageid" --format yaml > "$OUTPUT_DIR/containers/lxc/storage/$SAFE_STORAGE/volumes.yaml" 2> /dev/null
+			fi
+		done
+		
+		lxc profile list --format compact > $OUTPUT_DIR/containers/lxc/profiles/profile_list.txt 2> /dev/null
+		lxc profile list --format yaml > $OUTPUT_DIR/containers/lxc/profiles/profile_list.yaml 2> /dev/null
+		
+		lxc profile list --format compact 2>/dev/null | sed 1d | awk '{print $1}' | while read profile; do
+			if [ -n "$profile" ]; then
+				echo "    Processing profile: $profile"
+				SAFE_PROFILE=$(echo "$profile" | sed 's/[^a-zA-Z0-9_-]/_/g')
+				
+				lxc profile show "$profile" > "$OUTPUT_DIR/containers/lxc/profiles/profile_${SAFE_PROFILE}.yaml" 2> /dev/null
+			fi
+		done
+		
+		if [ -d "/var/lib/lxd" ]; then
+			ls -la /var/lib/lxd/ > $OUTPUT_DIR/containers/lxc/system/var_lib_lxd_listing.txt 2> /dev/null
+			
+			find /var/lib/lxd/logs -name "*.log" -type f -mtime -7 2>/dev/null | head -50 | while read logfile; do
+				if [ -f "$logfile" ]; then
+					LOG_NAME=$(echo "$logfile" | sed 's|/var/lib/lxd/logs/||' | sed 's|/|_|g')
+					cat "$logfile" > "$OUTPUT_DIR/containers/lxc/logs/recent_${LOG_NAME}" 2> /dev/null
+				fi
+			done
+			
+			# Database location
+			if [ -f "/var/lib/lxd/database/global/db.bin" ]; then
+				ls -la /var/lib/lxd/database/global/ > $OUTPUT_DIR/containers/lxc/system/database_listing.txt 2> /dev/null
+			fi
+		fi
+		
+		# Alternative log location
+		if [ -d "/var/log/lxd" ]; then
+			ls -la /var/log/lxd/ > $OUTPUT_DIR/containers/lxc/logs/log_directory_listing.txt 2> /dev/null
+			
+			# Copy recent daemon logs
+			for log in lxd.log lxd.log.1; do
+				if [ -f "/var/log/lxd/$log" ]; then
+					cat "/var/log/lxd/$log" > "$OUTPUT_DIR/containers/lxc/logs/${log}_recent" 2> /dev/null
+				fi
+			done
+		fi
+		
+		# Snap-specific paths (if LXD installed via snap)
+		if [ -d "/var/snap/lxd" ]; then
+			echo "LXD installed via snap" > $OUTPUT_DIR/containers/lxc/system/snap_install.txt
+			ls -la /var/snap/lxd/common/lxd/ >> $OUTPUT_DIR/containers/lxc/system/snap_install.txt 2> /dev/null
+		fi
+		
+		# Configuration files
+		for conf_file in /etc/default/lxd /etc/default/lxd-bridge; do
+			if [ -f "$conf_file" ]; then
+				cp "$conf_file" "$OUTPUT_DIR/containers/lxc/config/" 2> /dev/null
+			fi
+		done
+		
+		SUMMARY="$OUTPUT_DIR/containers/lxc/SUMMARY.txt"
+		echo "LXC/LXD Collection Summary" > "$SUMMARY"
+		echo "==========================" >> "$SUMMARY"
+		echo "Collection Date: $(date)" >> "$SUMMARY"
+		echo "" >> "$SUMMARY"
+
+		if [ -f "$OUTPUT_DIR/containers/lxc/system/version.txt" ]; then
+			echo "Version:" >> "$SUMMARY"
+			head -5 "$OUTPUT_DIR/containers/lxc/system/version.txt" >> "$SUMMARY"
+			echo "" >> "$SUMMARY"
+		fi
+		
+		# Resource counts
+		if [ -f "$OUTPUT_DIR/containers/lxc/containers/instance_list.txt" ]; then
+			INSTANCE_COUNT=$(wc -l < "$OUTPUT_DIR/containers/lxc/containers/instance_list.txt" 2>/dev/null || echo 0)
+			echo "Total instances: $INSTANCE_COUNT" >> "$SUMMARY"
+			
+			# Count running instances
+			RUNNING_COUNT=$(lxc list --all-projects 2>/dev/null | grep -c "RUNNING" || echo 0)
+			echo "Running instances: $RUNNING_COUNT" >> "$SUMMARY"
+		fi
+		
+		# Count resources
+		IMAGE_COUNT=$(lxc image list 2>/dev/null | grep -c "^|" || echo 0)
+		NETWORK_COUNT=$(lxc network list 2>/dev/null | grep -c "^|" || echo 0)
+		STORAGE_COUNT=$(lxc storage list 2>/dev/null | grep -c "^|" || echo 0)
+		PROFILE_COUNT=$(lxc profile list 2>/dev/null | grep -c "^|" || echo 0)
+		
+		echo "" >> "$SUMMARY"
+		echo "Resources:" >> "$SUMMARY"
+		echo "  Images: $IMAGE_COUNT" >> "$SUMMARY"
+		echo "  Networks: $NETWORK_COUNT" >> "$SUMMARY"
+		echo "  Storage pools: $STORAGE_COUNT" >> "$SUMMARY"
+		echo "  Profiles: $PROFILE_COUNT" >> "$SUMMARY"
+		
+		# Cluster status
+		if [ -f "$OUTPUT_DIR/containers/lxc/cluster/cluster_list.txt" ]; then
+			echo "" >> "$SUMMARY"
+			echo "Cluster: Yes" >> "$SUMMARY"
+			CLUSTER_NODES=$(wc -l < "$OUTPUT_DIR/containers/lxc/cluster/cluster_list.txt" 2>/dev/null || echo 0)
+			echo "Cluster nodes: $CLUSTER_NODES" >> "$SUMMARY"
+		else
+			echo "" >> "$SUMMARY"
+			echo "Cluster: No" >> "$SUMMARY"
+		fi
+		
+		# Warnings
+		if [ -f "$OUTPUT_DIR/containers/lxc/system/warnings.txt" ]; then
+			WARNING_COUNT=$(grep -c "^|" "$OUTPUT_DIR/containers/lxc/system/warnings.txt" 2>/dev/null || echo 0)
+			if [ "$WARNING_COUNT" -gt 0 ]; then
+				echo "" >> "$SUMMARY"
+				echo "Warnings: $WARNING_COUNT (see system/warnings.txt)" >> "$SUMMARY"
+			fi
+		fi
+		
+		echo "" >> "$SUMMARY"
+		echo "Collection completed. Check subdirectories for detailed information." >> "$SUMMARY"
+	fi
+
+	# Legacy LXC check (non-LXD)
+	if [ -x "$(command -v lxc-ls)" ] && [ ! -x "$(command -v lxc)" ]
+	then
+		echo "  ${COL_ENTRY}>${RESET} Collecting legacy LXC information"
+		mkdir -p $OUTPUT_DIR/containers/legacy_lxc 2> /dev/null
+		
+		lxc-ls -f > $OUTPUT_DIR/containers/legacy_lxc/container_list.txt 2> /dev/null
+		lxc-checkconfig > $OUTPUT_DIR/containers/legacy_lxc/checkconfig.txt 2> /dev/null
+		lxc-version > $OUTPUT_DIR/containers/legacy_lxc/version.txt 2> /dev/null
+		
+		if [ -d "/var/lib/lxc" ]; then
+			ls -la /var/lib/lxc/ > $OUTPUT_DIR/containers/legacy_lxc/var_lib_listing.txt 2> /dev/null
+			
+			# Collect container configs
+			find /var/lib/lxc -name "config" -type f 2>/dev/null | while read cfg; do
+				CONTAINER_NAME=$(echo "$cfg" | awk -F'/' '{print $(NF-1)}')
+				mkdir -p "$OUTPUT_DIR/containers/legacy_lxc/containers/$CONTAINER_NAME" 2> /dev/null
+				
+				cp "$cfg" "$OUTPUT_DIR/containers/legacy_lxc/containers/$CONTAINER_NAME/config" 2> /dev/null
+				
+				# Get container info if running
+				if lxc-info -n "$CONTAINER_NAME" >/dev/null 2>&1; then
+					lxc-info -n "$CONTAINER_NAME" > "$OUTPUT_DIR/containers/legacy_lxc/containers/$CONTAINER_NAME/info.txt" 2> /dev/null
+				fi
+			done
+		fi
+		
+		# Legacy LXC configuration
+		if [ -f "/etc/lxc/default.conf" ]; then
+			cp /etc/lxc/default.conf $OUTPUT_DIR/containers/legacy_lxc/ 2> /dev/null
+		fi
+		
+		if [ -f "/etc/lxc/lxc.conf" ]; then
+			cp /etc/lxc/lxc.conf $OUTPUT_DIR/containers/legacy_lxc/ 2> /dev/null
 		fi
 	fi
 	
