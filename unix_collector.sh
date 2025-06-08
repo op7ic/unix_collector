@@ -1421,13 +1421,6 @@ do
     fi
 done
 
-# Journal logs if available
-if [ -x /bin/journalctl ] || [ -x /usr/bin/journalctl ]
-then
-    journalctl -n 1000 --no-pager > $OUTPUT_DIR/general/systemd/journal_recent.txt 2> /dev/null
-    journalctl -b --no-pager > $OUTPUT_DIR/general/systemd/journal_boot.txt 2> /dev/null
-fi
-
 # Platform-specific schedulers
 echo "  ${COL_ENTRY}>${RESET} Platform-specific schedulers"
 
@@ -2231,7 +2224,6 @@ if [ -f "/etc/login.defs" ]; then
 fi
 
 if [ -f "/etc/krb5.conf" -o -f "/etc/ldap.conf" ]; then
-    echo "    Collecting Kerberos/LDAP configuration..."
     mkdir $OUTPUT_DIR/user_activity/auth_config 2> /dev/null
     
     if [ -f "/etc/krb5.conf" ]; then
@@ -3092,7 +3084,6 @@ elif [ $PLATFORM = "linux" -o $PLATFORM = "generic" ]
 then
     # RPM-based systems (Red Hat, CentOS, SUSE, etc.)
     if [ -x /usr/bin/yum ]; then
-        echo "    Collecting YUM patch history..."
         yum history 1> $OUTPUT_DIR/software/patches/yum-history.txt 2> /dev/null
         yum history list all 1> $OUTPUT_DIR/software/patches/yum-history-all.txt 2> /dev/null
         # Get detailed info for recent transactions
@@ -3110,7 +3101,6 @@ then
     
     # DNF (Fedora, newer Red Hat)
     if [ -x /usr/bin/dnf ]; then
-        echo "    Collecting DNF patch history..."
         dnf history 1> $OUTPUT_DIR/software/patches/dnf-history.txt 2> /dev/null
         dnf history list all 1> $OUTPUT_DIR/software/patches/dnf-history-all.txt 2> /dev/null
         # List available updates
@@ -3121,7 +3111,6 @@ then
     
     # Zypper (SUSE, openSUSE)
     if [ -x /usr/bin/zypper ]; then
-        echo "    Collecting Zypper patch history..."
         zypper patches 1> $OUTPUT_DIR/software/patches/zypper-patches.txt 2> /dev/null
         zypper list-patches 1> $OUTPUT_DIR/software/patches/zypper-list-patches.txt 2> /dev/null
         # Patch history
@@ -3134,7 +3123,6 @@ then
     
     # APT-based systems (Debian, Ubuntu, etc.)
     if [ -x /usr/bin/apt -o -x /usr/bin/apt-get ]; then
-        echo "    Collecting APT patch history..."
         # APT history logs
         if [ -f /var/log/apt/history.log ]; then
             cp /var/log/apt/history.log $OUTPUT_DIR/software/patches/apt-history.log 2> /dev/null
@@ -3168,7 +3156,6 @@ then
     
     # Emerge (Gentoo)
     if [ -x /usr/bin/emerge ]; then
-        echo "    Collecting Emerge patch history..."
         if [ -f /var/log/emerge.log ]; then
             tail -1000 /var/log/emerge.log 1> $OUTPUT_DIR/software/patches/emerge-recent.log 2> /dev/null
         fi
@@ -3178,7 +3165,6 @@ then
     
     # Pacman (Arch Linux)
     if [ -x /usr/bin/pacman ]; then
-        echo "    Collecting Pacman patch history..."
         if [ -f /var/log/pacman.log ]; then
             cp /var/log/pacman.log $OUTPUT_DIR/software/patches/ 2> /dev/null
         fi
@@ -3188,7 +3174,6 @@ then
     
     # FreeBSD
     if [ -x /usr/sbin/freebsd-update ]; then
-        echo "    Collecting FreeBSD update history..."
         freebsd-update fetch 1> $OUTPUT_DIR/software/patches/freebsd-update-check.txt 2> /dev/null
         # Check installed patches
         if [ -f /var/db/freebsd-update/tag ]; then
@@ -3200,7 +3185,6 @@ then
     
     # OpenBSD
     if [ -x /usr/sbin/syspatch ]; then
-        echo "    Collecting OpenBSD patch history..."
         syspatch -l 1> $OUTPUT_DIR/software/patches/syspatch-list.txt 2> /dev/null
         syspatch -c 1> $OUTPUT_DIR/software/patches/syspatch-check.txt 2> /dev/null
     fi
@@ -4585,7 +4569,6 @@ then
 else    
     # SystemD socket activation (modern replacement for inetd)
     if command -v systemctl > /dev/null 2>&1; then
-        echo "    Collecting systemd socket units..."
         systemctl list-unit-files --type=socket 1> $OUTPUT_DIR/network/services/systemd-sockets.txt 2> /dev/null
         systemctl list-units --type=socket --all 1> $OUTPUT_DIR/network/services/systemd-sockets-status.txt 2> /dev/null
         # Get details for active sockets
@@ -4616,9 +4599,6 @@ else
     done
 fi
 
-# Common network service configurations across platforms
-echo "    Collecting common network service configurations..."
-
 # RPC services
 if [ -f /etc/rpc ]; then
     cp /etc/rpc $OUTPUT_DIR/network/services/ 2> /dev/null
@@ -4643,7 +4623,6 @@ if [ -f /etc/exports ]; then
 fi
 
 # Check for active network listeners
-echo "    Identifying active network services..."
 echo "=== Active Network Services ===" > $OUTPUT_DIR/network/services/active-listeners.txt
 
 # Get listening services with process information
@@ -4661,7 +4640,6 @@ echo "=== Super-server Status ===" >> $OUTPUT_DIR/network/services/active-listen
 ps aux | grep -E "[x]inetd|[i]netd" >> $OUTPUT_DIR/network/services/active-listeners.txt 2> /dev/null
 
 # tcpwrappers configuration
-echo "    Collecting TCP wrappers configuration..."
 if [ -f /etc/hosts.allow ]; then
     cp /etc/hosts.allow $OUTPUT_DIR/network/services/ 2> /dev/null
 fi
@@ -4670,7 +4648,6 @@ if [ -f /etc/hosts.deny ]; then
 fi
 
 # Create services summary
-echo "    Creating network services summary..."
 echo "=== Network Services Configuration Summary ===" > $OUTPUT_DIR/network/services/summary.txt
 echo "Platform: $PLATFORM" >> $OUTPUT_DIR/network/services/summary.txt
 echo "Collection Date: `date`" >> $OUTPUT_DIR/network/services/summary.txt
@@ -6018,7 +5995,6 @@ then
 		
 		lxc image list --format compact 2> /dev/null | sed 1d | awk '{print $2}' | while read imageid; do
 			if [ -n "$imageid" ]; then
-				echo "    Processing image: $imageid"
 				SAFE_IMAGE=$(echo "$imageid" | sed 's/[^a-zA-Z0-9_-]/_/g' | cut -c1-64)
 				
 				lxc image info "$imageid" > "$OUTPUT_DIR/containers/lxc/images/info_${SAFE_IMAGE}.txt" 2> /dev/null
@@ -6031,7 +6007,6 @@ then
 		
 		lxc network list --format compact 2> /dev/null | sed 1d | awk '{print $1}' | while read netname; do
 			if [ -n "$netname" ]; then
-				echo "    Processing network: $netname"
 				SAFE_NET=$(echo "$netname" | sed 's/[^a-zA-Z0-9_-]/_/g')
 				mkdir -p "$OUTPUT_DIR/containers/lxc/networks/$SAFE_NET" 2> /dev/null
 				
@@ -6046,7 +6021,6 @@ then
 		
 		lxc storage list --format compact 2> /dev/null | sed 1d | awk '{print $1}' | while read storageid; do
 			if [ -n "$storageid" ]; then
-				echo "    Processing storage: $storageid"
 				SAFE_STORAGE=$(echo "$storageid" | sed 's/[^a-zA-Z0-9_-]/_/g')
 				mkdir -p "$OUTPUT_DIR/containers/lxc/storage/$SAFE_STORAGE" 2> /dev/null
 				
@@ -6062,7 +6036,6 @@ then
 		
 		lxc profile list --format compact 2> /dev/null | sed 1d | awk '{print $1}' | while read profile; do
 			if [ -n "$profile" ]; then
-				echo "    Processing profile: $profile"
 				SAFE_PROFILE=$(echo "$profile" | sed 's/[^a-zA-Z0-9_-]/_/g')
 				
 				lxc profile show "$profile" > "$OUTPUT_DIR/containers/lxc/profiles/profile_${SAFE_PROFILE}.yaml" 2> /dev/null
