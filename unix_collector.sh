@@ -3051,6 +3051,189 @@ fi
 echo "${COL_SECTION}INSTALLED SOFTWARE AND PATCHES [25% ]:${RESET}"
 mkdir $OUTPUT_DIR/software
 
+echo "  ${COL_ENTRY}>${RESET} Remote Access Tools"
+mkdir $OUTPUT_DIR/software/remote_tools 2> /dev/null
+
+# TeamViewer
+if [ -d "/opt/teamviewer" ] || [ -d "/var/log/teamviewer" ]; then
+    mkdir $OUTPUT_DIR/software/remote_tools/teamviewer 2> /dev/null
+    find /opt/teamviewer -name "*.log" -o -name "*.conf" 2> /dev/null | head -50 | while read file; do
+        cp -p "$file" $OUTPUT_DIR/software/remote_tools/teamviewer/ 2> /dev/null
+    done
+    cp -rp /var/log/teamviewer $OUTPUT_DIR/software/remote_tools/teamviewer/ 2> /dev/null
+    find /home -maxdepth 3 -path "*/.config/teamviewer*" -type d 2> /dev/null | head -10 | while read tv_dir; do
+        username=`echo "$tv_dir" | cut -d'/' -f3`
+        mkdir -p $OUTPUT_DIR/software/remote_tools/teamviewer/$username 2> /dev/null
+        cp -rp "$tv_dir" $OUTPUT_DIR/software/remote_tools/teamviewer/$username/ 2> /dev/null
+    done
+fi
+
+# AnyDesk
+find /home -maxdepth 3 -name ".anydesk" -type d 2> /dev/null | head -10 | while read anydesk_dir; do
+    username=`echo "$anydesk_dir" | cut -d'/' -f3`
+    mkdir -p $OUTPUT_DIR/software/remote_tools/anydesk/$username 2> /dev/null
+    find "$anydesk_dir" \( -name "*.log" -o -name "*.trace" -o -name "connection_trace.txt" \) 2> /dev/null | while read file; do
+        cp -p "$file" $OUTPUT_DIR/software/remote_tools/anydesk/$username/ 2> /dev/null
+    done
+done
+if [ -d "/usr/share/anydesk" ]; then
+    find /usr/share/anydesk -type f -name "*.log" 2> /dev/null | while read file; do
+        cp -p "$file" $OUTPUT_DIR/software/remote_tools/anydesk/ 2> /dev/null
+    done
+fi
+
+# RustDesk
+find /home -maxdepth 4 -path "*/.config/rustdesk/*" -type f 2> /dev/null | head -50 | while read file; do
+    username=`echo "$file" | cut -d'/' -f3`
+    mkdir -p $OUTPUT_DIR/software/remote_tools/rustdesk/$username 2> /dev/null
+    cp -p "$file" $OUTPUT_DIR/software/remote_tools/rustdesk/$username/ 2> /dev/null
+done
+
+# Chrome Remote Desktop
+if [ -f "/var/log/chrome-remote-desktop.log" ] || [ -d "/opt/google/chrome-remote-desktop" ]; then
+    mkdir $OUTPUT_DIR/software/remote_tools/chrome_remote_desktop 2> /dev/null
+    cp /var/log/chrome-remote-desktop.log $OUTPUT_DIR/software/remote_tools/chrome_remote_desktop/ 2> /dev/null
+    find /tmp -name "chrome_remote_desktop_*.log" 2> /dev/null | while read log; do
+        cp -p "$log" $OUTPUT_DIR/software/remote_tools/chrome_remote_desktop/ 2> /dev/null
+    done
+fi
+
+# VNC variants (TightVNC, TigerVNC, RealVNC, UltraVNC)
+vnc_found=0
+find /home -maxdepth 3 \( -name ".vnc" -o -name ".tightvnc" -o -name ".tigervnc" -o -name ".ultravnc" \) -type d 2> /dev/null | head -10 | while read vnc_dir; do
+    if [ $vnc_found -eq 0 ]; then
+        vnc_found=1
+    fi
+    username=`echo "$vnc_dir" | cut -d'/' -f3`
+    vnc_type=`basename "$vnc_dir"`
+    mkdir -p $OUTPUT_DIR/software/remote_tools/vnc/$username/$vnc_type 2> /dev/null
+    find "$vnc_dir" \( -name "*.log" -o -name "*.pid" -o -name "passwd" \) 2> /dev/null | while read file; do
+        cp -p "$file" $OUTPUT_DIR/software/remote_tools/vnc/$username/$vnc_type/ 2> /dev/null
+    done
+done
+# System VNC files
+if [ -d "/etc/vnc" ]; then
+    cp -rp /etc/vnc $OUTPUT_DIR/software/remote_tools/vnc/ 2> /dev/null
+fi
+find /var/log -name "*vnc*.log" -o -name "*tigervnc*" 2> /dev/null | head -20 | while read log; do
+    cp -p "$log" $OUTPUT_DIR/software/remote_tools/vnc/ 2> /dev/null
+done
+
+# Remmina
+find /home -maxdepth 4 -path "*/.config/remmina/*" -o -path "*/.local/share/remmina/*" 2> /dev/null | head -50 | while read file; do
+    if [ -f "$file" ]; then
+        username=`echo "$file" | cut -d'/' -f3`
+        mkdir -p $OUTPUT_DIR/software/remote_tools/remmina/$username 2> /dev/null
+        cp -p "$file" $OUTPUT_DIR/software/remote_tools/remmina/$username/ 2> /dev/null
+    fi
+done
+
+# NoMachine
+if [ -d "/usr/NX" ] || [ -d "/var/log/nxserver" ]; then
+    mkdir $OUTPUT_DIR/software/remote_tools/nomachine 2> /dev/null
+    find /usr/NX -name "*.log" -o -name "*.cfg" 2> /dev/null | head -50 | while read file; do
+        cp -p "$file" $OUTPUT_DIR/software/remote_tools/nomachine/ 2> /dev/null
+    done
+    cp -rp /var/log/nxserver $OUTPUT_DIR/software/remote_tools/nomachine/ 2> /dev/null
+fi
+
+# Splashtop
+find /var/log -name "*splashtop*" 2> /dev/null | head -10 | while read log; do
+    mkdir -p $OUTPUT_DIR/software/remote_tools/splashtop 2> /dev/null
+    cp -p "$log" $OUTPUT_DIR/software/remote_tools/splashtop/ 2> /dev/null
+done
+
+# X2Go
+if [ -f "/var/lib/x2go/x2go_sessions" ] || [ -d "/etc/x2go" ]; then
+    mkdir $OUTPUT_DIR/software/remote_tools/x2go 2> /dev/null
+    cp /var/lib/x2go/x2go_sessions $OUTPUT_DIR/software/remote_tools/x2go/ 2> /dev/null
+    find /var/log -name "x2go*.log" 2> /dev/null | while read log; do
+        cp -p "$log" $OUTPUT_DIR/software/remote_tools/x2go/ 2> /dev/null
+    done
+fi
+
+# XRDP
+if [ -d "/etc/xrdp" ]; then
+    mkdir $OUTPUT_DIR/software/remote_tools/xrdp 2> /dev/null
+    find /etc/xrdp -name "*.ini" -o -name "*.conf" 2> /dev/null | while read conf; do
+        cp -p "$conf" $OUTPUT_DIR/software/remote_tools/xrdp/ 2> /dev/null
+    done
+    find /var/log -name "xrdp*.log" 2> /dev/null | while read log; do
+        cp -p "$log" $OUTPUT_DIR/software/remote_tools/xrdp/ 2> /dev/null
+    done
+fi
+
+# Apache Guacamole
+if [ -d "/etc/guacamole" ]; then
+    mkdir $OUTPUT_DIR/software/remote_tools/guacamole 2> /dev/null
+    cp -rp /etc/guacamole $OUTPUT_DIR/software/remote_tools/guacamole/ 2> /dev/null
+fi
+
+# DWService
+if [ -d "/usr/share/dwagent" ]; then
+    mkdir $OUTPUT_DIR/software/remote_tools/dwservice 2> /dev/null
+    find /usr/share/dwagent \( -name "*.log" -o -name "*.cfg" \) 2> /dev/null | head -20 | while read file; do
+        cp -p "$file" $OUTPUT_DIR/software/remote_tools/dwservice/ 2> /dev/null
+    done
+fi
+
+# Parsec
+find /home -maxdepth 4 -path "*/.parsec/*" -type f 2> /dev/null | head -20 | while read file; do
+    username=`echo "$file" | cut -d'/' -f3`
+    mkdir -p $OUTPUT_DIR/software/remote_tools/parsec/$username 2> /dev/null
+    cp -p "$file" $OUTPUT_DIR/software/remote_tools/parsec/$username/ 2> /dev/null
+done
+
+# ConnectWise/ScreenConnect
+if [ -d "/opt/screenconnect" ] || [ -d "/opt/connectwise" ]; then
+    mkdir $OUTPUT_DIR/software/remote_tools/screenconnect 2> /dev/null
+    find /opt/screenconnect /opt/connectwise -name "*.log" -o -name "*.config" 2> /dev/null | head -50 | while read file; do
+        cp -p "$file" $OUTPUT_DIR/software/remote_tools/screenconnect/ 2> /dev/null
+    done
+fi
+
+# LogMeIn
+if [ -d "/opt/logmein" ]; then
+    mkdir $OUTPUT_DIR/software/remote_tools/logmein 2> /dev/null
+    find /opt/logmein \( -name "*.log" -o -name "*.conf" \) 2> /dev/null | head -20 | while read file; do
+        cp -p "$file" $OUTPUT_DIR/software/remote_tools/logmein/ 2> /dev/null
+    done
+fi
+
+# SSH Tunneling Scripts (potential remote access)
+echo "  ${COL_ENTRY}>${RESET} SSH Tunneling Scripts"
+find /home /root -maxdepth 3 \( -name "*tunnel*.sh" -o -name "*forward*.sh" -o -name "*vnc*.sh" \) 2> /dev/null | head -50 | while read script; do
+    if [ -f "$script" ]; then
+        mkdir -p $OUTPUT_DIR/software/remote_tools/ssh_tunnels 2> /dev/null
+        cp -p "$script" $OUTPUT_DIR/software/remote_tools/ssh_tunnels/ 2> /dev/null
+    fi
+done
+
+# Remote Access Related Systemd Services
+echo "  ${COL_ENTRY}>${RESET} Remote Access Systemd Services"
+mkdir $OUTPUT_DIR/software/remote_tools/systemd_services 2> /dev/null
+find /etc/systemd/system /usr/lib/systemd/system -name "*.service" -type f 2> /dev/null | while read service; do
+    grep -qiE "teamviewer|anydesk|rustdesk|vnc|rdp|nomachine|splashtop|x2go|guacamole|dwservice|parsec|connectwise|logmein" "$service" 2> /dev/null
+    if [ $? -eq 0 ]; then
+        cp -p "$service" $OUTPUT_DIR/software/remote_tools/systemd_services/ 2> /dev/null
+    fi
+done
+
+# Desktop Entries for Remote Tools
+echo "  ${COL_ENTRY}>${RESET} Remote Access Desktop Entries"
+mkdir $OUTPUT_DIR/software/remote_tools/desktop_entries 2> /dev/null
+find /usr/share/applications /usr/local/share/applications -name "*.desktop" 2> /dev/null | while read desktop; do
+    grep -qiE "teamviewer|anydesk|rustdesk|vnc|rdp|nomachine|splashtop|x2go|remmina|guacamole|parsec" "$desktop" 2> /dev/null
+    if [ $? -eq 0 ]; then
+        cp -p "$desktop" $OUTPUT_DIR/software/remote_tools/desktop_entries/ 2> /dev/null
+    fi
+done
+
+# Remote Access Tools Summary
+echo "  ${COL_ENTRY}>${RESET} Remote Access Tools Summary"
+find $OUTPUT_DIR/software/remote_tools -type f 2> /dev/null | wc -l > $OUTPUT_DIR/software/remote_tools_artifact_count.txt
+ls -1 $OUTPUT_DIR/software/remote_tools 2> /dev/null | grep -v "artifact_count" > $OUTPUT_DIR/software/remote_tools_detected.txt
+
 echo "  ${COL_ENTRY}>${RESET} Installed software (this could take a few mins)"
 if [ $PLATFORM = "solaris" ]
 then
