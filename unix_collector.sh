@@ -2714,9 +2714,8 @@ then
     fi
     
     # grsecurity/PaX collection
-    mkdir $OUTPUT_DIR/security_frameworks/grsecurity 2> /dev/null
-    
     if [ -f /proc/sys/kernel/grsecurity/grsec_lock ]; then
+		mkdir $OUTPUT_DIR/security_frameworks/grsecurity 2> /dev/null
         echo "grsecurity detected" > $OUTPUT_DIR/security_frameworks/grsecurity/detected.txt
         # Collect grsec settings (if readable)
         find /proc/sys/kernel/grsecurity -type f 2> /dev/null | while read grsec_file
@@ -2731,9 +2730,8 @@ then
     fi
     
     # SMACK collection
-    mkdir $OUTPUT_DIR/security_frameworks/smack 2> /dev/null
-    
     if [ -d /sys/fs/smackfs ]; then
+		mkdir $OUTPUT_DIR/security_frameworks/smack 2> /dev/null
         echo "SMACK detected" > $OUTPUT_DIR/security_frameworks/smack/detected.txt
         ls -la /sys/fs/smackfs/ 1> $OUTPUT_DIR/security_frameworks/smack/smackfs-contents.txt 2> /dev/null
         if [ -f /sys/fs/smackfs/load2 ]; then
@@ -2743,7 +2741,6 @@ then
     
     # TOMOYO collection
     mkdir $OUTPUT_DIR/security_frameworks/tomoyo 2> /dev/null
-    
     if [ -d /sys/kernel/security/tomoyo ]; then
         echo "TOMOYO detected" > $OUTPUT_DIR/security_frameworks/tomoyo/detected.txt
         ls -la /sys/kernel/security/tomoyo/ 1> $OUTPUT_DIR/security_frameworks/tomoyo/kernel-interface.txt 2> /dev/null
@@ -2753,9 +2750,8 @@ then
     fi
     
     # Integrity Measurement Architecture (IMA)
-    mkdir $OUTPUT_DIR/security_frameworks/ima 2> /dev/null
-    
     if [ -d /sys/kernel/security/ima ]; then
+		mkdir $OUTPUT_DIR/security_frameworks/ima 2> /dev/null
         echo "IMA detected" > $OUTPUT_DIR/security_frameworks/ima/detected.txt
         for ima_file in /sys/kernel/security/ima/*
         do
