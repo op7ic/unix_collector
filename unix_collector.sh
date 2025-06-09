@@ -1086,20 +1086,225 @@ then
     done
 fi
 
+
+
+#!/bin/sh
+# Optimized hidden process and connection detection
+# Maintains POSIX sh compatibility and silent failures
+
 echo "  ${COL_ENTRY}>${RESET} Hidden process detection"
-# Compare ps output with /proc entries
-ps -e -o pid 2> /dev/null | grep -v PID | sed 's/^[ ]*//' | sort -n > $OUTPUT_DIR/process_info/ps_pids.txt 2> /dev/null
-ls -1 /proc 2> /dev/null | grep '^[0-9]*$' | sort -n > $OUTPUT_DIR/process_info/proc_pids.txt 2> /dev/null
-comm -13 $OUTPUT_DIR/process_info/ps_pids.txt $OUTPUT_DIR/process_info/proc_pids.txt > $OUTPUT_DIR/process_info/hidden_pids_in_proc.txt 2> /dev/null
-comm -23 $OUTPUT_DIR/process_info/ps_pids.txt $OUTPUT_DIR/process_info/proc_pids.txt > $OUTPUT_DIR/process_info/hidden_pids_in_ps.txt 2> /dev/null
+mkdir $OUTPUT_DIR/process_info/hidden_detection 2>/dev/null
 
-# Check for process hiding via bind mounts
-mount 2> /dev/null | grep "/proc/[0-9]" > $OUTPUT_DIR/process_info/proc_bind_mounts.txt 2> /dev/null
-
-if [ -f "/etc/ld.so.preload" ]; then
-    cat /etc/ld.so.preload > $OUTPUT_DIR/process_info/ld_so_preload.txt 2> /dev/null
-    ls -la /etc/ld.so.preload >> $OUTPUT_DIR/process_info/ld_so_preload.txt 2> /dev/null
+# First, collect PIDs from both sources with consistent filtering
+if [ -d "/proc" ]
+then
+    # Get PIDs from /proc - using consistent regex that matches only pure numbers
+    ls -1 /proc 2>/dev/null | grep '^[0-9][0-9]*$' | sort -n > $OUTPUT_DIR/process_info/hidden_detection/proc_pids.txt 2>/dev/null
+    
+    # Get PIDs from ps - handle different ps output formats
+    if [ $PLATFORM = "linux" -o $PLATFORM = "android" ]
+    then
+        ps -e -o pid 2>/dev/null | grep -v PID | sed 's/^[ ]*//' | grep '^[0-9][0-9]*$' | sort -n > $OUTPUT_DIR/process_info/hidden_detection/ps_pids.txt 2>/dev/null
+    elif [ $PLATFORM = "solaris" ]
+    then
+        ps -e -o pid 2>/dev/null | grep -v PID | sed 's/^[ ]*//' | grep '^[0-9][0-9]*$' | sort -n > $OUTPUT_DIR/process_info/hidden_detection/ps_pids.txt 2>/dev/null
+    elif [ $PLATFORM = "aix" ]
+    then
+        ps -e -o pid 2>/dev/null | tail -n +2 | sed 's/^[ ]*//' | grep '^[0-9][0-9]*$' | sort -n > $OUTPUT_DIR/process_info/hidden_detection/ps_pids.txt 2>/dev/null
+    else
+        ps -e 2>/dev/null | awk 'NR>1 {print $1}' | grep '^[0-9][0-9]*$' | sort -n > $OUTPUT_DIR/process_info/hidden_detection/ps_pids.txt 2>/dev/null
+    fi
+    
+    # Find discrepancies between ps and /proc
+    if [ -f "$OUTPUT_DIR/process_info/hidden_detection/proc_pids.txt" -a -f "$OUTPUT_DIR/process_info/hidden_detection/ps_pids.txt" ]
+    then
+        # PIDs in /proc but not in ps (potentially hidden)
+        comm -13 $OUTPUT_DIR/process_info/hidden_detection/ps_pids.txt $OUTPUT_DIR/process_info/hidden_detection/proc_pids.txt > $OUTPUT_DIR/process_info/hidden_detection/hidden_pids_in_proc.txt 2>/dev/null
+        
+        # PIDs in ps but not in /proc (shouldn't happen normally)
+        comm -23 $OUTPUT_DIR/process_info/hidden_detection/ps_pids.txt $OUTPUT_DIR/process_info/hidden_detection/proc_pids.txt > $OUTPUT_DIR/process_info/hidden_detection/hidden_pids_in_ps.txt 2>/dev/null
+    fi
 fi
+
+# Check for process hiding techniques
+echo "  ${COL_ENTRY}>${RESET} Process hiding technique detection"
+
+# 1. Check for bind mounts over /proc entries
+mount 2>/dev/null | grep "/proc/[0-9]" > $OUTPUT_DIR/process_info/hidden_detection/proc_bind_mounts.txt 2>/dev/null
+
+# 2. Check LD_PRELOAD which is commonly used for hiding
+if [ -f "/etc/ld.so.preload" ]
+then
+    echo "=== Content of /etc/ld.so.preload ===" > $OUTPUT_DIR/process_info/hidden_detection/ld_so_preload.txt
+    cat /etc/ld.so.preload >> $OUTPUT_DIR/process_info/hidden_detection/ld_so_preload.txt 2>/dev/null
+    echo "" >> $OUTPUT_DIR/process_info/hidden_detection/ld_so_preload.txt
+    echo "=== File permissions ===" >> $OUTPUT_DIR/process_info/hidden_detection/ld_so_preload.txt
+    ls -la /etc/ld.so.preload >> $OUTPUT_DIR/process_info/hidden_detection/ld_so_preload.txt 2>/dev/null
+    echo "" >> $OUTPUT_DIR/process_info/hidden_detection/ld_so_preload.txt
+    echo "=== File modification time ===" >> $OUTPUT_DIR/process_info/hidden_detection/ld_so_preload.txt
+    stat /etc/ld.so.preload >> $OUTPUT_DIR/process_info/hidden_detection/ld_so_preload.txt 2>/dev/null
+fi
+
+# 3. Check for LD_PRELOAD in running processes
+if [ -d "/proc" ]
+then
+    echo "=== Processes with LD_PRELOAD set ===" > $OUTPUT_DIR/process_info/hidden_detection/processes_with_ld_preload.txt
+    ls -1 /proc 2>/dev/null | grep '^[0-9][0-9]*$' | while read pid
+    do
+        if [ -r "/proc/$pid/environ" ]
+        then
+            if grep -a "LD_PRELOAD" "/proc/$pid/environ" >/dev/null 2>&1
+            then
+                echo "PID $pid:" >> $OUTPUT_DIR/process_info/hidden_detection/processes_with_ld_preload.txt
+                tr '\0' '\n' < "/proc/$pid/environ" 2>/dev/null | grep "LD_PRELOAD" >> $OUTPUT_DIR/process_info/hidden_detection/processes_with_ld_preload.txt
+                if [ -r "/proc/$pid/cmdline" ]
+                then
+                    echo "Command: `tr '\0' ' ' < /proc/$pid/cmdline 2>/dev/null`" >> $OUTPUT_DIR/process_info/hidden_detection/processes_with_ld_preload.txt
+                fi
+                echo "" >> $OUTPUT_DIR/process_info/hidden_detection/processes_with_ld_preload.txt
+            fi
+        fi
+    done
+fi
+
+# 4. Platform-specific hidden process checks
+if [ $PLATFORM = "linux" -o $PLATFORM = "android" ]
+then
+    # Kernel threads (shown in [] brackets)
+    ps aux 2>/dev/null | grep '\[.*\]' > $OUTPUT_DIR/process_info/hidden_detection/kernel_threads.txt 2>/dev/null
+    
+    # Collect all /proc/*/stat for analysis (limit to first 1000 to avoid hanging)
+    echo "=== Process stat information ===" > $OUTPUT_DIR/process_info/hidden_detection/all_proc_stat.txt
+    ls -1 /proc 2>/dev/null | grep '^[0-9][0-9]*$' | head -1000 | while read pid
+    do
+        if [ -r "/proc/$pid/stat" ]
+        then
+            stat_info=`cat "/proc/$pid/stat" 2>/dev/null | head -1`
+            if [ -n "$stat_info" ]
+            then
+                echo "$pid: $stat_info" >> $OUTPUT_DIR/process_info/hidden_detection/all_proc_stat.txt
+            fi
+        fi
+    done
+    
+    # Check for orphaned network connections (connections without visible process)
+    echo "=== Orphaned network connections ===" > $OUTPUT_DIR/process_info/hidden_detection/orphan_connections.txt
+    
+    # Try netstat first
+    if [ -x /bin/netstat -o -x /usr/bin/netstat -o -x /sbin/netstat ]
+    then
+        netstat -tulpn 2>/dev/null | grep -v "PID/Program" | awk '$NF == "-" {print}' >> $OUTPUT_DIR/process_info/hidden_detection/orphan_connections.txt 2>/dev/null
+    fi
+    
+    # Also try ss if available
+    if [ -x /bin/ss -o -x /usr/bin/ss -o -x /sbin/ss ]
+    then
+        echo "" >> $OUTPUT_DIR/process_info/hidden_detection/orphan_connections.txt
+        echo "=== From ss command ===" >> $OUTPUT_DIR/process_info/hidden_detection/orphan_connections.txt
+        ss -tulpn 2>/dev/null | grep -v "users:" | grep -v "PID/Program" >> $OUTPUT_DIR/process_info/hidden_detection/orphan_connections.txt 2>/dev/null
+    fi
+    
+    # Check /proc/net for connections and correlate with processes
+    echo "=== Network connections from /proc/net ===" > $OUTPUT_DIR/process_info/hidden_detection/proc_net_connections.txt
+    for proto in tcp tcp6 udp udp6
+    do
+        if [ -r "/proc/net/$proto" ]
+        then
+            echo "[$proto]" >> $OUTPUT_DIR/process_info/hidden_detection/proc_net_connections.txt
+            cat "/proc/net/$proto" >> $OUTPUT_DIR/process_info/hidden_detection/proc_net_connections.txt 2>/dev/null
+            echo "" >> $OUTPUT_DIR/process_info/hidden_detection/proc_net_connections.txt
+        fi
+    done
+fi
+
+# 5. Check for process name anomalies
+if [ -d "/proc" ]
+then
+    echo "=== Process name anomalies ===" > $OUTPUT_DIR/process_info/hidden_detection/process_name_anomalies.txt
+    
+    # Look for processes with suspicious names
+    ls -1 /proc 2>/dev/null | grep '^[0-9][0-9]*$' | while read pid
+    do
+        if [ -r "/proc/$pid/comm" -a -r "/proc/$pid/cmdline" ]
+        then
+            comm_name=`cat "/proc/$pid/comm" 2>/dev/null | head -1`
+            cmdline=`tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null | head -1`
+            
+            # Check for empty or suspicious names
+            if [ -z "$comm_name" -o "$comm_name" = "." -o "$comm_name" = ".." ]
+            then
+                echo "PID $pid has suspicious comm name: '$comm_name'" >> $OUTPUT_DIR/process_info/hidden_detection/process_name_anomalies.txt
+                echo "  cmdline: $cmdline" >> $OUTPUT_DIR/process_info/hidden_detection/process_name_anomalies.txt
+            fi
+            
+            # Check for very short process names (often used by rootkits)
+            if [ ${#comm_name} -le 2 ] 2>/dev/null
+            then
+                echo "PID $pid has very short name: '$comm_name'" >> $OUTPUT_DIR/process_info/hidden_detection/process_name_anomalies.txt
+                echo "  cmdline: $cmdline" >> $OUTPUT_DIR/process_info/hidden_detection/process_name_anomalies.txt
+            fi
+        fi
+    done
+fi
+
+# 6. Check for GID process hiding trick
+if [ $PLATFORM = "linux" ]
+then
+    echo "=== Checking for GID hiding trick ===" > $OUTPUT_DIR/process_info/hidden_detection/gid_hiding_check.txt
+    
+    # Some rootkits hide processes by setting GID to a special value
+    # Check /proc/*/stat for processes with GID 0x80000000 or similar
+    ls -1 /proc 2>/dev/null | grep '^[0-9][0-9]*$' | while read pid
+    do
+        if [ -r "/proc/$pid/status" ]
+        then
+            gid_line=`grep "^Gid:" "/proc/$pid/status" 2>/dev/null`
+            if echo "$gid_line" | grep -E "(2147483647|4294967295|80000000)" >/dev/null 2>&1
+            then
+                echo "PID $pid has suspicious GID: $gid_line" >> $OUTPUT_DIR/process_info/hidden_detection/gid_hiding_check.txt
+                if [ -r "/proc/$pid/cmdline" ]
+                then
+                    echo "  Command: `tr '\0' ' ' < /proc/$pid/cmdline 2>/dev/null`" >> $OUTPUT_DIR/process_info/hidden_detection/gid_hiding_check.txt
+                fi
+            fi
+        fi
+    done
+fi
+
+# 7. Summary report
+echo "  ${COL_ENTRY}>${RESET} Creating hidden process summary"
+echo "=== Hidden Process Detection Summary ===" > $OUTPUT_DIR/process_info/hidden_detection/SUMMARY.txt
+echo "Report generated on: `date`" >> $OUTPUT_DIR/process_info/hidden_detection/SUMMARY.txt
+echo "" >> $OUTPUT_DIR/process_info/hidden_detection/SUMMARY.txt
+
+# Count hidden PIDs
+if [ -f "$OUTPUT_DIR/process_info/hidden_detection/hidden_pids_in_proc.txt" ]
+then
+    hidden_count=`wc -l < $OUTPUT_DIR/process_info/hidden_detection/hidden_pids_in_proc.txt 2>/dev/null`
+    echo "Hidden PIDs found in /proc but not ps: $hidden_count" >> $OUTPUT_DIR/process_info/hidden_detection/SUMMARY.txt
+    if [ "$hidden_count" -gt 0 ]
+    then
+        echo "PIDs: `cat $OUTPUT_DIR/process_info/hidden_detection/hidden_pids_in_proc.txt | tr '\n' ' '`" >> $OUTPUT_DIR/process_info/hidden_detection/SUMMARY.txt
+    fi
+fi
+
+# Check for LD_PRELOAD
+if [ -f "/etc/ld.so.preload" ]
+then
+    echo "" >> $OUTPUT_DIR/process_info/hidden_detection/SUMMARY.txt
+    echo "WARNING: /etc/ld.so.preload exists (commonly used for hiding)" >> $OUTPUT_DIR/process_info/hidden_detection/SUMMARY.txt
+fi
+
+# Check for bind mounts
+if [ -s "$OUTPUT_DIR/process_info/hidden_detection/proc_bind_mounts.txt" ]
+then
+    echo "" >> $OUTPUT_DIR/process_info/hidden_detection/SUMMARY.txt
+    echo "WARNING: Bind mounts found over /proc entries" >> $OUTPUT_DIR/process_info/hidden_detection/SUMMARY.txt
+fi
+
+echo "" >> $OUTPUT_DIR/process_info/hidden_detection/SUMMARY.txt
+echo "Check individual files in this directory for detailed information." >> $OUTPUT_DIR/process_info/hidden_detection/SUMMARY.txt
+
 
 # Extract key process information for analysis
 echo "  ${COL_ENTRY}>${RESET} Process analysis summaries"
