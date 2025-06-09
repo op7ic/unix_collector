@@ -554,6 +554,11 @@ then
     ' < $OUTPUT_DIR/general/timeline/bodyfile.txt > $OUTPUT_DIR/general/timeline/mactime_mtime.txt 2> /dev/null
 fi
 
+echo "  ${COL_ENTRY}>${RESET} Capability Files"
+if [ -x "$(command -v getcap)" ]; then
+    getcap -r / 2>/dev/null > $OUTPUT_DIR/general/file_capabilities.txt
+fi
+
 echo "  ${COL_ENTRY}>${RESET} Release"
 uname -r 1> $OUTPUT_DIR/general/release.txt 2> /dev/null
 cp /etc/*release $OUTPUT_DIR/general/ 2> /dev/null
@@ -972,6 +977,9 @@ ls -l /proc/[0-9]*/cwd 1> $OUTPUT_DIR/process_info/process_working_directory.txt
 ls -l /proc/[0-9]*/exe 2> /dev/null | grep -E "\(deleted\)" | awk -F"/proc/|/exe" '{print $2}' 1> $OUTPUT_DIR/process_info/deleted_processes_ids.txt 2> /dev/null
 ls -l /proc/[0-9]*/exe 2> /dev/null | grep -E "\(deleted\)" 1> $OUTPUT_DIR/process_info/deleted_processes.txt 2> /dev/null
 for pid in $(find /proc -maxdepth 1 -type d -name '[0-9]*'); do echo $(basename $pid); done 1> $OUTPUT_DIR/process_info/all_process_ids.txt 2> /dev/null
+lsof | grep -E "(deleted|DEL)" > $OUTPUT_DIR/process_info/deleted_but_running.txt 2>/dev/null
+ls -la /proc/*/exe 2>/dev/null | grep deleted > $OUTPUT_DIR/process_info/deleted_executables.txt
+
 
 # Enhanced process information collection
 echo "  ${COL_ENTRY}>${RESET} Enhanced process information"
@@ -1029,6 +1037,24 @@ for pid in /proc/[0-9]*; do
 	fi
 done
 
+if [ $PLATFORM = "solaris" ]
+then
+	mkdir -p $OUTPUT_DIR/process_info/memory_maps 2> /dev/null
+    ps -e -o pid | grep '[0-9]' | while read pid
+    do
+        pmap -x $pid 1> "$OUTPUT_DIR/process_info/memory_maps/${pid}_pmap.txt" 2>/dev/null
+    done
+fi
+
+if [ $PLATFORM = "aix" ]
+then
+	mkdir -p $OUTPUT_DIR/process_info/memory_maps 2> /dev/null
+    ps -e -o pid | grep '[0-9]' | while read pid
+    do
+        svmon -P $pid 1> "$OUTPUT_DIR/process_info/memory_maps/${pid}_svmon.txt" 2>/dev/null
+    done
+fi
+
 echo "  ${COL_ENTRY}>${RESET} Process network namespaces"
 for pid in /proc/[0-9]*; do
     PID_NUM=$(basename $pid)
@@ -1039,6 +1065,26 @@ for pid in /proc/[0-9]*; do
         cat $pid/net/udp6 > $OUTPUT_DIR/process_info/net_udp6_${PID_NUM}.txt 2> /dev/null
     fi
 done
+
+echo "  ${COL_ENTRY}>${RESET} Process file descriptors"
+mkdir $OUTPUT_DIR/process_info/file_descriptors 2>/dev/null
+
+if [ -d "/proc" ]
+then
+    ls -1 /proc 2>/dev/null | grep '^[0-9]' | grep -v '[^0-9]' | while read pid
+    do
+        if [ -d "/proc/$pid/fd" ]
+        then
+            ls -la "/proc/$pid/fd/" 1> "$OUTPUT_DIR/process_info/file_descriptors/${pid}_fd_list.txt" 2>/dev/null
+            
+            ls "/proc/$pid/fd/" 2>/dev/null | while read fd
+            do
+                link=`readlink "/proc/$pid/fd/$fd" 2>/dev/null`
+                echo "$fd -> $link" 1>> "$OUTPUT_DIR/process_info/file_descriptors/${pid}_fd_resolved.txt" 2>/dev/null
+            done
+        fi
+    done
+fi
 
 echo "  ${COL_ENTRY}>${RESET} Hidden process detection"
 # Compare ps output with /proc entries
@@ -1970,6 +2016,8 @@ then
     users 1> $OUTPUT_DIR/user_activity/users.txt 2> /dev/null
     ac -p 1> $OUTPUT_DIR/user_activity/ac-user-connect-time.txt 2> /dev/null
     ac -d 1> $OUTPUT_DIR/user_activity/ac-daily-connect-time.txt 2> /dev/null
+	lastb > $OUTPUT_DIR/user_activity/lastb_failed_logins.txt
+	journalctl -u sshd | grep -i failed > $OUTPUT_DIR/user_activity/journactl_sshd_ssh_failures.txt
 elif [ $PLATFORM = "solaris" ]
 then
     if [ -f /var/adm/wtmpx ]; then
@@ -4378,6 +4426,8 @@ echo "  ${COL_ENTRY}>${RESET} IP addr"
 ip addr 1> $OUTPUT_DIR/network/ipaddr.txt 2> /dev/null
 ip netconf 1> $OUTPUT_DIR/network/ipnetconf.txt 2> /dev/null
 ifconfig -a 1> $OUTPUT_DIR/network/ifconfig-a.txt 2> /dev/null
+ss -tulpan > $OUTPUT_DIR/network/ss_tulpan.txt 2>/dev/null
+ss -oemitu > $OUTPUT_DIR/network/ss_detailed.txt 2>/dev/nul
 plutil -p /Library/Preferences/SystemConfiguration/preferences.plist 1> $OUTPUT_DIR/network/network_preferences_mac.txt 2> /dev/null
 
 echo "  ${COL_ENTRY}>${RESET} IP forwarding"
