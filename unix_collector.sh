@@ -1086,12 +1086,6 @@ then
     done
 fi
 
-
-
-#!/bin/sh
-# Optimized hidden process and connection detection
-# Maintains POSIX sh compatibility and silent failures
-
 echo "  ${COL_ENTRY}>${RESET} Hidden process detection"
 mkdir $OUTPUT_DIR/process_info/hidden_detection 2>/dev/null
 
