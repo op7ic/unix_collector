@@ -184,12 +184,6 @@ tar -xf collector-*.tar.xz
 
 ## 📋 Key Features
 
-[![Self-Contained](https://img.shields.io/badge/Self--Contained-brightgreen?style=flat-square)](https://github.com/op7ic/unix_collector)
-[![Zero--Dependencies](https://img.shields.io/badge/Zero--Dependencies-blue?style=flat-square)](https://github.com/op7ic/unix_collector)
-[![Read--Only](https://img.shields.io/badge/Read--Only-orange?style=flat-square)](https://github.com/op7ic/unix_collector)
-[![Multi--Hash](https://img.shields.io/badge/Multi--Hash-purple?style=flat-square)](https://github.com/op7ic/unix_collector)
-[![Auto--Compress](https://img.shields.io/badge/Auto--Compress-red?style=flat-square)](https://github.com/op7ic/unix_collector)
-
 - **🔧 Self-Contained**: Single shell script with no external dependencies
 - **🌐 Air-Gap Ready**: No internet connection required for operation
 - **🛡️ Non-Invasive**: Read-only operations preserve evidence integrity
