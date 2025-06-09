@@ -1293,10 +1293,6 @@ then
     echo "WARNING: Bind mounts found over /proc entries" >> $OUTPUT_DIR/process_info/hidden_detection/SUMMARY.txt
 fi
 
-echo "" >> $OUTPUT_DIR/process_info/hidden_detection/SUMMARY.txt
-echo "Check individual files in this directory for detailed information." >> $OUTPUT_DIR/process_info/hidden_detection/SUMMARY.txt
-
-
 # Extract key process information for analysis
 echo "  ${COL_ENTRY}>${RESET} Process analysis summaries"
 # Find processes with deleted executables
