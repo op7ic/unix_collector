@@ -1,11 +1,12 @@
 # unix_collector
 
-The unix_collector is a self-contained shell script designed for the forensic collection of various artifacts from Unix-based systems located deep inside internal network. It runs on multiple Unix platforms and gathers data that can be analyzed to identify potential system compromises.
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![Version](https://img.shields.io/badge/Version-2.0-green.svg)]()
+[![Platform](https://img.shields.io/badge/Platform-Multi--UNIX-orange.svg)]()
+
+A comprehensive live forensic collection script for UNIX-like systems, designed to gather critical system information for forensic investigations and incident response.
 
 As a single shell script, ```unix_collector``` is easy to upload and execute, without the need for untarring, compiling, installation, or an internet connection to download additional components. The script can be run either as a normal user or as root, though it performs more effectively when executed as root, as this allows it to access a wider range of system files and artifacts. 
-
-📦 **9 Operating Systems** | 🐧 **8+ Linux Distros** | 🐳 **10 Container/VM Platforms** | 🔍 **Non-Invasive Collection**
-
 
 [![Imgur](https://i.imgur.com/6xMcGIg.gif)](#)
 
@@ -49,126 +50,246 @@ UNIX Collector supports a wide range of UNIX-like operating systems with automat
 - [![Gentoo](https://img.shields.io/badge/Gentoo-54487A?style=flat-square&logo=gentoo&logoColor=white)](https://www.gentoo.org/)
 - [![Slackware](https://img.shields.io/badge/Slackware-000000?style=flat-square&logo=slackware&logoColor=white)](http://www.slackware.com/)
 
-> **Note**: The script automatically detects the platform and adjusts collection methods accordingly. For systems not explicitly listed, use the `--platform=generic` option for best-effort collection.
-
+**Note**: The script automatically detects the platform and adjusts collection methods accordingly. For systems not explicitly listed, use the `--platform=generic` option for best-effort collection.
 
 # Features
 
-* Runs everything from a single script.
-* No installation or external libraries needed.
-* No internet connection needed.
-* Enumerate basic host information such as kernel version, processes, hostname and save details in output directory.
-* Enumerate files written to the disk and create basic timeline using 'stat' command.
-* Enumerate network information and save details in output directory.
-* Enumerate patch and installed software information and save details in output directory.
-* Enumerate process list and other process information and save details in output directory.
-* Enumerate application lists, plist/apk for iOS/Android save them in output directory.
-* Enumerate hardware information.
-* Enumerate virtual controller information (ESXi,VMBox,VIRT) and save details in output directory.
-* Hash files in various folders such as /home/ /opt/ /usr/ and save details in output directory.
-* Hash files which are marked as SGID or SUID and save details in output directory.
-* Copy various files such as cron job, plist or other files into output directory.
-* Copy SUID/SGID binaries into output directory.
-* Copy home and tmp directories into output directory.
-* Copy specific /proc/ files into output directory.
-* Copy system logs (i.e /var/log or /var/adm/) into output directory.
-* Copy /dev/shm into output directory.
-* Gather information about containers.
-* Where copy or hashing operation happens, files over 500MB will be skipped. This default behavior can be modified inside the script by changing RSYNC_MAX_FILESIZE, TAR_MAX_FILESIZE and HASH_MAX_FILESIZE global variables.
-* TAR entire output directory and use hostname as file name with current date.
+### 🔍 What It Collects
 
-# Requirements
+The script gathers **250+ distinct forensic artifacts** to help identify potential system compromises:
 
-* Enough space on the disk so logs and other files can be copied into single location (alternatively run from mounted disk or network partition).
-* sh
+| Category | Artifact Count | Key Artifacts |
+|----------|-------|---------------|
+| **System Information** | ~30 | Kernel version, hardware inventory, BIOS/UEFI, timezone, installation date |
+| **Storage & Filesystems** | ~40 | Disk partitions, RAID arrays, LVM volumes, ZFS datasets, mount points |
+| **Process Analysis** | ~25 | Running processes, command lines, file handles, deleted binaries, memory maps |
+| **Persistence Mechanisms** | ~35 | Cron jobs, at tasks, systemd timers, rc scripts, kernel modules |
+| **Network Configuration** | ~20 | Interfaces, routing tables, connections, firewall rules, ARP cache |
+| **User & Authentication** | ~15 | User accounts, groups, SSH configs, sudo rules, Kerberos tickets |
+| **System Logs** | ~10 | /var/log, audit logs, boot logs, security events, dmesg |
+| **Virtual Systems** | ~45 | VMware ESXi (25), VirtualBox (10), KVM/libvirt (7), others (3) |
+| **Container Platforms** | ~45 | Docker (13), Podman (11), LXC (12), Containerd (2), Proxmox (3) |
+| **File Hashes** | 3 | MD5, SHA1, SHA256 for all collected binaries |
+| **Configuration Files** | ~20 | /etc configs, systemd units, network settings |
+| **Additional Data** | ~15 | Home directories, temp files, installed packages, compiler tools |
 
-# Examples 
+**System & Hardware**
+- Complete hardware inventory and system information
+- Kernel version, modules, and taint status
+- BIOS/UEFI settings and boot configuration
+- Storage devices, partitions, and RAID configurations
 
-Execute ```unix_collector``` without specifying any operating system version (script will guess OS type):
+**Files & Processes**
+- Full filesystem timeline with inode and MAC times
+- Running processes with command lines and file descriptors
+- Process memory maps and deleted binaries detection
+- SUID/SGID binaries with cryptographic hashes
+- Open files and network connections per process
 
-```chmod +x ./unix_collector.sh && ./unix_collector.sh```
+**Users & Authentication**
+- User accounts, groups, and password policies
+- SSH keys and configurations
+- Sudo rules and PAM settings
+- Login history and active sessions
+- Kerberos tickets and authentication tokens
 
-Execute ```unix_collector``` on AIX while specifying platform:
+**Persistence Mechanisms**
+- Cron jobs, at tasks, and systemd timers
+- Init scripts and startup items
+- Kernel modules and drivers
+- System services and daemons
 
-```chmod +x ./unix_collector.sh && ./unix_collector.sh --platform=aix```
+**Network & Communications**
+- Network interfaces and routing tables
+- Active connections and listening ports
+- Firewall rules and packet filters
+- DNS configuration and host mappings
+- ARP cache and neighbor tables
 
-Execute ```unix_collector``` on MacOS while specifying platform:
+**Logs & Audit Trails**
+- System logs (/var/log, /var/adm)
+- Authentication logs and security events
+- Audit daemon logs and rules
+- Boot and kernel messages
+- Application-specific logs
 
-```chmod +x ./unix_collector.sh && ./unix_collector.sh --platform=mac```
+**Container & Virtualization**
+- Docker/Podman containers, images, and volumes
+- Virtual machine inventories and configurations
+- Container runtime configs and logs
+- Hypervisor settings and resource allocations
 
-# Sample Output
+**Additional Artifacts**
+- Installed software and patch levels
+- Configuration files from /etc
+- Temporary files and caches
+- User home directories
+- Browser artifacts and history
+- Scheduled tasks and services
+
+## 🚀 Quick Start
+
+### Installation
+
+```bash
+# Download the script (single file, no dependencies)
+wget https://raw.githubusercontent.com/op7ic/unix_collector/main/unix_collector.sh
+
+# Make it executable
+chmod +x unix_collector.sh
 ```
 
-  _   _ _   _ _____  __   ____ ___  _     _     _____ ____ _____ ___  ____
- | | | | \ | |_ _\ \/ /  / ___/ _ \| |   | |   | ____/ ___|_   _/ _ \|  _ \
- | | | |  \| || | \  /  | |  | | | | |   | |   |  _|| |     | || | | | |_) |
- | |_| | |\  || | /  \  | |__| |_| | |___| |___| |__| |___  | || |_| |  _ <
-  \___/|_| \_|___/_/\_\  \____\___/|_____|_____|_____\____| |_| \___/|_| \_\
+### Basic Usage
 
-A live forensic collection script for UNIX-like systems. Version: 1.7 by op7ic
+```bash
+# Run with auto-detection (recommended: run as root for full collection)
+sudo ./unix_collector.sh
 
+# Run as normal user (limited collection)
+./unix_collector.sh
 
-PLATFORM: GNU/Linux
-
-BASIC INFORMATION [0%  ]:
-  > UNIX Collector
-  > UNIX Collector Date
-  > UNIX Collector User
-  > UNIX Collector Platform
-GENERAL INFORMATION [15%  ]:
-  > Hostname
-  > Kernel
-  > Version
-  > Check for tainted kernel
-  > SSH settings
-  > File timeline
-  > Release
-  > Kerberos ticket list
-  > Full OS Info
-  > Process list
-  > Cron and other scheduler files
-  > Kernel Modules
-  > At scheduler
-  > Kernel settings
-  > Environment
-  > ulimit
-  > Auditd
-  > spool files
-INSTALLED SOFTWARE AND PATCHES [25% ]:
-  > Installed software (this could take a few mins)
-  > Installed patches
-  > Compiler tools (NFS skip)
-LOG, HOME and PROC FILE COLLECTION [50% ]:
-  > Copying logs
-  > Copying home dirs
-  > Copying proc dirs
-  > Copying /tmp/ and /var/tmp/ dirs where possible
-SUID/SGID SEARCH [60% ]:
-  > Finding all SUID/SGID binaries
-HASH BINARIES [65% ]:
-  > Hashing all SUID/SGID binaries
-  > Hashing all HOME dirs
-  > Hashing all /bin/ /sbin/ /usr/ /opt/ /tmp/ dirs
-NETWORK INFORMATION [90% ]:
-  > Interface configuration
-  > IP addr
-  > IP forwarding
-  > Routing
-  > Netstat
-  > ARP cache
-  > Hosts
-  > DNS
-  > TCP wrappers
-  > RPC
-  > IP Tables
-  > IP Tables (IPv6)
-FINISHING [100%]:
-  > Removing empty files
-  > Removing oversize file list
-  > Creating TAR file
-  > Removing temporary directory
+# Specify platform manually
+sudo ./unix_collector.sh --platform=Linux
 ```
 
-# License
+**💡 Tip**: While the script can run as a normal user, running as root provides access to more comprehensive forensic artifacts including system logs, process memory maps, and privileged configuration files.
 
-The unix_collector project uses the [GNU General Public License v3.0](LICENSE) software license.
+### Available Platform Options
+- `solaris` - Sun/Oracle Solaris
+- `aix` - IBM AIX
+- `mac` - macOS/Darwin
+- `linux` - Generic Linux
+- `hpux` - HP-UX
+- `android` - Android devices
+- `generic` - Unknown UNIX systems
+
+### Example deployment and collection
+
+```bash
+# 1. Transfer script to target system
+scp unix_collector.sh user@target:/tmp/
+
+# 2. SSH to target
+ssh user@target
+
+# 3. Run collector
+cd /tmp && sudo ./unix_collector.sh --quiet
+
+# 4. Transfer results back
+scp collector-*.tar.xz analyst@forensics:/cases/
+
+# 5. Extract and analyze
+tar -xf collector-*.tar.xz
+```
+
+## 📋 Key Features
+
+[![Self-Contained](https://img.shields.io/badge/Self--Contained-brightgreen?style=flat-square)](https://github.com/op7ic/unix_collector)
+[![Zero--Dependencies](https://img.shields.io/badge/Zero--Dependencies-blue?style=flat-square)](https://github.com/op7ic/unix_collector)
+[![Read--Only](https://img.shields.io/badge/Read--Only-orange?style=flat-square)](https://github.com/op7ic/unix_collector)
+[![Multi--Hash](https://img.shields.io/badge/Multi--Hash-purple?style=flat-square)](https://github.com/op7ic/unix_collector)
+[![Auto--Compress](https://img.shields.io/badge/Auto--Compress-red?style=flat-square)](https://github.com/op7ic/unix_collector)
+
+- **🔧 Self-Contained**: Single shell script with no external dependencies
+- **🌐 Air-Gap Ready**: No internet connection required for operation
+- **🛡️ Non-Invasive**: Read-only operations preserve evidence integrity
+- **🔍 Comprehensive**: Collects 250+ types of forensic artifacts
+- **⚡ Efficient**: Configurable file size limits prevent resource exhaustion
+- **🔐 Hash Verification**: Multiple algorithms (MD5, SHA1, SHA256) for evidence validation
+- **📊 Timeline Analysis**: Complete filesystem timeline with inode and timestamp data exported both to body and csv files
+
+## 💾 Output Format
+
+### Archive Structure
+The script creates a timestamped archive: `collector-hostname-DD-MM-YYYY.tar[.xz|.bz2|.gz]`
+
+Compression is automatically selected based on available tools:
+1. **XZ** (smallest size, if available)
+2. **BZIP2** (good compression)
+3. **GZIP** (fastest)
+4. **TAR** (no compression, fallback in case other tools don't exist)
+
+### Directory Organization
+```
+collector-hostname-DD-MM-YYYY/
+├── general/           # System information, kernel, hardware
+├── software/          # Installed packages and patches
+├── logs/             # System and application logs
+├── homedir/          # User home directories
+├── procfiles/        # Process information from /proc
+├── tmpfiles/         # Temporary file preservation
+├── setuid/           # SUID/SGID binaries
+├── hashes/           # File hashes (MD5/SHA1/SHA256)
+├── network/          # Network configuration and connections
+├── hardware/         # Hardware information
+├── auditd/           # Audit configuration (Linux)
+├── virtual/          # Virtualization platform data
+├── containers/       # Container runtime information
+└── collector-*.txt   # Collection metadata
+```
+
+## 💻 System Requirements
+
+### Minimal Requirements
+- **Shell**: Any POSIX-compliant shell (/bin/sh)
+- **Privileges**: Can run as normal user; root/sudo recommended for comprehensive collection
+- **Tools**: Basic UNIX utilities (find, tar, grep) - standard on all UNIX systems
+- **Space**: Enough space on the disk so logs and other files can be copied into single location (alternatively run from mounted disk or network partition). (varies by system size)
+
+## ⚡ Performance & Limits
+
+### Configurable Limits
+- **File Size Cap**: 500MB default (prevents collecting large databases/media)
+- **Smart Filtering**: Excludes virtual disk images (vmdk, vhd, ova)
+- **Efficient Collection**: Uses rsync when available for faster copying
+
+### Expected Run Times
+- **Small Systems** (<10GB used): 5-10 minutes
+- **Medium Systems** (10-100GB): 15-30 minutes
+- **Large Systems** (100GB+): 30-60 minutes
+- **Timeline Generation**: Adds 5-30 minutes depending on filesystem size
+
+### Resource Usage
+- **CPU**: Low to moderate (mainly during hashing)
+- **Memory**: Minimal (<100MB typical)
+- **Disk I/O**: Read-intensive during collection
+- **Network**: None required
+
+## 🎯 Use Cases
+
+- **🚨 Incident Response**: Rapid forensic triage during security incidents
+- **🔍 Compromise Assessment**: Identify indicators of system compromise
+- **🛡️ Threat Hunting**: Collect artifacts for proactive threat detection
+- **📊 Security Audits**: Document system state for compliance and analysis
+- **🔬 Forensic Investigations**: Preserve evidence for detailed analysis
+- **💾 System Baseline**: Create reference snapshots for change detection
+- **🏢 Enterprise Security**: Deploy across internal networks for centralized collection
+- **📱 IoT/Embedded Analysis**: Investigate compromised embedded devices
+
+## 🌐 Deployment Scenarios
+
+UNIX Collector excels in challenging environments where traditional forensic tools may not be viable:
+
+- **Air-Gapped Networks**: No internet connectivity required
+- **Restricted Environments**: No installation or compilation needed
+- **Legacy Systems**: Works on older UNIX variants with basic shell
+- **Embedded Devices**: Minimal footprint for resource-constrained systems
+- **Containerized Environments**: Collects both host and container artifacts
+- **Multi-Platform Infrastructure**: Single tool for heterogeneous environments
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit issues, feature requests, or pull requests on the [GitHub repository](https://github.com/op7ic/unix_collector).
+
+## License
+
+This project is licensed under the GNU General Public License v3.0 - see the LICENSE file for details.
+
+## Acknowledgments
+
+- Inspired by the collective knowledge of Portcullis Security Team
+- Based on concepts from unix-privesc-check by pentestmonkey
+- Special thanks to Ian Ventura-Whiting (Fizz) and Tim Brown (timb_machine) for inspiration
+
+---
+
