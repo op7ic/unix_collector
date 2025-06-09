@@ -3234,6 +3234,271 @@ echo "  ${COL_ENTRY}>${RESET} Remote Access Tools Summary"
 find $OUTPUT_DIR/software/remote_tools -type f 2> /dev/null | wc -l > $OUTPUT_DIR/software/remote_tools_artifact_count.txt
 ls -1 $OUTPUT_DIR/software/remote_tools 2> /dev/null | grep -v "artifact_count" > $OUTPUT_DIR/software/remote_tools_detected.txt
 
+echo "  ${COL_ENTRY}>${RESET} Application-Specific Artifacts"
+mkdir $OUTPUT_DIR/software/applications 2> /dev/null
+
+# Confluence
+find /opt /var /usr/local -path "*/confluence/*" -type d 2> /dev/null | head -5 | while read conf_dir; do
+    mkdir -p $OUTPUT_DIR/software/applications/confluence 2> /dev/null
+    find "$conf_dir" -name "confluence.cfg.xml" -o -name "atlassian-confluence.log" -o -name "catalina.out" 2> /dev/null | head -50 | while read file; do
+        cp -p "$file" $OUTPUT_DIR/software/applications/confluence/ 2> /dev/null
+    done
+    # Get version info
+    find "$conf_dir" -name "confluence-build.properties" -o -name "confluence.version" 2> /dev/null | head -5 | while read version_file; do
+        cp -p "$version_file" $OUTPUT_DIR/software/applications/confluence/ 2> /dev/null
+    done
+done
+
+# Jira
+find /opt /var /usr/local -path "*/jira/*" -type d 2> /dev/null | head -5 | while read jira_dir; do
+    mkdir -p $OUTPUT_DIR/software/applications/jira 2> /dev/null
+    find "$jira_dir" -name "jira-config.properties" -o -name "dbconfig.xml" -o -name "atlassian-jira.log" 2> /dev/null | head -50 | while read file; do
+        cp -p "$file" $OUTPUT_DIR/software/applications/jira/ 2> /dev/null
+    done
+done
+
+# Bitbucket
+find /opt /var /usr/local -path "*/bitbucket/*" -type d 2> /dev/null | head -5 | while read bb_dir; do
+    mkdir -p $OUTPUT_DIR/software/applications/bitbucket 2> /dev/null
+    find "$bb_dir" -name "bitbucket.properties" -o -name "bitbucket-config.properties" -o -name "atlassian-bitbucket.log" 2> /dev/null | head -50 | while read file; do
+        cp -p "$file" $OUTPUT_DIR/software/applications/bitbucket/ 2> /dev/null
+    done
+done
+
+# Tomcat
+find /opt /var /usr/local -name "tomcat*" -type d 2> /dev/null | head -10 | while read tomcat_dir; do
+    if [ -d "$tomcat_dir/logs" ] || [ -d "$tomcat_dir/conf" ]; then
+        mkdir -p $OUTPUT_DIR/software/applications/tomcat 2> /dev/null
+        # Logs
+        find "$tomcat_dir/logs" -name "*.log" -o -name "*.txt" -o -name "*.out" 2> /dev/null | head -100 | while read log; do
+            cp -p "$log" $OUTPUT_DIR/software/applications/tomcat/ 2> /dev/null
+        done
+        # Configuration
+        find "$tomcat_dir/conf" -name "*.xml" -o -name "*.properties" 2> /dev/null | head -20 | while read conf; do
+            cp -p "$conf" $OUTPUT_DIR/software/applications/tomcat/ 2> /dev/null
+        done
+        # Version info
+        find "$tomcat_dir" -name "RELEASE-NOTES" -o -name "VERSION" 2> /dev/null | head -5 | while read version; do
+            cp -p "$version" $OUTPUT_DIR/software/applications/tomcat/ 2> /dev/null
+        done
+    fi
+done
+
+# JBoss/WildFly
+find /opt /var /usr/local -name "jboss*" -o -name "wildfly*" -type d 2> /dev/null | head -5 | while read jboss_dir; do
+    if [ -d "$jboss_dir/standalone" ] || [ -d "$jboss_dir/domain" ]; then
+        mkdir -p $OUTPUT_DIR/software/applications/jboss 2> /dev/null
+        # Logs
+        find "$jboss_dir" -path "*/log/*.log" 2> /dev/null | head -50 | while read log; do
+            cp -p "$log" $OUTPUT_DIR/software/applications/jboss/ 2> /dev/null
+        done
+        # Configuration
+        find "$jboss_dir" -name "standalone.xml" -o -name "domain.xml" -o -name "host.xml" 2> /dev/null | head -10 | while read conf; do
+            cp -p "$conf" $OUTPUT_DIR/software/applications/jboss/ 2> /dev/null
+        done
+    fi
+done
+
+# WebLogic
+find /opt /var /usr/local -path "*/weblogic/*" -type d 2> /dev/null | head -5 | while read wl_dir; do
+    mkdir -p $OUTPUT_DIR/software/applications/weblogic 2> /dev/null
+    find "$wl_dir" -name "*.log" -o -name "config.xml" -o -name "weblogic.xml" 2> /dev/null | head -50 | while read file; do
+        cp -p "$file" $OUTPUT_DIR/software/applications/weblogic/ 2> /dev/null
+    done
+done
+
+# WebSphere
+find /opt /var /usr/local -path "*/WebSphere/*" -type d 2> /dev/null | head -5 | while read ws_dir; do
+    mkdir -p $OUTPUT_DIR/software/applications/websphere 2> /dev/null
+    find "$ws_dir" -name "*.log" -o -name "server.xml" -o -name "security.xml" 2> /dev/null | head -50 | while read file; do
+        cp -p "$file" $OUTPUT_DIR/software/applications/websphere/ 2> /dev/null
+    done
+done
+
+# Apache Struts (often within other apps)
+find /opt /var /usr/local -name "struts.xml" -o -name "struts-*.jar" -o -name "struts2-*.jar" 2> /dev/null | head -50 | while read struts_file; do
+    mkdir -p $OUTPUT_DIR/software/applications/struts 2> /dev/null
+    cp -p "$struts_file" $OUTPUT_DIR/software/applications/struts/ 2> /dev/null
+done
+
+# Jenkins
+find /var/lib /opt /usr/local -name "jenkins*" -type d 2> /dev/null | head -5 | while read jenkins_dir; do
+    if [ -f "$jenkins_dir/config.xml" ] || [ -d "$jenkins_dir/jobs" ]; then
+        mkdir -p $OUTPUT_DIR/software/applications/jenkins 2> /dev/null
+        # Main config
+        cp -p "$jenkins_dir/config.xml" $OUTPUT_DIR/software/applications/jenkins/ 2> /dev/null
+        cp -p "$jenkins_dir/credentials.xml" $OUTPUT_DIR/software/applications/jenkins/ 2> /dev/null
+        # Version info
+        cp -p "$jenkins_dir/.jenkins.version" $OUTPUT_DIR/software/applications/jenkins/ 2> /dev/null
+        # Recent logs
+        find "$jenkins_dir" -name "*.log" -mtime -7 2> /dev/null | head -50 | while read log; do
+            cp -p "$log" $OUTPUT_DIR/software/applications/jenkins/ 2> /dev/null
+        done
+    fi
+done
+
+# GitLab
+if [ -d "/opt/gitlab" ] || [ -d "/var/opt/gitlab" ]; then
+    mkdir -p $OUTPUT_DIR/software/applications/gitlab 2> /dev/null
+    # Config files
+    cp /etc/gitlab/gitlab.rb $OUTPUT_DIR/software/applications/gitlab/ 2> /dev/null
+    # Logs
+    find /var/log/gitlab -name "*.log" -mtime -7 2> /dev/null | head -50 | while read log; do
+        cp -p "$log" $OUTPUT_DIR/software/applications/gitlab/ 2> /dev/null
+    done
+fi
+
+# Elasticsearch
+if [ -d "/etc/elasticsearch" ] || [ -d "/var/log/elasticsearch" ]; then
+    mkdir -p $OUTPUT_DIR/software/applications/elasticsearch 2> /dev/null
+    cp -p /etc/elasticsearch/*.yml $OUTPUT_DIR/software/applications/elasticsearch/ 2> /dev/null
+    find /var/log/elasticsearch -name "*.log" -mtime -7 2> /dev/null | head -50 | while read log; do
+        cp -p "$log" $OUTPUT_DIR/software/applications/elasticsearch/ 2> /dev/null
+    done
+fi
+
+# Kibana
+if [ -d "/etc/kibana" ] || [ -d "/var/log/kibana" ]; then
+    mkdir -p $OUTPUT_DIR/software/applications/kibana 2> /dev/null
+    cp -p /etc/kibana/*.yml $OUTPUT_DIR/software/applications/kibana/ 2> /dev/null
+    find /var/log/kibana -name "*.log" -mtime -7 2> /dev/null | head -50 | while read log; do
+        cp -p "$log" $OUTPUT_DIR/software/applications/kibana/ 2> /dev/null
+    done
+fi
+
+# Logstash
+if [ -d "/etc/logstash" ] || [ -d "/var/log/logstash" ]; then
+    mkdir -p $OUTPUT_DIR/software/applications/logstash 2> /dev/null
+    cp -p /etc/logstash/*.yml $OUTPUT_DIR/software/applications/logstash/ 2> /dev/null
+    find /etc/logstash/conf.d -name "*.conf" 2> /dev/null | while read conf; do
+        cp -p "$conf" $OUTPUT_DIR/software/applications/logstash/ 2> /dev/null
+    done
+fi
+
+# Grafana
+if [ -d "/etc/grafana" ] || [ -d "/var/lib/grafana" ]; then
+    mkdir -p $OUTPUT_DIR/software/applications/grafana 2> /dev/null
+    cp -p /etc/grafana/*.ini $OUTPUT_DIR/software/applications/grafana/ 2> /dev/null
+    find /var/log/grafana -name "*.log" -mtime -7 2> /dev/null | head -20 | while read log; do
+        cp -p "$log" $OUTPUT_DIR/software/applications/grafana/ 2> /dev/null
+    done
+fi
+
+# Nagios
+if [ -d "/etc/nagios" ] || [ -d "/usr/local/nagios" ]; then
+    mkdir -p $OUTPUT_DIR/software/applications/nagios 2> /dev/null
+    find /etc/nagios /usr/local/nagios/etc -name "*.cfg" 2> /dev/null | head -50 | while read cfg; do
+        cp -p "$cfg" $OUTPUT_DIR/software/applications/nagios/ 2> /dev/null
+    done
+    find /var/log/nagios /usr/local/nagios/var -name "*.log" -mtime -7 2> /dev/null | head -20 | while read log; do
+        cp -p "$log" $OUTPUT_DIR/software/applications/nagios/ 2> /dev/null
+    done
+fi
+
+# Splunk Universal Forwarder
+if [ -d "/opt/splunkforwarder" ]; then
+    mkdir -p $OUTPUT_DIR/software/applications/splunk_forwarder 2> /dev/null
+    cp -p /opt/splunkforwarder/etc/system/local/*.conf $OUTPUT_DIR/software/applications/splunk_forwarder/ 2> /dev/null
+    find /opt/splunkforwarder/var/log/splunk -name "*.log" -mtime -7 2> /dev/null | head -20 | while read log; do
+        cp -p "$log" $OUTPUT_DIR/software/applications/splunk_forwarder/ 2> /dev/null
+    done
+fi
+
+# WordPress
+find /var/www /opt /usr/local -name "wp-config.php" 2> /dev/null | head -20 | while read wp_conf; do
+    mkdir -p $OUTPUT_DIR/software/applications/wordpress 2> /dev/null
+    cp -p "$wp_conf" $OUTPUT_DIR/software/applications/wordpress/ 2> /dev/null
+    wp_dir=`dirname "$wp_conf"`
+    # Get version
+    if [ -f "$wp_dir/wp-includes/version.php" ]; then
+        cp -p "$wp_dir/wp-includes/version.php" $OUTPUT_DIR/software/applications/wordpress/ 2> /dev/null
+    fi
+    # Get installed plugins list
+    if [ -d "$wp_dir/wp-content/plugins" ]; then
+        ls -la "$wp_dir/wp-content/plugins" > $OUTPUT_DIR/software/applications/wordpress/installed_plugins.txt 2> /dev/null
+    fi
+done
+
+# Drupal
+find /var/www /opt /usr/local -name "settings.php" -path "*/sites/*/settings.php" 2> /dev/null | head -20 | while read drupal_conf; do
+    mkdir -p $OUTPUT_DIR/software/applications/drupal 2> /dev/null
+    cp -p "$drupal_conf" $OUTPUT_DIR/software/applications/drupal/ 2> /dev/null
+done
+
+# Joomla
+find /var/www /opt /usr/local -name "configuration.php" -path "*/joomla*/configuration.php" 2> /dev/null | head -20 | while read joomla_conf; do
+    mkdir -p $OUTPUT_DIR/software/applications/joomla 2> /dev/null
+    cp -p "$joomla_conf" $OUTPUT_DIR/software/applications/joomla/ 2> /dev/null
+done
+
+# phpMyAdmin
+find /var/www /opt /usr/local /usr/share -name "config.inc.php" -path "*phpmyadmin*" 2> /dev/null | head -10 | while read pma_conf; do
+    mkdir -p $OUTPUT_DIR/software/applications/phpmyadmin 2> /dev/null
+    cp -p "$pma_conf" $OUTPUT_DIR/software/applications/phpmyadmin/ 2> /dev/null
+done
+
+# Redis
+if [ -f "/etc/redis/redis.conf" ] || [ -f "/etc/redis.conf" ]; then
+    mkdir -p $OUTPUT_DIR/software/applications/redis 2> /dev/null
+    cp -p /etc/redis/redis.conf /etc/redis.conf $OUTPUT_DIR/software/applications/redis/ 2> /dev/null
+    find /var/log -name "redis*.log" -mtime -7 2> /dev/null | head -10 | while read log; do
+        cp -p "$log" $OUTPUT_DIR/software/applications/redis/ 2> /dev/null
+    done
+fi
+
+# MongoDB
+if [ -d "/etc/mongod.conf" ] || [ -f "/etc/mongodb.conf" ]; then
+    mkdir -p $OUTPUT_DIR/software/applications/mongodb 2> /dev/null
+    cp -p /etc/mongod.conf /etc/mongodb.conf $OUTPUT_DIR/software/applications/mongodb/ 2> /dev/null
+    find /var/log -name "mongo*.log" -mtime -7 2> /dev/null | head -10 | while read log; do
+        cp -p "$log" $OUTPUT_DIR/software/applications/mongodb/ 2> /dev/null
+    done
+fi
+
+# Apache Solr
+find /opt /var /usr/local -name "solr" -type d 2> /dev/null | head -5 | while read solr_dir; do
+    if [ -f "$solr_dir/bin/solr" ] || [ -d "$solr_dir/server" ]; then
+        mkdir -p $OUTPUT_DIR/software/applications/solr 2> /dev/null
+        find "$solr_dir" -name "solr.xml" -o -name "solrconfig.xml" 2> /dev/null | head -20 | while read conf; do
+            cp -p "$conf" $OUTPUT_DIR/software/applications/solr/ 2> /dev/null
+        done
+        find "$solr_dir" -name "*.log" -mtime -7 2> /dev/null | head -20 | while read log; do
+            cp -p "$log" $OUTPUT_DIR/software/applications/solr/ 2> /dev/null
+        done
+    fi
+done
+
+# RabbitMQ
+if [ -d "/etc/rabbitmq" ]; then
+    mkdir -p $OUTPUT_DIR/software/applications/rabbitmq 2> /dev/null
+    cp -p /etc/rabbitmq/*.conf $OUTPUT_DIR/software/applications/rabbitmq/ 2> /dev/null
+    find /var/log/rabbitmq -name "*.log" -mtime -7 2> /dev/null | head -20 | while read log; do
+        cp -p "$log" $OUTPUT_DIR/software/applications/rabbitmq/ 2> /dev/null
+    done
+fi
+
+# ActiveMQ
+find /opt /var /usr/local -name "activemq" -type d 2> /dev/null | head -5 | while read amq_dir; do
+    if [ -d "$amq_dir/conf" ]; then
+        mkdir -p $OUTPUT_DIR/software/applications/activemq 2> /dev/null
+        cp -p "$amq_dir/conf/"*.xml $OUTPUT_DIR/software/applications/activemq/ 2> /dev/null
+        find "$amq_dir/data" -name "*.log" -mtime -7 2> /dev/null | head -20 | while read log; do
+            cp -p "$log" $OUTPUT_DIR/software/applications/activemq/ 2> /dev/null
+        done
+    fi
+done
+
+# Spring Boot Applications (by checking for application.properties/yml)
+echo "    - Checking for Spring Boot applications"
+find /opt /var /usr/local -name "application.properties" -o -name "application.yml" -o -name "application.yaml" 2> /dev/null | head -50 | while read spring_conf; do
+    app_dir=`dirname "$spring_conf"`
+    mkdir -p $OUTPUT_DIR/software/applications/spring_boot 2> /dev/null
+    cp -p "$spring_conf" $OUTPUT_DIR/software/applications/spring_boot/ 2> /dev/null
+    find "$app_dir" -name "bootstrap.properties" -o -name "bootstrap.yml" 2> /dev/null | while read boot_conf; do
+        cp -p "$boot_conf" $OUTPUT_DIR/software/applications/spring_boot/ 2> /dev/null
+    done
+done
+
 echo "  ${COL_ENTRY}>${RESET} Installed software (this could take a few mins)"
 if [ $PLATFORM = "solaris" ]
 then
