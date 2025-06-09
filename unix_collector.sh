@@ -1089,13 +1089,11 @@ fi
 echo "  ${COL_ENTRY}>${RESET} Hidden process detection"
 mkdir $OUTPUT_DIR/process_info/hidden_detection 2>/dev/null
 
-# First, collect PIDs from both sources with consistent filtering
+
 if [ -d "/proc" ]
 then
-    # Get PIDs from /proc - using consistent regex that matches only pure numbers
     ls -1 /proc 2>/dev/null | grep '^[0-9][0-9]*$' | sort -n > $OUTPUT_DIR/process_info/hidden_detection/proc_pids.txt 2>/dev/null
-    
-    # Get PIDs from ps - handle different ps output formats
+ 
     if [ $PLATFORM = "linux" -o $PLATFORM = "android" ]
     then
         ps -e -o pid 2>/dev/null | grep -v PID | sed 's/^[ ]*//' | grep '^[0-9][0-9]*$' | sort -n > $OUTPUT_DIR/process_info/hidden_detection/ps_pids.txt 2>/dev/null
@@ -1108,8 +1106,7 @@ then
     else
         ps -e 2>/dev/null | awk 'NR>1 {print $1}' | grep '^[0-9][0-9]*$' | sort -n > $OUTPUT_DIR/process_info/hidden_detection/ps_pids.txt 2>/dev/null
     fi
-    
-    # Find discrepancies between ps and /proc
+
     if [ -f "$OUTPUT_DIR/process_info/hidden_detection/proc_pids.txt" -a -f "$OUTPUT_DIR/process_info/hidden_detection/ps_pids.txt" ]
     then
         # PIDs in /proc but not in ps (potentially hidden)
