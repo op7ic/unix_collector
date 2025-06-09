@@ -4,10 +4,14 @@ The unix_collector is a self-contained shell script designed for the forensic co
 
 As a single shell script, ```unix_collector``` is easy to upload and execute, without the need for untarring, compiling, installation, or an internet connection to download additional components. The script can be run either as a normal user or as root, though it performs more effectively when executed as root, as this allows it to access a wider range of system files and artifacts. 
 
+📦 **9 Operating Systems** | 🐧 **8+ Linux Distros** | 🐳 **10 Container/VM Platforms** | 🔍 **Non-Invasive Collection**
+
 
 [![Imgur](https://i.imgur.com/6xMcGIg.gif)](#)
 
 ## 🖥️ Supported Platforms
+
+UNIX Collector supports a wide range of UNIX-like operating systems with automatic platform detection:
 
 ### Operating Systems
 - [![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://www.linux.org/)
@@ -15,12 +19,23 @@ As a single shell script, ```unix_collector``` is easy to upload and execute, wi
 - [![Android](https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://www.android.com/)
 - [![FreeBSD](https://img.shields.io/badge/FreeBSD-AB2B28?style=for-the-badge&logo=freebsd&logoColor=white)](https://www.freebsd.org/)
 - [![OpenBSD](https://img.shields.io/badge/OpenBSD-F2CA30?style=for-the-badge&logo=openbsd&logoColor=black)](https://www.openbsd.org/)
+- [![NetBSD](https://img.shields.io/badge/NetBSD-FF6600?style=for-the-badge&logo=netbsd&logoColor=white)](https://www.netbsd.org/)
 - [![Solaris](https://img.shields.io/badge/Solaris-FF6C2C?style=for-the-badge&logo=oracle&logoColor=white)](https://www.oracle.com/solaris/)
 - [![AIX](https://img.shields.io/badge/AIX-052FAD?style=for-the-badge&logo=ibm&logoColor=white)](https://www.ibm.com/power/operating-systems/aix)
 - [![HP--UX](https://img.shields.io/badge/HP--UX-0096D6?style=for-the-badge&logo=hp&logoColor=white)](https://www.hpe.com/)
 
-### Specialized Platforms
+### Container & Virtualization Platforms
+- [![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+- [![Kubernetes](https://img.shields.io/badge/Kubernetes-326CE5?style=for-the-badge&logo=kubernetes&logoColor=white)](https://kubernetes.io/)
+- [![Podman](https://img.shields.io/badge/Podman-892CA0?style=for-the-badge&logo=podman&logoColor=white)](https://podman.io/)
+- [![Containerd](https://img.shields.io/badge/Containerd-575757?style=for-the-badge&logo=containerd&logoColor=white)](https://containerd.io/)
+- [![LXC/LXD](https://img.shields.io/badge/LXC/LXD-E95420?style=for-the-badge&logo=linuxcontainers&logoColor=white)](https://linuxcontainers.org/)
 - [![VMware ESXi](https://img.shields.io/badge/VMware_ESXi-607078?style=for-the-badge&logo=vmware&logoColor=white)](https://www.vmware.com/products/esxi-and-esx.html)
+- [![VirtualBox](https://img.shields.io/badge/VirtualBox-183A61?style=for-the-badge&logo=virtualbox&logoColor=white)](https://www.virtualbox.org/)
+- [![KVM/libvirt](https://img.shields.io/badge/KVM/libvirt-FF6600?style=for-the-badge&logo=kvm&logoColor=white)](https://www.linux-kvm.org/)
+- [![Proxmox](https://img.shields.io/badge/Proxmox-E57000?style=for-the-badge&logo=proxmox&logoColor=white)](https://www.proxmox.com/)
+
+### Specialized Platforms
 - [![NetScaler](https://img.shields.io/badge/NetScaler-1B75BB?style=for-the-badge&logo=citrix&logoColor=white)](https://www.citrix.com/)
 - [![IoT/Embedded](https://img.shields.io/badge/IoT%2FEmbedded-6DB33F?style=for-the-badge&logo=linux&logoColor=white)]()
 
@@ -32,6 +47,9 @@ As a single shell script, ```unix_collector``` is easy to upload and execute, wi
 - [![SUSE](https://img.shields.io/badge/SUSE-0C322C?style=flat-square&logo=suse&logoColor=white)](https://www.suse.com/)
 - [![Arch](https://img.shields.io/badge/Arch-1793D1?style=flat-square&logo=arch-linux&logoColor=white)](https://archlinux.org/)
 - [![Gentoo](https://img.shields.io/badge/Gentoo-54487A?style=flat-square&logo=gentoo&logoColor=white)](https://www.gentoo.org/)
+- [![Slackware](https://img.shields.io/badge/Slackware-000000?style=flat-square&logo=slackware&logoColor=white)](http://www.slackware.com/)
+
+> **Note**: The script automatically detects the platform and adjusts collection methods accordingly. For systems not explicitly listed, use the `--platform=generic` option for best-effort collection.
 
 
 # Features
