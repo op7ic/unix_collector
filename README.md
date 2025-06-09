@@ -72,6 +72,7 @@ The script gathers **250+ distinct forensic artifacts** to help identify potenti
 | **File Hashes** | 3 | MD5, SHA1, SHA256 for all collected binaries |
 | **Configuration Files** | ~20 | /etc configs, systemd units, network settings |
 | **Additional Data** | ~15 | Home directories, temp files, installed packages, compiler tools |
+| **Remote Access Tools** | ~20 | TeamViewer, AnyDesk, RustDesk, VNC variants, SSH tunnels, RDP tools |
 
 **System & Hardware**
 - Complete hardware inventory and system information
@@ -126,6 +127,24 @@ The script gathers **250+ distinct forensic artifacts** to help identify potenti
 - User home directories
 - Browser artifacts and history
 - Scheduled tasks and services
+
+**Remote Access & Administration**
+- Remote access tool configurations and logs
+- TeamViewer, AnyDesk, RustDesk installations and logs
+- VNC server configurations (TightVNC, TigerVNC, RealVNC, UltraVNC)
+- Chrome Remote Desktop artifacts
+- SSH tunneling and port forwarding scripts
+- RDP/XRDP configurations and logs
+- NoMachine, Splashtop, Parsec gaming remote logs
+- Apache Guacamole web-based remote desktop settings
+- ConnectWise/ScreenConnect support tool artifacts
+- LogMeIn and GoToMyPC configurations
+- X2Go session data
+- Remmina connection profiles
+- DWService remote support logs
+- Remote tool systemd service definitions
+- Desktop entries for remote applications
+- Detection of potential backdoor SSH scripts
 
 ## 🚀 Quick Start
 
