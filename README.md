@@ -56,7 +56,7 @@ UNIX Collector supports a wide range of UNIX-like operating systems with automat
 
 ### 🔍 What It Collects
 
-The script gathers **250+ distinct forensic artifacts** to help identify potential system compromises:
+The script gathers **300+ distinct forensic artifacts** to help identify potential system compromises:
 
 | Category | Artifact Count | Key Artifacts |
 |----------|-------|---------------|
@@ -73,6 +73,7 @@ The script gathers **250+ distinct forensic artifacts** to help identify potenti
 | **Configuration Files** | ~20 | /etc configs, systemd units, network settings |
 | **Additional Data** | ~15 | Home directories, temp files, installed packages, compiler tools |
 | **Remote Access Tools** | ~20 | TeamViewer, AnyDesk, RustDesk, VNC variants, SSH tunnels, RDP tools |
+| **Application Artifacts** | ~40 | Confluence, Tomcat, Jenkins, WordPress, Elastic Stack, etc. |
 
 **System & Hardware**
 - Complete hardware inventory and system information
