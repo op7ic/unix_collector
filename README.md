@@ -56,7 +56,7 @@ UNIX Collector supports a wide range of UNIX-like operating systems with automat
 
 ### 🔍 What It Collects
 
-The script gathers **300+ distinct forensic artifacts** to help identify potential system compromises:
+The script gathers **350+ distinct forensic artifacts** to help identify potential system compromises:
 
 | Category | Artifact Count | Key Artifacts |
 |----------|-------|---------------|
