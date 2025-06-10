@@ -2608,6 +2608,145 @@ then
     cp /etc/sysconfig/selinux $OUTPUT_DIR/selinux/sysconfig-selinux 2> /dev/null
 fi
 
+echo "  ${COL_ENTRY}>${RESET} Unowned Files Detection"
+mkdir $OUTPUT_DIR/general/unowned_files 2> /dev/null
+
+find /etc /usr /var /opt /home /root /tmp -xdev -nouser -ls 2> /dev/null | head -1000 > $OUTPUT_DIR/general/unowned_files/nouser_files.txt 2> /dev/null
+find /etc /usr /var /opt /home /root /tmp -xdev -nogroup -ls 2> /dev/null | head -1000 > $OUTPUT_DIR/general/unowned_files/nogroup_files.txt 2> /dev/null
+find /bin /sbin /usr/bin /usr/sbin /usr/local/bin /usr/local/sbin -xdev \( -perm -4000 -o -perm -2000 \) \( -nouser -o -nogroup \) -ls 2> /dev/null > $OUTPUT_DIR/general/unowned_files/unowned_suid_sgid.txt 2> /dev/null
+
+# Get list of valid UIDs
+cut -d: -f3 /etc/passwd | sort -n > $OUTPUT_DIR/general/unowned_files/valid_uids.txt 2> /dev/null
+# Find files owned by UIDs not in passwd file (limited search)
+find /etc /usr/bin /usr/sbin -xdev -type f -ls 2> /dev/null | head -5000 | awk '{print $5, $0}' | while read uid rest; do
+    grep -q "^${uid}$" $OUTPUT_DIR/general/unowned_files/valid_uids.txt || echo "$uid $rest" >> $OUTPUT_DIR/general/unowned_files/invalid_uid_files.txt
+done
+
+find /etc /usr /var /opt -xdev -type f -perm -0002 \( -nouser -o -nogroup \) -ls 2> /dev/null | head -500 > $OUTPUT_DIR/general/unowned_files/world_writable_unowned.txt 2> /dev/null
+echo "Files with no user owner: $(wc -l < $OUTPUT_DIR/general/unowned_files/nouser_files.txt 2> /dev/null || echo 0)" > $OUTPUT_DIR/general/unowned_files/summary.txt
+echo "Files with no group owner: $(wc -l < $OUTPUT_DIR/general/unowned_files/nogroup_files.txt 2> /dev/null || echo 0)" >> $OUTPUT_DIR/general/unowned_files/summary.txt
+echo "Unowned SUID/SGID files: $(wc -l < $OUTPUT_DIR/general/unowned_files/unowned_suid_sgid.txt 2> /dev/null || echo 0)" >> $OUTPUT_DIR/general/unowned_files/summary.txt
+echo "World-writable unowned: $(wc -l < $OUTPUT_DIR/general/unowned_files/world_writable_unowned.txt 2> /dev/null || echo 0)" >> $OUTPUT_DIR/general/unowned_files/summary.txt
+
+echo "  ${COL_ENTRY}>${RESET} Dead Process Detection"
+mkdir $OUTPUT_DIR/general/dead_processes 2> /dev/null
+
+# Find processes where the executable has been deleted
+ls -1 /proc 2> /dev/null | grep '^[0-9]*$' | while read pid; do
+    if [ -r "/proc/$pid/exe" ]; then
+        exe_link=$(readlink "/proc/$pid/exe" 2> /dev/null)
+        if echo "$exe_link" | grep -q "(deleted)"; then
+            # Get process info
+            if [ -r "/proc/$pid/cmdline" ]; then
+                echo "PID: $pid" >> $OUTPUT_DIR/general/dead_processes/deleted_executables.txt
+                echo "Exe: $exe_link" >> $OUTPUT_DIR/general/dead_processes/deleted_executables.txt
+                tr '\0' ' ' < "/proc/$pid/cmdline" >> $OUTPUT_DIR/general/dead_processes/deleted_executables.txt 2> /dev/null
+                echo "---" >> $OUTPUT_DIR/general/dead_processes/deleted_executables.txt
+                
+                # Try to get process owner
+                stat_info=$(stat -c "%U" "/proc/$pid" 2> /dev/null)
+                echo "Owner: $stat_info" >> $OUTPUT_DIR/general/dead_processes/deleted_executables.txt
+                echo "========================================" >> $OUTPUT_DIR/general/dead_processes/deleted_executables.txt
+            fi
+        fi
+    fi
+done
+
+# For each process with deleted executable, save memory maps
+mkdir $OUTPUT_DIR/general/dead_processes/maps 2> /dev/null
+ls -1 /proc 2> /dev/null | grep '^[0-9]*$' | while read pid; do
+    if [ -r "/proc/$pid/exe" ]; then
+        exe_link=$(readlink "/proc/$pid/exe" 2> /dev/null)
+        if echo "$exe_link" | grep -q "(deleted)"; then
+            if [ -r "/proc/$pid/maps" ]; then
+                cp "/proc/$pid/maps" "$OUTPUT_DIR/general/dead_processes/maps/pid_${pid}_maps.txt" 2> /dev/null
+                
+                # Also get memory regions info (if available)
+                cp "/proc/$pid/smaps" "$OUTPUT_DIR/general/dead_processes/maps/pid_${pid}_smaps.txt" 2> /dev/null
+            fi
+        fi
+    fi
+done
+
+# Extract strings from deleted process memory (limited to avoid huge dumps)
+mkdir $OUTPUT_DIR/general/dead_processes/memory_strings 2> /dev/null
+ls -1 /proc 2> /dev/null | grep '^[0-9]*$' | while read pid; do
+    if [ -r "/proc/$pid/exe" ]; then
+        exe_link=$(readlink "/proc/$pid/exe" 2> /dev/null)
+        if echo "$exe_link" | grep -q "(deleted)"; then
+            # Only if we can read the mem file
+            if [ -r "/proc/$pid/mem" ] && [ -r "/proc/$pid/maps" ]; then
+                # Extract strings from stack and heap regions only (safer)
+                grep -E "stack|heap" "/proc/$pid/maps" 2> /dev/null | head -5 | while read line; do
+                    start_addr=$(echo "$line" | awk '{print $1}' | cut -d'-' -f1)
+                    end_addr=$(echo "$line" | awk '{print $1}' | cut -d'-' -f2)
+                    # Convert hex to decimal for dd
+                    start_dec=$(printf "%d" "0x$start_addr" 2> /dev/null)
+                    end_dec=$(printf "%d" "0x$end_addr" 2> /dev/null)
+                    size=$((end_dec - start_dec))
+                    
+                    # Limit size to 10MB per region
+                    if [ "$size" -gt 0 ] && [ "$size" -lt 10485760 ]; then
+                        dd if="/proc/$pid/mem" bs=1 skip="$start_dec" count="$size" 2> /dev/null | \
+                        strings -n 8 | head -1000 >> "$OUTPUT_DIR/general/dead_processes/memory_strings/pid_${pid}_strings.txt" 2> /dev/null
+                    fi
+                done
+            fi
+        fi
+    fi
+done
+
+# Check for open file descriptors pointing to deleted files
+mkdir $OUTPUT_DIR/general/dead_processes/deleted_fds 2> /dev/null
+ls -1 /proc 2> /dev/null | grep '^[0-9]*$' | while read pid; do
+    if [ -d "/proc/$pid/fd" ] && [ -r "/proc/$pid/fd" ]; then
+        ls -la "/proc/$pid/fd/" 2> /dev/null | grep "(deleted)" > /dev/null
+        if [ $? -eq 0 ]; then
+            echo "PID: $pid" >> $OUTPUT_DIR/general/dead_processes/deleted_fds/deleted_file_descriptors.txt
+            ls -la "/proc/$pid/fd/" 2> /dev/null | grep "(deleted)" >> $OUTPUT_DIR/general/dead_processes/deleted_fds/deleted_file_descriptors.txt
+            echo "---" >> $OUTPUT_DIR/general/dead_processes/deleted_fds/deleted_file_descriptors.txt
+        fi
+    fi
+done
+
+# Look for processes trying to hide
+mkdir $OUTPUT_DIR/general/dead_processes/suspicious 2> /dev/null
+
+# Processes with all numeric names (common hiding technique)
+ps aux | awk '$11 ~ /^[0-9]+$/ {print}' > $OUTPUT_DIR/general/dead_processes/suspicious/numeric_process_names.txt 2> /dev/null
+
+# Processes with very short names
+ps aux | awk 'length($11) <= 2 && $11 !~ /^(ps|ls|cp|mv|rm|sh|vi)$/ {print}' > $OUTPUT_DIR/general/dead_processes/suspicious/short_process_names.txt 2> /dev/null
+
+# Kernel threads impersonation check (user-space process with [] in name)
+ps aux | grep -E "^\[.*\]$" | grep -v " 0:" > $OUTPUT_DIR/general/dead_processes/suspicious/fake_kernel_threads.txt 2> /dev/null
+
+# Get environment variables for processes with deleted executables
+ls -1 /proc 2> /dev/null | grep '^[0-9]*$' | while read pid; do
+    if [ -r "/proc/$pid/exe" ]; then
+        exe_link=$(readlink "/proc/$pid/exe" 2> /dev/null)
+        if echo "$exe_link" | grep -q "(deleted)"; then
+            if [ -r "/proc/$pid/environ" ]; then
+                echo "PID: $pid" >> $OUTPUT_DIR/general/dead_processes/deleted_process_environ.txt
+                tr '\0' '\n' < "/proc/$pid/environ" 2> /dev/null >> $OUTPUT_DIR/general/dead_processes/deleted_process_environ.txt
+                echo "========================================" >> $OUTPUT_DIR/general/dead_processes/deleted_process_environ.txt
+            fi
+        fi
+    fi
+done
+
+cat /proc/sys/kernel/core_pattern > $OUTPUT_DIR/general/dead_processes/core_pattern.txt 2> /dev/null
+ulimit -c > $OUTPUT_DIR/general/dead_processes/core_ulimit.txt 2> /dev/null
+
+find / -name "core" -o -name "core.*" -type f 2> /dev/null | head -50 > $OUTPUT_DIR/general/dead_processes/existing_core_dumps.txt 2> /dev/null
+
+proc_count=$(grep -c "^PID:" $OUTPUT_DIR/general/dead_processes/deleted_executables.txt 2> /dev/null || echo 0)
+echo "Processes with deleted executables: $proc_count" > $OUTPUT_DIR/general/dead_processes/summary.txt
+fd_count=$(grep -c "^PID:" $OUTPUT_DIR/general/dead_processes/deleted_fds/deleted_file_descriptors.txt 2> /dev/null || echo 0)
+echo "Processes with deleted file descriptors: $fd_count" >> $OUTPUT_DIR/general/dead_processes/summary.txt
+core_count=$(wc -l < $OUTPUT_DIR/general/dead_processes/existing_core_dumps.txt 2> /dev/null || echo 0)
+echo "Core dumps found: $core_count" >> $OUTPUT_DIR/general/dead_processes/summary.txt
+
 echo "  ${COL_ENTRY}>${RESET} Security frameworks and policies"
 mkdir $OUTPUT_DIR/security_frameworks 2> /dev/null
 
