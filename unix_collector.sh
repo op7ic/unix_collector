@@ -908,7 +908,7 @@ elif [ $PLATFORM = "aix" ]; then
 fi
 
 if [ -x /sbin/runlevel ]; then
-    echo "Current Runlevel: `runlevel`" >> $OUTPUT_DIR/boot_startup/summary.txt 2> /dev/null
+    echo "Current Runlevel: `runlevel` 2> /dev/null" >> $OUTPUT_DIR/boot_startup/summary.txt 2> /dev/null
 elif [ -x /usr/bin/systemctl ]; then
     echo "Current Target: `systemctl get-default 2> /dev/null`" >> $OUTPUT_DIR/boot_startup/summary.txt 2> /dev/null
 fi
@@ -977,7 +977,7 @@ ls -l /proc/[0-9]*/cwd 1> $OUTPUT_DIR/process_info/process_working_directory.txt
 ls -l /proc/[0-9]*/exe 2> /dev/null | grep -E "\(deleted\)" | awk -F"/proc/|/exe" '{print $2}' 1> $OUTPUT_DIR/process_info/deleted_processes_ids.txt 2> /dev/null
 ls -l /proc/[0-9]*/exe 2> /dev/null | grep -E "\(deleted\)" 1> $OUTPUT_DIR/process_info/deleted_processes.txt 2> /dev/null
 for pid in $(find /proc -maxdepth 1 -type d -name '[0-9]*'); do echo $(basename $pid); done 1> $OUTPUT_DIR/process_info/all_process_ids.txt 2> /dev/null
-lsof | grep -E "(deleted|DEL)" > $OUTPUT_DIR/process_info/deleted_but_running.txt 2>/dev/null
+lsof 2> /dev/null | grep -E "(deleted|DEL)" > $OUTPUT_DIR/process_info/deleted_but_running.txt 2>/dev/null
 ls -la /proc/*/exe 2>/dev/null | grep deleted > $OUTPUT_DIR/process_info/deleted_executables.txt
 
 
@@ -2142,15 +2142,6 @@ if [ -f $OUTPUT_DIR/general/kernel_modules/tainted_modules.txt ]
 then
     TAINTED_COUNT=`cat $OUTPUT_DIR/general/kernel_modules/tainted_modules.txt | wc -l`
     echo "Tainted Modules: $TAINTED_COUNT" 1>> $OUTPUT_DIR/general/kernel_modules/verification_summary.txt 2> /dev/null
-fi
-
-
-# Systemd journal logs
-if [ -x "$(command -v journalctl)" ]; then
-    echo "  ${COL_ENTRY}>${RESET} Systemd journal logs"
-    journalctl --no-pager -n 10000 > $OUTPUT_DIR/logs/journal_recent.txt 2> /dev/null
-    journalctl --no-pager -b > $OUTPUT_DIR/logs/journal_boot.txt 2> /dev/null
-    journalctl --no-pager -p err > $OUTPUT_DIR/logs/journal_errors.txt 2> /dev/null
 fi
 
 echo "  ${COL_ENTRY}>${RESET} User Activity and Authentication Logs"
@@ -3628,7 +3619,6 @@ find /opt /var /usr/local -name "activemq" -type d 2> /dev/null | head -5 | whil
 done
 
 # Spring Boot Applications (by checking for application.properties/yml)
-echo "    - Checking for Spring Boot applications"
 find /opt /var /usr/local -name "application.properties" -o -name "application.yml" -o -name "application.yaml" 2> /dev/null | head -50 | while read spring_conf; do
     app_dir=`dirname "$spring_conf"`
     mkdir -p $OUTPUT_DIR/software/applications/spring_boot 2> /dev/null
@@ -4499,6 +4489,13 @@ find / -fstype nfs -prune -o \( -name 'gcc*' -o -name 'javac*' -o -name 'java*' 
 
 echo "${COL_SECTION}LOG, HOME and PROC FILE COLLECTION [50% ]:${RESET}"
 mkdir $OUTPUT_DIR/logs 2> /dev/null
+
+echo "  ${COL_ENTRY}>${RESET} Systemd journal logs"
+if [ -x "$(command -v journalctl)" ]; then
+    journalctl --no-pager -n 10000 > $OUTPUT_DIR/logs/journal_recent.txt 2> /dev/null
+    journalctl --no-pager -b > $OUTPUT_DIR/logs/journal_boot.txt 2> /dev/null
+    journalctl --no-pager -p err > $OUTPUT_DIR/logs/journal_errors.txt 2> /dev/null
+fi
 
 echo "  ${COL_ENTRY}>${RESET} Copying logs"
 if [ $PLATFORM = "solaris" ]
@@ -5512,7 +5509,7 @@ ip addr 1> $OUTPUT_DIR/network/ipaddr.txt 2> /dev/null
 ip netconf 1> $OUTPUT_DIR/network/ipnetconf.txt 2> /dev/null
 ifconfig -a 1> $OUTPUT_DIR/network/ifconfig-a.txt 2> /dev/null
 ss -tulpan > $OUTPUT_DIR/network/ss_tulpan.txt 2>/dev/null
-ss -oemitu > $OUTPUT_DIR/network/ss_detailed.txt 2>/dev/nul
+ss -oemitu > $OUTPUT_DIR/network/ss_detailed.txt 2>/dev/null
 plutil -p /Library/Preferences/SystemConfiguration/preferences.plist 1> $OUTPUT_DIR/network/network_preferences_mac.txt 2> /dev/null
 
 echo "  ${COL_ENTRY}>${RESET} IP forwarding"
