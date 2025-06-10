@@ -280,17 +280,6 @@ collector-hostname-DD-MM-YYYY/
 - **🏢 Enterprise Security**: Deploy across internal networks for centralized collection
 - **📱 IoT/Embedded Analysis**: Investigate compromised embedded devices
 
-## 🌐 Deployment Scenarios
-
-UNIX Collector excels in challenging environments where traditional forensic tools may not be viable:
-
-- **Air-Gapped Networks**: No internet connectivity required
-- **Restricted Environments**: No installation or compilation needed
-- **Legacy Systems**: Works on older UNIX variants with basic shell
-- **Embedded Devices**: Minimal footprint for resource-constrained systems
-- **Containerized Environments**: Collects both host and container artifacts
-- **Multi-Platform Infrastructure**: Single tool for heterogeneous environments
-
 ## Contributing
 
 Contributions are welcome! Please feel free to submit issues, feature requests, or pull requests on the [GitHub repository](https://github.com/op7ic/unix_collector).
@@ -304,6 +293,7 @@ This project is licensed under the GNU General Public License v3.0 - see the LIC
 - Inspired by the collective knowledge of Portcullis Security Team
 - Based on concepts from unix-privesc-check by pentestmonkey
 - Special thanks to Ian Ventura-Whiting (Fizz) and Tim Brown (timb_machine) for inspiration
+- Mike Trewartha 
 
 ---
 
