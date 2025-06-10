@@ -56,13 +56,13 @@ UNIX Collector supports a wide range of UNIX-like operating systems with automat
 
 ### 🔍 What It Collects
 
-The script gathers **350+ distinct forensic artifacts** to help identify potential system compromises:
+The script gathers **360+ distinct forensic artifacts** to help identify potential system compromises:
 
 | Category | Artifact Count | Key Artifacts |
 |----------|-------|---------------|
 | **System Information** | ~30 | Kernel version, hardware inventory, BIOS/UEFI, timezone, installation date |
 | **Storage & Filesystems** | ~40 | Disk partitions, RAID arrays, LVM volumes, ZFS datasets, mount points |
-| **Process Analysis** | ~25 | Running processes, command lines, file handles, deleted binaries, memory maps |
+| **Process Analysis** | ~30 | Running processes, command lines, file handles, deleted binaries, memory maps, unowned files, dead processes |
 | **Persistence Mechanisms** | ~35 | Cron jobs, at tasks, systemd timers, rc scripts, kernel modules |
 | **Network Configuration** | ~20 | Interfaces, routing tables, connections, firewall rules, ARP cache |
 | **User & Authentication** | ~15 | User accounts, groups, SSH configs, sudo rules, Kerberos tickets |
