@@ -149,10 +149,10 @@ The script gathers **350+ distinct forensic artifacts** to help identify potenti
 - Detection of potential backdoor SSH scripts
 
 **Web Browser Artifacts**
-- **Chromium-based**: Google Chrome, Chromium, Microsoft Edge, Brave, Opera, Vivaldi
-- **Mozilla Firefox**: Including ESR and Developer editions
-- **Safari**: macOS systems
-- **Privacy Browsers**: Tor Browser (limited collection)
+- Chromium-based: Google Chrome, Chromium, Microsoft Edge, Brave, Opera, Vivaldi
+- Mozilla Firefox: Including ESR and Developer editions
+- Safari: macOS systems
+- Privacy Browsers: Tor Browser (limited collection)
 
 ## 🚀 Quick Start
 
