@@ -74,6 +74,7 @@ The script gathers **300+ distinct forensic artifacts** to help identify potenti
 | **Additional Data** | ~15 | Home directories, temp files, installed packages, compiler tools |
 | **Remote Access Tools** | ~20 | TeamViewer, AnyDesk, RustDesk, VNC variants, SSH tunnels, RDP tools |
 | **Application Artifacts** | ~40 | Confluence, Tomcat, Jenkins, WordPress, Elastic Stack, etc. |
+| **Web Browsers** | ~50 | History, bookmarks, cookies, saved passwords, extensions, downloads, preferences |
 
 **System & Hardware**
 - Complete hardware inventory and system information

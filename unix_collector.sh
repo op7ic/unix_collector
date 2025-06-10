@@ -3896,6 +3896,316 @@ then
     fi
 fi
 
+echo "  ${COL_ENTRY}>${RESET} Web Browser Artifacts"
+mkdir $OUTPUT_DIR/software/browsers 2> /dev/null
+
+# Google Chrome / Chromium
+chrome_found=0
+# Check for Chrome in user directories
+find /home -maxdepth 4 \( -path "*/.config/google-chrome/*" -o -path "*/.config/chromium/*" \) -type f 2> /dev/null | while read chrome_file; do
+    if [ $chrome_found -eq 0 ]; then
+        echo "      > Chrome/Chromium detected"
+        chrome_found=1
+    fi
+    username=`echo "$chrome_file" | cut -d'/' -f3`
+    browser_type=`echo "$chrome_file" | grep -o -E "google-chrome|chromium"`
+    
+    # Create directory structure
+    mkdir -p $OUTPUT_DIR/software/browsers/chrome/$username/$browser_type 2> /dev/null
+    
+    # History files
+    if echo "$chrome_file" | grep -q "History"; then
+        cp -p "$chrome_file" $OUTPUT_DIR/software/browsers/chrome/$username/$browser_type/ 2> /dev/null
+    fi
+    
+    # Bookmarks
+    if echo "$chrome_file" | grep -q "Bookmarks"; then
+        cp -p "$chrome_file" $OUTPUT_DIR/software/browsers/chrome/$username/$browser_type/ 2> /dev/null
+    fi
+    
+    # Preferences (contains settings)
+    if echo "$chrome_file" | grep -q "Preferences"; then
+        cp -p "$chrome_file" $OUTPUT_DIR/software/browsers/chrome/$username/$browser_type/ 2> /dev/null
+    fi
+    
+    # Login Data (saved passwords)
+    if echo "$chrome_file" | grep -q "Login Data"; then
+        cp -p "$chrome_file" $OUTPUT_DIR/software/browsers/chrome/$username/$browser_type/ 2> /dev/null
+    fi
+    
+    # Cookies
+    if echo "$chrome_file" | grep -q "Cookies"; then
+        cp -p "$chrome_file" $OUTPUT_DIR/software/browsers/chrome/$username/$browser_type/ 2> /dev/null
+    fi
+    
+    # Web Data (autofill)
+    if echo "$chrome_file" | grep -q "Web Data"; then
+        cp -p "$chrome_file" $OUTPUT_DIR/software/browsers/chrome/$username/$browser_type/ 2> /dev/null
+    fi
+    
+    # Extensions
+    if echo "$chrome_file" | grep -q "/Extensions/"; then
+        extension_dir=`dirname "$chrome_file"`
+        extension_id=`basename "$extension_dir"`
+        mkdir -p $OUTPUT_DIR/software/browsers/chrome/$username/$browser_type/extensions 2> /dev/null
+        # Only copy manifest.json to identify extensions
+        if [ -f "$extension_dir/manifest.json" ]; then
+            mkdir -p $OUTPUT_DIR/software/browsers/chrome/$username/$browser_type/extensions/$extension_id 2> /dev/null
+            cp -p "$extension_dir/manifest.json" $OUTPUT_DIR/software/browsers/chrome/$username/$browser_type/extensions/$extension_id/ 2> /dev/null
+        fi
+    fi
+done
+
+# Get Chrome/Chromium versions
+find /home -maxdepth 5 -path "*/.config/google-chrome/*/version" -o -path "*/.config/chromium/*/version" 2> /dev/null | while read version_file; do
+    username=`echo "$version_file" | cut -d'/' -f3`
+    browser_type=`echo "$version_file" | grep -o -E "google-chrome|chromium"`
+    cp -p "$version_file" $OUTPUT_DIR/software/browsers/chrome/$username/$browser_type/ 2> /dev/null
+done
+
+# List Chrome profiles
+find /home -maxdepth 4 -type d \( -path "*/.config/google-chrome/Profile*" -o -path "*/.config/google-chrome/Default" -o -path "*/.config/chromium/Profile*" -o -path "*/.config/chromium/Default" \) 2> /dev/null | while read profile_dir; do
+    username=`echo "$profile_dir" | cut -d'/' -f3`
+    browser_type=`echo "$profile_dir" | grep -o -E "google-chrome|chromium"`
+    profile_name=`basename "$profile_dir"`
+    echo "$profile_name" >> $OUTPUT_DIR/software/browsers/chrome/$username/${browser_type}_profiles.txt 2> /dev/null
+done
+
+# Mozilla Firefox
+firefox_found=0
+find /home -maxdepth 3 -name ".mozilla" -type d 2> /dev/null | while read mozilla_dir; do
+    if [ $firefox_found -eq 0 ]; then
+        echo "      > Firefox detected"
+        firefox_found=1
+    fi
+    username=`echo "$mozilla_dir" | cut -d'/' -f3`
+    mkdir -p $OUTPUT_DIR/software/browsers/firefox/$username 2> /dev/null
+    
+    # Find Firefox profiles
+    find "$mozilla_dir/firefox" -name "*.default*" -o -name "*.default-release*" -type d 2> /dev/null | while read profile_dir; do
+        profile_name=`basename "$profile_dir"`
+        mkdir -p $OUTPUT_DIR/software/browsers/firefox/$username/$profile_name 2> /dev/null
+        
+        # Places.sqlite (history and bookmarks)
+        cp -p "$profile_dir/places.sqlite" $OUTPUT_DIR/software/browsers/firefox/$username/$profile_name/ 2> /dev/null
+        cp -p "$profile_dir/places.sqlite-wal" $OUTPUT_DIR/software/browsers/firefox/$username/$profile_name/ 2> /dev/null
+        
+        # Form history
+        cp -p "$profile_dir/formhistory.sqlite" $OUTPUT_DIR/software/browsers/firefox/$username/$profile_name/ 2> /dev/null
+        
+        # Downloads
+        cp -p "$profile_dir/downloads.sqlite" $OUTPUT_DIR/software/browsers/firefox/$username/$profile_name/ 2> /dev/null
+        
+        # Cookies
+        cp -p "$profile_dir/cookies.sqlite" $OUTPUT_DIR/software/browsers/firefox/$username/$profile_name/ 2> /dev/null
+        
+        # Logins (encrypted passwords)
+        cp -p "$profile_dir/logins.json" $OUTPUT_DIR/software/browsers/firefox/$username/$profile_name/ 2> /dev/null
+        cp -p "$profile_dir/key*.db" $OUTPUT_DIR/software/browsers/firefox/$username/$profile_name/ 2> /dev/null
+        
+        # Preferences
+        cp -p "$profile_dir/prefs.js" $OUTPUT_DIR/software/browsers/firefox/$username/$profile_name/ 2> /dev/null
+        cp -p "$profile_dir/user.js" $OUTPUT_DIR/software/browsers/firefox/$username/$profile_name/ 2> /dev/null
+        
+        # Extensions
+        cp -p "$profile_dir/extensions.json" $OUTPUT_DIR/software/browsers/firefox/$username/$profile_name/ 2> /dev/null
+        cp -p "$profile_dir/addons.json" $OUTPUT_DIR/software/browsers/firefox/$username/$profile_name/ 2> /dev/null
+        
+        # Session data
+        cp -p "$profile_dir/sessionstore.jsonlz4" $OUTPUT_DIR/software/browsers/firefox/$username/$profile_name/ 2> /dev/null
+        cp -p "$profile_dir/sessionstore-backups/recovery.jsonlz4" $OUTPUT_DIR/software/browsers/firefox/$username/$profile_name/ 2> /dev/null
+    done
+    
+    # Firefox profiles.ini
+    cp -p "$mozilla_dir/firefox/profiles.ini" $OUTPUT_DIR/software/browsers/firefox/$username/ 2> /dev/null
+done
+
+# Microsoft Edge (Chromium-based)
+edge_found=0
+find /home -maxdepth 4 -path "*/.config/microsoft-edge/*" -type f 2> /dev/null | while read edge_file; do
+    if [ $edge_found -eq 0 ]; then
+        echo "      > Microsoft Edge detected"
+        edge_found=1
+    fi
+    username=`echo "$edge_file" | cut -d'/' -f3`
+    mkdir -p $OUTPUT_DIR/software/browsers/edge/$username 2> /dev/null
+    
+    # Similar to Chrome structure
+    if echo "$edge_file" | grep -E "History|Bookmarks|Preferences|Login Data|Cookies|Web Data"; then
+        cp -p "$edge_file" $OUTPUT_DIR/software/browsers/edge/$username/ 2> /dev/null
+    fi
+done
+
+# Safari (macOS)
+if [ -d "/Users" ]; then  # macOS detection
+    find /Users -maxdepth 3 -path "*/Library/Safari/*" -type f 2> /dev/null | while read safari_file; do
+        echo "      > Safari detected"
+        username=`echo "$safari_file" | cut -d'/' -f3`
+        mkdir -p $OUTPUT_DIR/software/browsers/safari/$username 2> /dev/null
+        
+        # History
+        if echo "$safari_file" | grep -q "History.db"; then
+            cp -p "$safari_file" $OUTPUT_DIR/software/browsers/safari/$username/ 2> /dev/null
+        fi
+        
+        # Bookmarks
+        if echo "$safari_file" | grep -q "Bookmarks.plist"; then
+            cp -p "$safari_file" $OUTPUT_DIR/software/browsers/safari/$username/ 2> /dev/null
+        fi
+        
+        # Downloads
+        if echo "$safari_file" | grep -q "Downloads.plist"; then
+            cp -p "$safari_file" $OUTPUT_DIR/software/browsers/safari/$username/ 2> /dev/null
+        fi
+        
+        # Extensions
+        if echo "$safari_file" | grep -q "Extensions.plist"; then
+            cp -p "$safari_file" $OUTPUT_DIR/software/browsers/safari/$username/ 2> /dev/null
+        fi
+    done
+fi
+
+# Opera
+opera_found=0
+find /home -maxdepth 4 \( -path "*/.config/opera/*" -o -path "*/.opera/*" \) -type f 2> /dev/null | while read opera_file; do
+    if [ $opera_found -eq 0 ]; then
+        echo "      > Opera detected"
+        opera_found=1
+    fi
+    username=`echo "$opera_file" | cut -d'/' -f3`
+    mkdir -p $OUTPUT_DIR/software/browsers/opera/$username 2> /dev/null
+    
+    # Opera uses similar structure to Chrome
+    if echo "$opera_file" | grep -E "History|Bookmarks|Preferences|Login Data|Cookies|Web Data"; then
+        cp -p "$opera_file" $OUTPUT_DIR/software/browsers/opera/$username/ 2> /dev/null
+    fi
+done
+
+# Brave Browser
+brave_found=0
+find /home -maxdepth 4 -path "*/.config/BraveSoftware/Brave-Browser/*" -type f 2> /dev/null | while read brave_file; do
+    if [ $brave_found -eq 0 ]; then
+        echo "      > Brave Browser detected"
+        brave_found=1
+    fi
+    username=`echo "$brave_file" | cut -d'/' -f3`
+    mkdir -p $OUTPUT_DIR/software/browsers/brave/$username 2> /dev/null
+    
+    # Brave uses Chrome structure
+    if echo "$brave_file" | grep -E "History|Bookmarks|Preferences|Login Data|Cookies|Web Data"; then
+        cp -p "$brave_file" $OUTPUT_DIR/software/browsers/brave/$username/ 2> /dev/null
+    fi
+done
+
+# Vivaldi
+vivaldi_found=0
+find /home -maxdepth 4 -path "*/.config/vivaldi/*" -type f 2> /dev/null | while read vivaldi_file; do
+    if [ $vivaldi_found -eq 0 ]; then
+        echo "      > Vivaldi detected"
+        vivaldi_found=1
+    fi
+    username=`echo "$vivaldi_file" | cut -d'/' -f3`
+    mkdir -p $OUTPUT_DIR/software/browsers/vivaldi/$username 2> /dev/null
+    
+    # Vivaldi uses Chrome structure
+    if echo "$vivaldi_file" | grep -E "History|Bookmarks|Preferences|Login Data|Cookies|Web Data|Notes"; then
+        cp -p "$vivaldi_file" $OUTPUT_DIR/software/browsers/vivaldi/$username/ 2> /dev/null
+    fi
+done
+
+# Tor Browser
+tor_found=0
+find /home -maxdepth 4 -path "*/tor-browser*/*" -name "*.sqlite" -o -path "*/\.tor-browser*/*" -name "*.sqlite" 2> /dev/null | while read tor_file; do
+    if [ $tor_found -eq 0 ]; then
+        echo "      > Tor Browser detected"
+        tor_found=1
+    fi
+    username=`echo "$tor_file" | cut -d'/' -f3`
+    mkdir -p $OUTPUT_DIR/software/browsers/tor/$username 2> /dev/null
+    
+    # Tor Browser has Firefox structure but we want minimal collection for privacy
+    cp -p "$tor_file" $OUTPUT_DIR/software/browsers/tor/$username/ 2> /dev/null
+done
+
+# Browser Cache Locations
+mkdir $OUTPUT_DIR/software/browsers/cache_info 2> /dev/null
+
+# Chrome cache
+find /home -maxdepth 5 -path "*/.cache/google-chrome/*/Cache" -o -path "*/.cache/chromium/*/Cache" 2> /dev/null | while read cache_dir; do
+    username=`echo "$cache_dir" | cut -d'/' -f3`
+    browser=`echo "$cache_dir" | grep -o -E "google-chrome|chromium"`
+    # Just get cache size info, not actual cache files
+    du -sh "$cache_dir" 2> /dev/null >> $OUTPUT_DIR/software/browsers/cache_info/${username}_${browser}_cache_size.txt
+done
+
+# Firefox cache
+find /home -maxdepth 5 -path "*/.cache/mozilla/firefox/*/cache2" 2> /dev/null | while read cache_dir; do
+    username=`echo "$cache_dir" | cut -d'/' -f3`
+    du -sh "$cache_dir" 2> /dev/null >> $OUTPUT_DIR/software/browsers/cache_info/${username}_firefox_cache_size.txt
+done
+
+# Browser Process Information (if running)
+ps aux | grep -E "chrome|firefox|safari|opera|brave|vivaldi|edge" | grep -v grep > $OUTPUT_DIR/software/browsers/running_browsers.txt 2> /dev/null
+
+# Default Browser Settings
+mkdir $OUTPUT_DIR/software/browsers/system_defaults 2> /dev/null
+
+# XDG mime settings
+find /home -maxdepth 3 -name "mimeapps.list" 2> /dev/null | while read mime_file; do
+    username=`echo "$mime_file" | cut -d'/' -f3`
+    grep -E "text/html|x-scheme-handler/http|x-scheme-handler/https" "$mime_file" > $OUTPUT_DIR/software/browsers/system_defaults/${username}_default_browser.txt 2> /dev/null
+done
+
+# Alternatives system
+update-alternatives --display x-www-browser > $OUTPUT_DIR/software/browsers/system_defaults/system_default_browser.txt 2> /dev/null
+
+find /home -maxdepth 4 \( -path "*/.config/*/History" -o -path "*/.mozilla/firefox/*/places.sqlite" \) -mtime -7 2> /dev/null | head -50 > $OUTPUT_DIR/software/browsers/recently_used_browsers.txt
+
+# Chrome-based extensions
+find /home -maxdepth 7 -path "*/Extensions/*/manifest.json" 2> /dev/null | while read manifest; do
+    username=`echo "$manifest" | cut -d'/' -f3`
+    browser=`echo "$manifest" | grep -o -E "google-chrome|chromium|microsoft-edge|opera|brave|vivaldi" | head -1`
+    if [ -n "$browser" ]; then
+        grep -E '"name"|"version"|"description"' "$manifest" 2> /dev/null | head -3 >> $OUTPUT_DIR/software/browsers/${username}_${browser}_extensions.txt
+        echo "---" >> $OUTPUT_DIR/software/browsers/${username}_${browser}_extensions.txt
+    fi
+done
+
+# Firefox extensions
+find /home -maxdepth 5 -name "extensions.json" -path "*/.mozilla/firefox/*" 2> /dev/null | while read ext_file; do
+    username=`echo "$ext_file" | cut -d'/' -f3`
+    # Extract extension names (simplified - full JSON parsing would need jq)
+    grep -o '"name":"[^"]*"' "$ext_file" 2> /dev/null | cut -d'"' -f4 > $OUTPUT_DIR/software/browsers/${username}_firefox_extensions.txt
+done
+
+# Browser Security Settings
+mkdir $OUTPUT_DIR/software/browsers/security_settings 2> /dev/null
+find /home -maxdepth 5 \( -name "Preferences" -o -name "prefs.js" \) -path "*/.*/*" 2> /dev/null | while read pref_file; do
+    username=`echo "$pref_file" | cut -d'/' -f3`
+    browser_hint=`echo "$pref_file" | grep -o -E "chrome|chromium|firefox|opera|brave|vivaldi|edge" | head -1`
+    grep -i "proxy" "$pref_file" 2> /dev/null > $OUTPUT_DIR/software/browsers/security_settings/${username}_${browser_hint}_proxy.txt
+done
+
+# Browser Downloads
+mkdir $OUTPUT_DIR/software/browsers/downloads 2> /dev/null
+# System Downloads folder
+find /home -maxdepth 3 -name "Downloads" -type d 2> /dev/null | while read dl_dir; do
+    username=`echo "$dl_dir" | cut -d'/' -f3`
+    # Just list recent downloads, not copy them
+    find "$dl_dir" -type f -mtime -30 2> /dev/null | head -100 > $OUTPUT_DIR/software/browsers/downloads/${username}_recent_downloads.txt
+done
+
+find $OUTPUT_DIR/software/browsers -type f 2> /dev/null | wc -l > $OUTPUT_DIR/software/browsers_artifact_count.txt
+ls -1 $OUTPUT_DIR/software/browsers 2> /dev/null | grep -v -E "cache_info|system_defaults|security_settings|downloads|txt$" > $OUTPUT_DIR/software/browsers_detected.txt
+
+# Create summary of all browser profiles found
+echo "Browser profiles found:" > $OUTPUT_DIR/software/browser_profiles_summary.txt
+find $OUTPUT_DIR/software/browsers -name "*_profiles.txt" 2> /dev/null | while read profile_list; do
+    echo "  $profile_list:" >> $OUTPUT_DIR/software/browser_profiles_summary.txt
+    cat "$profile_list" | sed 's/^/    /' >> $OUTPUT_DIR/software/browser_profiles_summary.txt
+done
+
+
 echo "  ${COL_ENTRY}>${RESET} Compiler and development tools detection"
 mkdir $OUTPUT_DIR/software/development_tools 2> /dev/null
 
