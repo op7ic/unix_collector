@@ -65,6 +65,7 @@ WHOAMI="root"
 QUIET="NO"
 DISPLAYHELP="OFF"
 OUTPUT_DIR="collector-${HOSTNAME}-${COLLECTION_DATE}"
+OUTPUT_DIR_NAME=`basename "$OUTPUT_DIR"`
 TAR_FILE="collector-${HOSTNAME}-${COLLECTION_DATE}.tar"
 RSYNC_MAX_FILESIZE=-500m
 TAR_MAX_FILESIZE=-500M
@@ -255,6 +256,25 @@ fi
 
 # Create output directory
 mkdir $OUTPUT_DIR
+
+FIND_FS_OPTIONS=""
+if find "$OUTPUT_DIR" -xdev -print 1> /dev/null 2> /dev/null
+then
+    FIND_FS_OPTIONS="-xdev"
+elif find "$OUTPUT_DIR" -mount -print 1> /dev/null 2> /dev/null
+then
+    FIND_FS_OPTIONS="-mount"
+fi
+if find "$OUTPUT_DIR" -prune -print 1> /dev/null 2> /dev/null
+then
+    FIND_FS_OPTIONS="$FIND_FS_OPTIONS -name $OUTPUT_DIR_NAME -prune -o"
+fi
+if find "$OUTPUT_DIR" \( -fstype nfs -o -fstype nfs4 -o -fstype autofs -o -fstype cachefs \) -prune -o -print 1> /dev/null 2> /dev/null
+then
+    FIND_FS_OPTIONS="$FIND_FS_OPTIONS ( -fstype nfs -o -fstype nfs4 -o -fstype autofs -o -fstype cachefs ) -prune -o"
+fi
+
+echo "find_options=$FIND_FS_OPTIONS" 1> $OUTPUT_DIR/collector-find-controls.txt 2> /dev/null
 # ------------------
 # PART 2: THE BASICS
 # ------------------
@@ -395,7 +415,7 @@ echo "Inode,Hard Link Count,Full Path,Last Access,Last Modification,Last Status 
 case $PLATFORM in
     "linux"|"android"|"generic")
         # Generate bodyfile format
-        find / -xdev -type f -o -type d -o -type l 2> /dev/null | while read filepath
+        find / $FIND_FS_OPTIONS \( -type f -o -type d -o -type l \) -print 2> /dev/null | while read filepath
         do
             # Skip if file doesn't exist (race condition)
             [ -e "$filepath" ] || continue
@@ -412,13 +432,13 @@ case $PLATFORM in
         # Alternative method using find -printf if stat fails
         if [ ! -s "$OUTPUT_DIR/general/timeline/bodyfile.txt" ] || [ $(wc -l < $OUTPUT_DIR/general/timeline/bodyfile.txt) -lt 10 ]
         then
-            find / -xdev \( -type f -o -type d -o -type l \) -printf "0|%p|%i|%M|%u|%g|%s|%A@|%T@|%C@|0\n" 2> /dev/null >> $OUTPUT_DIR/general/timeline/bodyfile_find.txt
+            find / $FIND_FS_OPTIONS \( -type f -o -type d -o -type l \) -printf "0|%p|%i|%M|%u|%g|%s|%A@|%T@|%C@|0\n" 2> /dev/null >> $OUTPUT_DIR/general/timeline/bodyfile_find.txt
         fi
         ;;
         
     "mac")
         # macOS uses BSD stat with different format
-        find / -xdev -type f -o -type d -o -type l 2> /dev/null | while read filepath
+        find / $FIND_FS_OPTIONS \( -type f -o -type d -o -type l \) -print 2> /dev/null | while read filepath
         do
             [ -e "$filepath" ] || continue  
             # BSD stat format for bodyfile
@@ -436,12 +456,12 @@ case $PLATFORM in
             # Human readable format
             stat -f "%i,%l,%N,%Sa,%Sm,%Sc,%SB,%Su,%Sg,%Sp,%z,%HT" "$filepath" 2> /dev/null >> $OUTPUT_DIR/general/timeline/timeline.csv
         done
-        find / -xdev -print0 2> /dev/null | xargs -0 stat -L > $OUTPUT_DIR/general/timeline/timeline_mac_native.txt 2> /dev/null
+        find / $FIND_FS_OPTIONS -print0 2> /dev/null | xargs -0 stat -L > $OUTPUT_DIR/general/timeline/timeline_mac_native.txt 2> /dev/null
         ;;
     "solaris")
         if [ "$STAT_TYPE" = "gnu" ]
         then
-            find / -xdev -type f -o -type d -o -type l 2> /dev/null | while read filepath
+            find / $FIND_FS_OPTIONS \( -type f -o -type d -o -type l \) -print 2> /dev/null | while read filepath
             do
                 [ -e "$filepath" ] || continue
                 stat -c "0|%n|%i|%A|%u|%g|%s|%X|%Y|%Z|%W" "$filepath" 2> /dev/null >> $OUTPUT_DIR/general/timeline/bodyfile.txt
@@ -450,7 +470,7 @@ case $PLATFORM in
         else
             # Fallback to ls and perl for Solaris
             echo "  ${COL_ENTRY}>${RESET} Using perl method for Solaris"
-            find / -xdev 2> /dev/null | perl -ne 'chomp; 
+            find / $FIND_FS_OPTIONS -print 2> /dev/null | perl -ne 'chomp;
                 @s=stat($_); 
                 next unless @s; 
                 ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,$mtime,$ctime,$blksize,$blocks)=@s;
@@ -461,7 +481,7 @@ case $PLATFORM in
         ;;
     "aix")
         # AIX using perl method (most reliable)
-        find / -xdev 2> /dev/null | perl -ne 'chomp;
+        find / $FIND_FS_OPTIONS -print 2> /dev/null | perl -ne 'chomp;
             $_ =~ s/\x0a//g; $_ =~ s/\x0d//g;
             @s = stat($_);
             next unless @s;
@@ -471,12 +491,12 @@ case $PLATFORM in
             print "0|$_|$ino|$mode_str|$uid|$gid|$size|$atime|$mtime|$ctime|0\n";
         ' > $OUTPUT_DIR/general/timeline/bodyfile.txt 2> /dev/null
         echo "device number,inode,file name,nlink,uid,gid,rdev,size,access time,modified time,inode change time,io size,block size" > $OUTPUT_DIR/general/timeline/timeline.csv
-        find / -xdev 2> /dev/null | perl -n -e '$_ =~ s/\x0a//g; $_ =~ s/\x0d//g;print $_ . "," . join(",", stat($_)) . "\n";' >> $OUTPUT_DIR/general/timeline/timeline.csv 2> /dev/null
+        find / $FIND_FS_OPTIONS -print 2> /dev/null | perl -n -e '$_ =~ s/\x0a//g; $_ =~ s/\x0d//g;print $_ . "," . join(",", stat($_)) . "\n";' >> $OUTPUT_DIR/general/timeline/timeline.csv 2> /dev/null
         ;;
     *)
         if command -v stat >/dev/null 2>&1
         then
-            find / -xdev -type f -o -type d -o -type l 2> /dev/null | while read filepath
+            find / $FIND_FS_OPTIONS \( -type f -o -type d -o -type l \) -print 2> /dev/null | while read filepath
             do
                 [ -e "$filepath" ] || continue
                 stat -c "0|%n|%i|%A|%u|%g|%s|%X|%Y|%Z|%W" "$filepath" 2> /dev/null >> $OUTPUT_DIR/general/timeline/bodyfile.txt || \
@@ -490,13 +510,13 @@ esac
 echo "  ${COL_ENTRY}>${RESET} Generating focused timelines"
 # Recently modified files (last 14 days)
 echo "# Recently modified files (last 14 days)" > $OUTPUT_DIR/general/timeline/recent_files.txt
-find / -xdev -type f -mtime -14 -ls 2> /dev/null >> $OUTPUT_DIR/general/timeline/recent_files.txt
+find / $FIND_FS_OPTIONS -type f -mtime -14 -ls 2> /dev/null >> $OUTPUT_DIR/general/timeline/recent_files.txt
 # Recently accessed files (last 14 days)  
 echo "# Recently accessed files (last 14 days)" > $OUTPUT_DIR/general/timeline/recent_accessed.txt
-find / -xdev -type f -atime -14 -ls 2> /dev/null >> $OUTPUT_DIR/general/timeline/recent_accessed.txt
+find / $FIND_FS_OPTIONS -type f -atime -14 -ls 2> /dev/null >> $OUTPUT_DIR/general/timeline/recent_accessed.txt
 # SUID/SGID files timeline
 echo "# SUID/SGID files" > $OUTPUT_DIR/general/timeline/suid_sgid_timeline.txt
-find / -xdev \( -perm -4000 -o -perm -2000 \) -type f -ls 2> /dev/null >> $OUTPUT_DIR/general/timeline/suid_sgid_timeline.txt
+find / $FIND_FS_OPTIONS -type f \( -perm -4000 -o -perm -2000 \) -ls 2> /dev/null >> $OUTPUT_DIR/general/timeline/suid_sgid_timeline.txt
 # Timeline for critical directories
 for dir in /etc /var/log /root /tmp /var/tmp /home /opt
 do
@@ -505,7 +525,7 @@ do
         echo "  ${COL_ENTRY}>${RESET} Timeline for $dir"
         DIR_NAME=$(echo $dir | tr '/' '_' | sed 's/^_//')
         # Quick timeline for critical directories
-        find "$dir" -xdev -type f -ls 2> /dev/null | \
+        find "$dir" $FIND_FS_OPTIONS -type f -ls 2> /dev/null | \
             awk '{print $3" "$11" "$7" "$8" "$9" "$10" "$NF}' | \
             sort -k4,5 > "$OUTPUT_DIR/general/timeline/timeline_${DIR_NAME}.txt" 2> /dev/null
     fi
@@ -516,7 +536,7 @@ TOTAL_FILES=$(wc -l < $OUTPUT_DIR/general/timeline/bodyfile.txt 2> /dev/null || 
 # Find files modified in last 24 hours
 if [ "$PLATFORM" != "aix" ]
 then
-    RECENT_24H=$(find / -xdev -type f -mtime -1 2> /dev/null | wc -l)
+    RECENT_24H=$(find / $FIND_FS_OPTIONS -type f -mtime -1 -print 2> /dev/null | wc -l)
 else
     RECENT_24H="N/A"
 fi
@@ -2729,7 +2749,7 @@ done
 cat /proc/sys/kernel/core_pattern > $OUTPUT_DIR/general/dead_processes/core_pattern.txt 2> /dev/null
 ulimit -c > $OUTPUT_DIR/general/dead_processes/core_ulimit.txt 2> /dev/null
 
-find / -name "core" -o -name "core.*" -type f 2> /dev/null | head -50 > $OUTPUT_DIR/general/dead_processes/existing_core_dumps.txt 2> /dev/null
+find / $FIND_FS_OPTIONS -type f \( -name "core" -o -name "core.*" \) -print 2> /dev/null | head -50 > $OUTPUT_DIR/general/dead_processes/existing_core_dumps.txt 2> /dev/null
 
 proc_count=$(grep -c "^PID:" $OUTPUT_DIR/general/dead_processes/deleted_executables.txt 2> /dev/null || echo 0)
 echo "Processes with deleted executables: $proc_count" > $OUTPUT_DIR/general/dead_processes/summary.txt
@@ -3102,10 +3122,10 @@ fi
 # File ACLs and extended attributes
 echo "  ${COL_ENTRY}>${RESET} File ACLs and extended attributes"
 if [ -x "$(command -v getfacl)" ]; then
-    find / -xdev -type f -exec getfacl {} + > $OUTPUT_DIR/general/file_acls_getfacl.txt 2> /dev/null &
+    find / $FIND_FS_OPTIONS -type f -exec getfacl {} + > $OUTPUT_DIR/general/file_acls_getfacl.txt 2> /dev/null &
 fi
 if [ -x "$(command -v getfattr)" ]; then
-    find / -xdev -type f -exec getfattr -d {} + > $OUTPUT_DIR/general/extended_file_attributes_getfattr.txt 2> /dev/null &
+    find / $FIND_FS_OPTIONS -type f -exec getfattr -d {} + > $OUTPUT_DIR/general/extended_file_attributes_getfattr.txt 2> /dev/null &
 fi
 
 if [ $PLATFORM = "mac" ]
@@ -3670,7 +3690,7 @@ then
     
 elif [ $PLATFORM = "android" ]
 then
-    find / -iname "*.apk" 1> $OUTPUT_DIR/software/software-apps.txt 2> /dev/null
+    find / $FIND_FS_OPTIONS -iname "*.apk" -print 1> $OUTPUT_DIR/software/software-apps.txt 2> /dev/null
     pm list packages 1> $OUTPUT_DIR/software/list_packages-pm.txt 2> /dev/null 
     cmd package list packages -f -u -i -U 1> $OUTPUT_DIR/software/android_list_packages-package.txt 2> /dev/null 
     dumpsys -l 1> $OUTPUT_DIR/software/android_services_list.txt 2> /dev/null
@@ -3694,8 +3714,8 @@ then
     
 elif [ $PLATFORM = "mac" ]
 then
-    find / -iname "*.app" 1> $OUTPUT_DIR/software/software-apps.txt 2> /dev/null
-    find / -iname "*.plist" 1> $OUTPUT_DIR/software/software-plist.txt 2> /dev/null
+    find / $FIND_FS_OPTIONS -iname "*.app" -print 1> $OUTPUT_DIR/software/software-apps.txt 2> /dev/null
+    find / $FIND_FS_OPTIONS -iname "*.plist" -print 1> $OUTPUT_DIR/software/software-plist.txt 2> /dev/null
     ls -la /Applications/ 1> $OUTPUT_DIR/software/software-Applications-folder.txt 2> /dev/null
     mkdir $OUTPUT_DIR/software/System_Kernel_Extensions/ 2> /dev/null
     cp -R /System/Library/Extensions/ $OUTPUT_DIR/software/System_Kernel_Extensions/ 2> /dev/null
@@ -4481,7 +4501,7 @@ echo "" >> $OUTPUT_DIR/software/development_tools/summary.txt
 
 # Legacy compatibility - create the original simple list
 echo "  ${COL_ENTRY}>${RESET} Creating legacy compiler list (NFS skip)"
-find / -fstype nfs -prune -o \( -name 'gcc*' -o -name 'javac*' -o -name 'java*' -o -name 'perl*' -o -name 'tclsh*' -o -name 'python*' -o -name 'ruby*' \) -ls 1> $OUTPUT_DIR/software/compiler.txt 2> /dev/null
+find / $FIND_FS_OPTIONS \( -name 'gcc*' -o -name 'javac*' -o -name 'java*' -o -name 'perl*' -o -name 'tclsh*' -o -name 'python*' -o -name 'ruby*' \) -ls 1> $OUTPUT_DIR/software/compiler.txt 2> /dev/null
 
 # ------------------------------------
 # PART 5: LOG FILES, HOME DIR and PROC folders
@@ -4579,7 +4599,7 @@ then
 		mkdir $OUTPUT_DIR/homedir/home 1> /dev/null 2> /dev/null
 		mkdir $OUTPUT_DIR/homedir/root 1> /dev/null 2> /dev/null
 		mkdir $OUTPUT_DIR/homedir/home-export 1> /dev/null 2> /dev/null
-		find /home/ /export/home/ /root/ -size $TAR_MAX_FILESIZE >> $OUTPUT_DIR/homedir/oversized_files.txt
+		find /home/ /export/home/ /root/ $FIND_FS_OPTIONS -size $TAR_MAX_FILESIZE -print >> $OUTPUT_DIR/homedir/oversized_files.txt
 		tar --exclude=$OUTPUT_DIR -cvfX $OUTPUT_DIR/homedir/home/home.tar $OUTPUT_DIR/homedir/oversized_files.txt /home/ 1> /dev/null 2> /dev/null
 		tar --exclude=$OUTPUT_DIR -cvfX $OUTPUT_DIR/homedir/root/root.tar $OUTPUT_DIR/homedir/oversized_files.txt /root/ 1> /dev/null 2> /dev/null
 		tar --exclude=$OUTPUT_DIR -cvfX $OUTPUT_DIR/homedir/home-export/home-export.tar $OUTPUT_DIR/homedir/oversized_files.txt /export/home/ 1> /dev/null 2> /dev/null
@@ -4596,7 +4616,7 @@ then
 	then
 		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
 		mkdir $OUTPUT_DIR/homedir/root 2> /dev/null
-		find /home/ /root/ -size $TAR_MAX_FILESIZE >> $OUTPUT_DIR/homedir/oversized_files.txt
+		find /home/ /root/ $FIND_FS_OPTIONS -size $TAR_MAX_FILESIZE -print >> $OUTPUT_DIR/homedir/oversized_files.txt
 		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home/home.tar /home/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
 		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/root/root.tar /root/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
 	fi 
@@ -4612,7 +4632,7 @@ then
 	then
 		mkdir $OUTPUT_DIR/homedir/Users 2> /dev/null
 		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
-		find /Users/ /home/ -size $TAR_MAX_FILESIZE >> $OUTPUT_DIR/homedir/oversized_files.txt
+		find /Users/ /home/ $FIND_FS_OPTIONS -size $TAR_MAX_FILESIZE -print >> $OUTPUT_DIR/homedir/oversized_files.txt
 		tar --exclude=$OUTPUT_DIR --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt -cvf $OUTPUT_DIR/homedir/home/Users.tar /Users/  1> /dev/null 2> /dev/null
 		tar --exclude=$OUTPUT_DIR --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt -cvf $OUTPUT_DIR/homedir/home/home.tar /home/  1> /dev/null 2> /dev/null
 	fi 	
@@ -4628,7 +4648,7 @@ then
 	then
 		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
 		mkdir $OUTPUT_DIR/homedir/root 2> /dev/null
-		find /root/ /home/ -size $TAR_MAX_FILESIZE >> $OUTPUT_DIR/homedir/oversized_files.txt 2> /dev/null
+		find /root/ /home/ $FIND_FS_OPTIONS -size $TAR_MAX_FILESIZE -print >> $OUTPUT_DIR/homedir/oversized_files.txt 2> /dev/null
 		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home/home.tar /home/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null || tar -cvf $OUTPUT_DIR/homedir/home/home.tar /home/  --exclude=$OUTPUT_DIR --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
 		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/root/root.tar /root/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null || tar -cvf $OUTPUT_DIR/homedir/root/root.tar /root/ --exclude=$OUTPUT_DIR --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null 
 	fi 
@@ -4644,7 +4664,7 @@ then
 	then
 		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
 		mkdir $OUTPUT_DIR/homedir/root 2> /dev/null
-		find /home/ /root/ -size $TAR_MAX_FILESIZE >> $OUTPUT_DIR/homedir/oversized_files.txt 2> /dev/null
+		find /home/ /root/ $FIND_FS_OPTIONS -size $TAR_MAX_FILESIZE -print >> $OUTPUT_DIR/homedir/oversized_files.txt 2> /dev/null
 		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home/home.tar /home/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null || tar -cvf $OUTPUT_DIR/homedir/home/home.tar /home/  --exclude=$OUTPUT_DIR --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
 		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/root/root.tar /root/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null || tar -cvf $OUTPUT_DIR/homedir/root/root.tar /root/ --exclude=$OUTPUT_DIR --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null 
 	fi 
@@ -4660,7 +4680,7 @@ then
 	then
 		mkdir $OUTPUT_DIR/homedir/home 2> /dev/null
 		mkdir $OUTPUT_DIR/homedir/root 2> /dev/null
-		find /home/ /root/ -size $TAR_MAX_FILESIZE >> $OUTPUT_DIR/homedir/oversized_files.txt 2> /dev/null
+		find /home/ /root/ $FIND_FS_OPTIONS -size $TAR_MAX_FILESIZE -print >> $OUTPUT_DIR/homedir/oversized_files.txt 2> /dev/null
 		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/home/home.tar /home/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null || tar -cvf $OUTPUT_DIR/homedir/home/home.tar /home/  --exclude=$OUTPUT_DIR --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null
 		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/homedir/root/root.tar /root/ --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null || tar -cvf $OUTPUT_DIR/homedir/root/root.tar /root/ --exclude=$OUTPUT_DIR --exclude-from $OUTPUT_DIR/homedir/oversized_files.txt 1> /dev/null 2> /dev/null 
 	fi 
@@ -4719,7 +4739,7 @@ then
 		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /var/tmp/ $OUTPUT_DIR/tmpfiles/var_tmp 1> /dev/null 2> /dev/null
 	elif [ -x "$(command -v tar)" ]
 	then
-		find /tmp/ /var/tmp/ -size $TAR_MAX_FILESIZE >> $OUTPUT_DIR/tmpfiles/oversized_files.txt 2> /dev/null
+		find /tmp/ /var/tmp/ $FIND_FS_OPTIONS -size $TAR_MAX_FILESIZE -print >> $OUTPUT_DIR/tmpfiles/oversized_files.txt 2> /dev/null
 		tar --exclude=$OUTPUT_DIR -cvfX $OUTPUT_DIR/tmpfiles/tmp.tar $OUTPUT_DIR/tmpfiles/oversized_files.txt /tmp/ 1> /dev/null 2> /dev/null
 		tar --exclude=$OUTPUT_DIR -cvfX $OUTPUT_DIR/tmpfiles/var_tmp.tar $OUTPUT_DIR/tmpfiles/oversized_files.txt /var/tmp/ 1> /dev/null 2> /dev/null
 	fi 
@@ -4733,7 +4753,7 @@ then
 		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /var/tmp/ $OUTPUT_DIR/tmpfiles/var_tmp 1> /dev/null 2> /dev/null
 	elif [ -x "$(command -v tar)" ]
 	then
-		find /tmp/ /var/tmp/ -size $TAR_MAX_FILESIZE >> $OUTPUT_DIR/tmpfiles/oversized_files.txt 2> /dev/null
+		find /tmp/ /var/tmp/ $FIND_FS_OPTIONS -size $TAR_MAX_FILESIZE -print >> $OUTPUT_DIR/tmpfiles/oversized_files.txt 2> /dev/null
 		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/tmp.tar /tmp/ --exclude-from $OUTPUT_DIR/tmpfiles/oversized_files.txt 1> /dev/null 2> /dev/null
 		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/var_tmp.tar /var/tmp/ --exclude-from $OUTPUT_DIR/tmpfiles/oversized_files.txt 1> /dev/null 2> /dev/null
 	fi 
@@ -4747,7 +4767,7 @@ then
 		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /var/tmp/ $OUTPUT_DIR/tmpfiles/var_tmp 1> /dev/null 2> /dev/null
 	elif [ -x "$(command -v tar)" ]
 	then
-		find /tmp/ /var/tmp/ -size $TAR_MAX_FILESIZE >> $OUTPUT_DIR/tmpfiles/oversized_files.txt 2> /dev/null
+		find /tmp/ /var/tmp/ $FIND_FS_OPTIONS -size $TAR_MAX_FILESIZE -print >> $OUTPUT_DIR/tmpfiles/oversized_files.txt 2> /dev/null
 		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/tmp.tar /tmp/ --exclude-from $OUTPUT_DIR/tmpfiles/oversized_files.txt 1> /dev/null 2> /dev/null
 		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/var_tmp.tar /var/tmp/ --exclude-from $OUTPUT_DIR/tmpfiles/oversized_files.txt 1> /dev/null 2> /dev/null
 	fi 
@@ -4763,7 +4783,7 @@ then
 		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /var/tmp/ $OUTPUT_DIR/tmpfiles/var_tmp 1> /dev/null 2> /dev/null
 	elif [ -x "$(command -v tar)" ]
 	then
-	    find /tmp/ /private/tmp/ /var/tmp/ -size $TAR_MAX_FILESIZE >> $OUTPUT_DIR/tmpfiles/oversized_files.txt 2> /dev/null
+	    find /tmp/ /private/tmp/ /var/tmp/ $FIND_FS_OPTIONS -size $TAR_MAX_FILESIZE -print >> $OUTPUT_DIR/tmpfiles/oversized_files.txt 2> /dev/null
 		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/tmp.tar /tmp/ --exclude-from $OUTPUT_DIR/tmpfiles/oversized_files.txt 1> /dev/null 2> /dev/null
 		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/private_tmp.tar /private/tmp/ --exclude-from $OUTPUT_DIR/tmpfiles/oversized_files.txt 1> /dev/null 2> /dev/null
 		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/var_tmp.tar /var/tmp/ --exclude-from $OUTPUT_DIR/tmpfiles/oversized_files.txt 1> /dev/null 2> /dev/null
@@ -4778,7 +4798,7 @@ then
 		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /var/tmp/ $OUTPUT_DIR/tmpfiles/var_tmp 1> /dev/null 2> /dev/null
 	elif [ -x "$(command -v tar)" ]
 	then
-		find /tmp/ /var/tmp/ -size $TAR_MAX_FILESIZE >> $OUTPUT_DIR/tmpfiles/oversized_files.txt 2> /dev/null
+		find /tmp/ /var/tmp/ $FIND_FS_OPTIONS -size $TAR_MAX_FILESIZE -print >> $OUTPUT_DIR/tmpfiles/oversized_files.txt 2> /dev/null
 		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/tmp.tar /tmp/ --exclude-from $OUTPUT_DIR/tmpfiles/oversized_files.txt 1> /dev/null 2> /dev/null
 		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/var_tmp.tar /var/tmp/ --exclude-from $OUTPUT_DIR/tmpfiles/oversized_files.txt 1> /dev/null 2> /dev/null
 	fi 
@@ -4792,7 +4812,7 @@ then
 		rsync -av --max-size=$RSYNC_MAX_FILESIZE --exclude '*.vmdk' --exclude '*.ovf' --exclude '*.ova' --exclude '*.vhd' --exclude '*.vmss' --exclude=$OUTPUT_DIR /var/tmp/ $OUTPUT_DIR/tmpfiles/var_tmp 1> /dev/null 2> /dev/null
 	elif [ -x "$(command -v tar)" ]
 	then
-		find /tmp/ /var/tmp/ -size $TAR_MAX_FILESIZE >> $OUTPUT_DIR/tmpfiles/oversized_files.txt 2> /dev/null
+		find /tmp/ /var/tmp/ $FIND_FS_OPTIONS -size $TAR_MAX_FILESIZE -print >> $OUTPUT_DIR/tmpfiles/oversized_files.txt 2> /dev/null
 		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/tmp.tar /tmp/ --exclude-from $OUTPUT_DIR/tmpfiles/oversized_files.txt 1> /dev/null 2> /dev/null
 		tar --exclude=$OUTPUT_DIR -cvf $OUTPUT_DIR/tmpfiles/var_tmp.tar /var/tmp/ --exclude-from $OUTPUT_DIR/tmpfiles/oversized_files.txt 1> /dev/null 2> /dev/null
 	fi 
@@ -4803,7 +4823,7 @@ if [ $PLATFORM = "mac" ]
 then
 	echo "${COL_SECTION} Searching plist files [55% ]: ${RESET}"
 	mkdir $OUTPUT_DIR/plist
-	find / -size $TAR_MAX_FILESIZE -type f -iname "*.plist" 2> /dev/null | while read line
+	find / $FIND_FS_OPTIONS -size $TAR_MAX_FILESIZE -type f -iname "*.plist" -print 2> /dev/null | while read line
 	do  
 	    FILENAME=$(printf %q "$line")
 		echo $FILENAME >> $OUTPUT_DIR/plist/plist.files.txt
@@ -4818,7 +4838,7 @@ elif [ $PLATFORM = "android" ]
 then
 	echo "${COL_SECTION} Searching for APK files [55% ]: ${RESET}" 
 	mkdir $OUTPUT_DIR/apk
-	find / -size $TAR_MAX_FILESIZE -type f -iname "*.apk" 2> /dev/null | while read line
+	find / $FIND_FS_OPTIONS -size $TAR_MAX_FILESIZE -type f -iname "*.apk" -print 2> /dev/null | while read line
 	do
 	    FILENAME=$(printf %q "$line")
 		echo $FILENAME >> $OUTPUT_DIR/apk/apk.files.txt
@@ -4839,17 +4859,25 @@ mkdir $OUTPUT_DIR/setuid
 if [ $PLATFORM = "android" ]
 then
 	echo "  ${COL_ENTRY}>${RESET} Finding all SUID/SGID binaries"
-	find / -type f -a -perm /6000 2> /dev/null | while read line
+	find / $FIND_FS_OPTIONS -type f -a \( -perm -4000 -o -perm -2000 \) -print 2> /dev/null | while read line
 	do
-		mkdir -p "$OUTPUT_DIR/setuid`dirname $line`" 2> /dev/null
-		cp -p "$line" "$OUTPUT_DIR/setuid`dirname $line`" 2> /dev/null
+		case "$line" in
+			*"/$OUTPUT_DIR_NAME/"*) continue ;;
+		esac
+		line_dir=`dirname "$line"`
+		mkdir -p "$OUTPUT_DIR/setuid$line_dir" 2> /dev/null
+		cp -p "$line" "$OUTPUT_DIR/setuid$line_dir" 2> /dev/null
 	done
 else
 	echo "  ${COL_ENTRY}>${RESET} Finding all SUID/SGID binaries"
-	find / -type f -a \( -perm -u+s -o -perm -g+s \) 2> /dev/null | while read line
+	find / $FIND_FS_OPTIONS -type f -a \( -perm -4000 -o -perm -2000 \) -print 2> /dev/null | while read line
 	do
-		mkdir -p "$OUTPUT_DIR/setuid`dirname $line`" 2> /dev/null
-		cp -p "$line" "$OUTPUT_DIR/setuid`dirname $line`" 2> /dev/null
+		case "$line" in
+			*"/$OUTPUT_DIR_NAME/"*) continue ;;
+		esac
+		line_dir=`dirname "$line"`
+		mkdir -p "$OUTPUT_DIR/setuid$line_dir" 2> /dev/null
+		cp -p "$line" "$OUTPUT_DIR/setuid$line_dir" 2> /dev/null
 	done
 fi
 
@@ -4865,25 +4893,25 @@ if [ $PLATFORM = "linux" ]
 then 
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha256sum {} \; 2> /dev/null | while read line
+		find / $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -a \( -perm -4000 -o -perm -2000 \) -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha1sum {} \; 2> /dev/null | while read line
+		find / $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -a \( -perm -4000 -o -perm -2000 \) -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec md5sum {} \; 2> /dev/null | while read line
+		find / $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -a \( -perm -4000 -o -perm -2000 \) -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
+		find / $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -a \( -perm -4000 -o -perm -2000 \) -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
@@ -4892,25 +4920,25 @@ elif [ $PLATFORM = "generic" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha256sum {} \; 2> /dev/null | while read line
+		find / $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -a \( -perm -4000 -o -perm -2000 \) -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha1sum {} \; 2> /dev/null | while read line
+		find / $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -a \( -perm -4000 -o -perm -2000 \) -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec md5sum {} \; 2> /dev/null | while read line
+		find / $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -a \( -perm -4000 -o -perm -2000 \) -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
+		find / $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -a \( -perm -4000 -o -perm -2000 \) -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
@@ -4919,31 +4947,31 @@ elif [ $PLATFORM = "solaris" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha256sum {} \; 2> /dev/null | while read line
+		find / $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -a \( -perm -4000 -o -perm -2000 \) -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha1sum {} \; 2> /dev/null | while read line
+		find / $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -a \( -perm -4000 -o -perm -2000 \) -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec md5sum {} \; 2> /dev/null | while read line
+		find / $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -a \( -perm -4000 -o -perm -2000 \) -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v digest)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec digest -a sha256 -v {} \; 2> /dev/null | while read line
+		find / $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -a \( -perm -4000 -o -perm -2000 \) -exec digest -a sha256 -v {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
+		find / $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -a \( -perm -4000 -o -perm -2000 \) -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
@@ -4952,31 +4980,31 @@ elif [ $PLATFORM = "aix" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha256sum {} \; 2> /dev/null | while read line
+		find / $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -a \( -perm -4000 -o -perm -2000 \) -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha1sum {} \; 2> /dev/null | while read line
+		find / $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -a \( -perm -4000 -o -perm -2000 \) -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec md5sum {} \; 2> /dev/null | while read line
+		find / $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -a \( -perm -4000 -o -perm -2000 \) -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v csum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec csum -h MD5 {} \; 2> /dev/null | while read line
+		find / $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -a \( -perm -4000 -o -perm -2000 \) -exec csum -h MD5 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
+		find / $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -a \( -perm -4000 -o -perm -2000 \) -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
@@ -4985,25 +5013,25 @@ elif [ $PLATFORM = "hpux" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha256sum {} \; 2> /dev/null | while read line
+		find / $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -a \( -perm -4000 -o -perm -2000 \) -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha1sum {} \; 2> /dev/null | while read line
+		find / $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -a \( -perm -4000 -o -perm -2000 \) -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec md5sum {} \; 2> /dev/null | while read line
+		find / $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -a \( -perm -4000 -o -perm -2000 \) -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
+		find / $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -a \( -perm -4000 -o -perm -2000 \) -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
@@ -5012,31 +5040,31 @@ elif [ $PLATFORM = "mac" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha256sum {} \; 2> /dev/null | while read line
+		find / $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -a \( -perm -4000 -o -perm -2000 \) -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec sha1sum {} \; 2> /dev/null | while read line
+		find / $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -a \( -perm -4000 -o -perm -2000 \) -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec md5sum {} \; 2> /dev/null | while read line
+		find / $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -a \( -perm -4000 -o -perm -2000 \) -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
+		find / $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -a \( -perm -4000 -o -perm -2000 \) -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v shasum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a \( -perm -u+s -o -perm -g+s \) -exec shasum -a 256 {} \; 2> /dev/null | while read line
+		find / $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -a \( -perm -4000 -o -perm -2000 \) -exec shasum -a 256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
@@ -5045,31 +5073,31 @@ elif [ $PLATFORM = "android" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a -perm /6000 -exec sha256sum {} \; 2> /dev/null | while read line
+		find / $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -a \( -perm -4000 -o -perm -2000 \) -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a -perm /6000 -exec sha1sum {} \; 2> /dev/null | while read line
+		find / $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -a \( -perm -4000 -o -perm -2000 \) -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a -perm /6000 -exec md5sum {} \; 2> /dev/null | while read line
+		find / $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -a \( -perm -4000 -o -perm -2000 \) -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a -perm /6000 -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
+		find / $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -a \( -perm -4000 -o -perm -2000 \) -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
 	elif [ -x "$(command -v shasum)" ]
 	then
-		find / -size $HASH_MAX_FILESIZE -type f -a -perm /6000 -exec shasum -a 256 {} \; 2> /dev/null | while read line
+		find / $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -a \( -perm -4000 -o -perm -2000 \) -exec shasum -a 256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-sgid_suid 2> /dev/null
 		done	
@@ -5081,25 +5109,25 @@ if [ $PLATFORM = "linux" ]
 then 
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
+		find /home/ /root/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
+		find /home/ /root/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
+		find /home/ /root/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
+		find /home/ /root/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
@@ -5108,25 +5136,25 @@ elif [ $PLATFORM = "generic" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
+		find /home/ /root/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
+		find /home/ /root/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
+		find /home/ /root/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
+		find /home/ /root/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
@@ -5135,31 +5163,31 @@ elif [ $PLATFORM = "solaris" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /home/ /root/ /export/home/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
+		find /home/ /root/ /export/home/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /home/ /root/ /export/home/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
+		find /home/ /root/ /export/home/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /home/ /root/ /export/home/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
+		find /home/ /root/ /export/home/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v digest)" ]
 	then
-		find /home/ /root/ /export/home/ -size $HASH_MAX_FILESIZE -type f -exec digest -a sha256 {} \; 2> /dev/null | while read line
+		find /home/ /root/ /export/home/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec digest -a sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /home/ /root/ /export/home/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
+		find /home/ /root/ /export/home/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
@@ -5168,31 +5196,31 @@ elif [ $PLATFORM = "aix" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
+		find /home/ /root/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
+		find /home/ /root/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
+		find /home/ /root/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v csum)" ]
 	then
-		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec csum -h MD5 {} \; 2> /dev/null | while read line
+		find /home/ /root/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec csum -h MD5 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
+		find /home/ /root/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
@@ -5201,25 +5229,25 @@ elif [ $PLATFORM = "hpux" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
+		find /home/ /root/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
+		find /home/ /root/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
+		find /home/ /root/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /home/ /root/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
+		find /home/ /root/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
@@ -5228,31 +5256,31 @@ elif [ $PLATFORM = "mac" ]
 then
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /Users/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
+		find /Users/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /Users/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
+		find /Users/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /Users/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
+		find /Users/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /Users/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
+		find /Users/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
 	elif [ -x "$(command -v shasum)" ]
 	then
-		find /Users/ -size $HASH_MAX_FILESIZE -type f -exec shasum -a 256 {} \; 2> /dev/null | while read line
+		find /Users/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec shasum -a 256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-homedir 2> /dev/null
 		done	
@@ -5264,25 +5292,25 @@ then
 	echo "  ${COL_ENTRY}>${RESET} Hashing all /bin/ /sbin/ /usr/ /opt/ /tmp/ dirs"
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
@@ -5292,25 +5320,25 @@ then
 	echo "  ${COL_ENTRY}>${RESET} Hashing all /bin/ /sbin/ /usr/ /opt/ /tmp/ dirs"
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done
@@ -5320,31 +5348,31 @@ then
 	echo "  ${COL_ENTRY}>${RESET} Hashing all /bin/ /sbin/ /usr/ /opt/ /tmp/ dirs"
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v digest)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec digest -a sha256 {} \; 2> /dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec digest -a sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
@@ -5354,31 +5382,31 @@ then
 	echo "  ${COL_ENTRY}>${RESET} Hashing all /bin/ /sbin/ /usr/ /opt/ /tmp/ dirs"
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v csum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec csum -h MD5 {} \; 2> /dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec csum -h MD5 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/shaMD5sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
@@ -5388,25 +5416,25 @@ then
 	echo "  ${COL_ENTRY}>${RESET} Hashing all /bin/ /sbin/ /usr/ /opt/ /tmp/ dirs"
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /tmp/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /tmp/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
@@ -5416,31 +5444,31 @@ then
 	echo "  ${COL_ENTRY}>${RESET} Hashing all /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ dirs"
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v shasum)" ]
 	then
-		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ -size $HASH_MAX_FILESIZE -type f -exec shasum -a 256 {} \; 2> /dev/null | while read line
+		find /bin/ /sbin/ /usr/ /opt/ /Library/ /tmp/ /System/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec shasum -a 256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
@@ -5450,31 +5478,31 @@ then
 	echo "  ${COL_ENTRY}>${RESET} Hashing all /bin/ /storage/ /system/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ dirs"
     if [ -x "$(command -v sha256sum)" ]
 	then
-		find /bin/ /storage/ /system/ /sys/module/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
+		find /bin/ /storage/ /system/ /sys/module/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec sha256sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v sha1sum)" ]
 	then
-		find /bin/ /storage/ /system/ /sys/module/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
+		find /bin/ /storage/ /system/ /sys/module/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec sha1sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha1sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v md5sum)" ]
 	then
-		find /bin/ /storage/ /system/ /sys/module/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
+		find /bin/ /storage/ /system/ /sys/module/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec md5sum {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/md5sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v openssl)" ]
 	then
-		find /bin/ /storage/ /system/ /sys/module/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
+		find /bin/ /storage/ /system/ /sys/module/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec openssl dgst -sha256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
 	elif [ -x "$(command -v shasum)" ]
 	then
-		find /bin/ /storage/ /system/ /sys/module/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ -size $HASH_MAX_FILESIZE -type f -exec shasum -a 256 {} \; 2> /dev/null | while read line
+		find /bin/ /storage/ /system/ /sys/module/ /sbin/ /oem/ /odm/ /sdcard/ /mmt/ $FIND_FS_OPTIONS -size $HASH_MAX_FILESIZE -type f -exec shasum -a 256 {} \; 2> /dev/null | while read line
 		do
 		  echo $line >> $OUTPUT_DIR/hashes/sha256sum-variousbins 2> /dev/null
 		done	
